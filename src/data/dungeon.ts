@@ -8,4 +8,9 @@ export const FOREST_SPECIES: SpeciesDef[] = [
 ];
 
 export { generateDungeon } from '../world/dungeonGenerator.ts';
-export type { DungeonLayout, DungeonEnemySpawn } from '../world/dungeonGenerator.ts';
+export type {
+  DungeonLayout,
+  DungeonEnemySpawn,
+  DungeonInteractable,
+  RoomType,
+} from '../world/dungeonGenerator.ts';

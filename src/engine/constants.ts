@@ -11,7 +11,8 @@ export const PLAYER_ATTACK_RANGE = 36;
 export const BAG_SLOTS = 12;
 export const HABITAT_CAPACITY = 4;
 export const CAPTURE_RANGE = 120;
-export const CAPTURE_ORB_SPEED = 220;
+/** @deprecated Use CAPTURE_ORB_FLY_SPEED from capture.ts */
+export const CAPTURE_ORB_SPEED = 130;
 export const STARTING_ORBS = 3;
 export const ORB_PRICE = 25;
 export const ORB_BUNDLE_QTY = 3;

@@ -6,7 +6,8 @@ import {
   PLAYER_MAX_HP,
   PLAYER_SPEED,
   CAPTURE_RANGE,
-  CAPTURE_ORB_SPEED,
+  ORB_BUNDLE_PRICE,
+  ORB_PRICE,
 } from '../engine/constants.ts';
 import { Camera } from '../engine/camera.ts';
 import type { InputManager } from '../engine/input.ts';
@@ -14,23 +15,38 @@ import { DungeonMinimap } from '../ui/dungeonMinimap.ts';
 import { YSortLayer } from '../engine/ySortLayer.ts';
 import { getSpecies } from '../data/creatures.ts';
 import { LOOT_TABLE } from '../data/items.ts';
-import { generateDungeon, type DungeonLayout } from '../world/dungeonGenerator.ts';
+import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
 import { calcDamage, distance, normalize } from '../systems/combat.ts';
 import {
   canTargetForCapture,
+  CAPTURE_ARRIVE_PAUSE,
+  CAPTURE_FAIL_FX_DURATION,
+  CAPTURE_ORB_FLY_SPEED,
+  CAPTURE_SHAKE_DURATION,
+  CAPTURE_SHAKE_PAUSE,
+  CAPTURE_SUCCESS_FX_DURATION,
   formatCaptureChance,
+  formatCapturePercent,
+  planCaptureSequence,
   rollCaptureFailure,
-  rollCaptureSuccess,
+  type CaptureSequencePlan,
 } from '../systems/capture.ts';
+import { shouldEnemyAggro } from '../systems/enemyAi.ts';
+import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
 import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
   createChestSprite,
   createCreatureSprite,
+  createInteractableSprite,
   createPlayerSprite,
   createPortalSprite,
-  createCaptureOrbGraphic,
+  createSpeechBubble,
+  createCaptureOrbBall,
+  createCaptureAttemptHud,
+  updateCaptureAttemptHud,
+  createCaptureSuccessBanner,
   drawCaptureBurst,
   drawAttackSlash,
   drawDamageNumber,
@@ -47,6 +63,8 @@ export interface DungeonCallbacks {
 interface LiveEnemy {
   id: string;
   speciesId: string;
+  roomIndex: number;
+  isBoss: boolean;
   hp: number;
   maxHp: number;
   x: number;
@@ -55,15 +73,28 @@ interface LiveEnemy {
   speed: number;
   attackCd: number;
   enraged: boolean;
+  aggroed: boolean;
   fled: boolean;
   dead: boolean;
   container: Container;
   capturableGlow: boolean;
+  captureLocked: boolean;
 }
 
-interface FlyingOrb {
-  gfx: Graphics;
+type CaptureOrbPhase = 'flying' | 'arrived' | 'shaking' | 'success_fx' | 'fail_fx';
+type ShakeSubPhase = 'anim' | 'pause';
+
+interface ActiveCaptureOrb {
+  container: Container;
+  hud: Container;
+  successBanner: Container | null;
   target: LiveEnemy;
+  plan: CaptureSequencePlan;
+  phase: CaptureOrbPhase;
+  currentShake: number;
+  shakeSubPhase: ShakeSubPhase;
+  phaseTimer: number;
+  wobbleTime: number;
 }
 
 interface LiveChest {
@@ -72,6 +103,22 @@ interface LiveChest {
   lootId: string;
   opened: boolean;
   container: Container;
+}
+
+interface LiveInteractable {
+  data: DungeonInteractable;
+  container: Container;
+  bubble: Container | null;
+  used: boolean;
+}
+
+interface PendingChoices {
+  kind: 'event' | 'merchant';
+  interactable: LiveInteractable;
+  labelA: string;
+  labelB: string;
+  applyA: () => void;
+  applyB: () => void;
 }
 
 export class DungeonScene {
@@ -91,8 +138,10 @@ export class DungeonScene {
   private enemies: LiveEnemy[] = [];
   private active = false;
   private portalActive = false;
-  private flyingOrbs: FlyingOrb[] = [];
+  private activeCapture: ActiveCaptureOrb | null = null;
   private chests: LiveChest[] = [];
+  private interactables: LiveInteractable[] = [];
+  private pendingChoices: PendingChoices | null = null;
   private layout: DungeonLayout;
   private glowTargetId: string | null = null;
   private minimap: DungeonMinimap;
@@ -132,6 +181,7 @@ export class DungeonScene {
 
     this.portalSprite.x = this.layout.portal.x;
     this.portalSprite.y = this.layout.portal.y;
+    this.portalSprite.alpha = 0.35;
     this.entityLayer.addChild(this.portalSprite);
 
     this.playerSprite.x = this.playerX;
@@ -146,6 +196,7 @@ export class DungeonScene {
 
     this.spawnEnemies();
     this.spawnChests();
+    this.spawnInteractables();
   }
 
   enter(): void {
@@ -156,10 +207,7 @@ export class DungeonScene {
   exit(): void {
     this.active = false;
     this.state.playerHp = this.playerHp;
-    for (const orb of this.flyingOrbs) {
-      orb.gfx.destroy();
-    }
-    this.flyingOrbs = [];
+    this.clearActiveCapture();
     this.root.destroy({ children: true });
   }
 
@@ -169,10 +217,15 @@ export class DungeonScene {
       const container = createCreatureSprite(species);
       container.x = spawn.x;
       container.y = spawn.y;
+      if (spawn.isBoss) {
+        container.scale.set(1.35);
+      }
       this.entityLayer.addChild(container);
       this.enemies.push({
         id: `${spawn.speciesId}-${spawn.roomIndex}`,
         speciesId: spawn.speciesId,
+        roomIndex: spawn.roomIndex,
+        isBoss: spawn.isBoss ?? false,
         hp: species.maxHp,
         maxHp: species.maxHp,
         x: spawn.x,
@@ -181,12 +234,35 @@ export class DungeonScene {
         speed: species.speed,
         attackCd: 0,
         enraged: false,
+        aggroed: false,
         fled: false,
         dead: false,
         container,
         capturableGlow: false,
+        captureLocked: false,
       });
     }
+  }
+
+  private spawnInteractables(): void {
+    for (const data of this.layout.interactables) {
+      const container = createInteractableSprite(data.kind, false);
+      container.x = data.x;
+      container.y = data.y;
+      this.entityLayer.addChild(container);
+      this.interactables.push({ data, container, bubble: null, used: false });
+    }
+  }
+
+  private refreshInteractableSprite(item: LiveInteractable): void {
+    this.clearInteractableBubble(item);
+    const parent = item.container.parent;
+    parent?.removeChild(item.container);
+    item.container.destroy({ children: true });
+    item.container = createInteractableSprite(item.data.kind, item.used);
+    item.container.x = item.data.x;
+    item.container.y = item.data.y;
+    parent?.addChild(item.container);
   }
 
   private spawnChests(): void {
@@ -212,10 +288,12 @@ export class DungeonScene {
     this.updateEnemies(dt);
     this.updateCaptureOrbs(dt);
     this.tryLaunchCapture();
+    this.resolvePendingChoices();
     this.handleInteract();
     this.checkPlayerDeath();
     this.updateCapturableGlow();
     this.updatePortalState();
+    this.updateInteractablePrompts();
 
     this.entityLayer.resort();
     this.camera.follow(this.playerX, this.playerY, this.layout.width, this.layout.height);
@@ -265,7 +343,7 @@ export class DungeonScene {
     this.attackCd = PLAYER_ATTACK_COOLDOWN;
 
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled) continue;
+      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
       const dist = distance(this.playerX, this.playerY, enemy.x, enemy.y);
       if (dist <= PLAYER_ATTACK_RANGE + 8) {
         this.damageEnemy(enemy, calcDamage(PLAYER_ATTACK_DAMAGE));
@@ -274,6 +352,7 @@ export class DungeonScene {
   }
 
   private damageEnemy(enemy: LiveEnemy, dmg: number): void {
+    enemy.aggroed = true;
     enemy.hp = Math.max(0, enemy.hp - dmg);
     drawDamageNumber(this.fxLayer, dmg, enemy.x, enemy.y - 20);
     if (enemy.hp <= 0) {
@@ -285,17 +364,23 @@ export class DungeonScene {
 
   private onEnemyKilled(enemy: LiveEnemy): void {
     const species = getSpecies(enemy.speciesId);
-    const lootKey = enemy.speciesId === 'lumimorcego' ? 'esporo_brilhante' : 'cogumelo_comum';
+    const lootKey =
+      enemy.speciesId === 'lumimorcego' || enemy.speciesId === 'rei_esporas'
+        ? 'esporo_brilhante'
+        : 'cogumelo_comum';
     const lootDef = LOOT_TABLE[lootKey] ?? LOOT_TABLE.cogumelo_comum;
     const loot: LootItem = {
       kind: 'loot',
       id: lootDef.id,
       name: lootDef.name,
       baseValue: lootDef.baseValue,
-      quantity: 1,
+      quantity: enemy.speciesId === 'rei_esporas' ? 2 : 1,
     };
     if (!addToBag(this.state, loot)) {
       this.callbacks.showToast('Bolsa cheia!');
+    } else if (enemy.speciesId === 'rei_esporas') {
+      this.state.gold += 35;
+      this.callbacks.showToast('Rei das Esporas derrotado — tesouro épico!');
     } else {
       this.callbacks.showToast(`${species.name} derrotado — loot coletado`);
     }
@@ -304,34 +389,46 @@ export class DungeonScene {
 
   private updateEnemies(dt: number): void {
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled) continue;
+      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
 
       const dist = distance(this.playerX, this.playerY, enemy.x, enemy.y);
-      if (dist > 8) {
-        const dir = normalize(this.playerX - enemy.x, this.playerY - enemy.y);
-        const spd = enemy.speed * (enemy.enraged ? 1.2 : 1);
-        const stepX = dir.x * spd * dt;
-        const stepY = dir.y * spd * dt;
-        const moved = moveWithCollision(
-          enemy.x,
-          enemy.y,
-          stepX,
-          stepY,
-          9,
-          this.layout.walls,
-          this.layout.floors,
-          this.layout.obstacles,
-        );
-        enemy.x = moved.x;
-        enemy.y = moved.y;
-      }
+      enemy.aggroed = shouldEnemyAggro({
+        aggroed: enemy.aggroed,
+        enraged: enemy.enraged,
+        isBoss: enemy.isBoss,
+        distToPlayer: dist,
+        playerInSpawnRoom: this.isPlayerInRoom(enemy.roomIndex),
+      });
 
-      enemy.attackCd -= dt;
-      if (dist < 18 && enemy.attackCd <= 0) {
-        enemy.attackCd = 1.1;
-        const dmg = calcDamage(enemy.atk);
-        this.playerHp = Math.max(0, this.playerHp - dmg);
-        drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24);
+      if (enemy.aggroed) {
+        if (dist > 8) {
+          const dir = normalize(this.playerX - enemy.x, this.playerY - enemy.y);
+          const spd = enemy.speed * (enemy.enraged ? 1.2 : 1);
+          const stepX = dir.x * spd * dt;
+          const stepY = dir.y * spd * dt;
+          const moved = moveWithCollision(
+            enemy.x,
+            enemy.y,
+            stepX,
+            stepY,
+            9,
+            this.layout.walls,
+            this.layout.floors,
+            this.layout.obstacles,
+          );
+          enemy.x = moved.x;
+          enemy.y = moved.y;
+        }
+
+        enemy.attackCd -= dt;
+        if (dist < 18 && enemy.attackCd <= 0) {
+          enemy.attackCd = 1.1;
+          const dmg = calcDamage(enemy.atk);
+          this.playerHp = Math.max(0, this.playerHp - dmg);
+          drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24);
+        }
+      } else {
+        enemy.attackCd -= dt;
       }
 
       enemy.container.x = enemy.x;
@@ -341,11 +438,26 @@ export class DungeonScene {
     if (this.attackCd > 0) this.attackCd -= dt;
   }
 
+  private isPlayerInRoom(roomIndex: number): boolean {
+    const room = this.layout.rooms.find((r) => r.index === roomIndex);
+    if (!room) return false;
+    const { x, y, width, height } = room.rect;
+    const margin = 6;
+    return (
+      this.playerX >= x + margin &&
+      this.playerX <= x + width - margin &&
+      this.playerY >= y + margin &&
+      this.playerY <= y + height - margin
+    );
+  }
+
   private getNearestCaptureTarget(): LiveEnemy | null {
     let best: LiveEnemy | null = null;
     let bestDist = Infinity;
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled) continue;
+      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
+      const species = getSpecies(enemy.speciesId);
+      if (!species.capturable) continue;
       if (!canTargetForCapture(enemy.hp, enemy.maxHp)) continue;
       const d = distance(this.playerX, this.playerY, enemy.x, enemy.y);
       if (d < CAPTURE_RANGE && d < bestDist) {
@@ -363,7 +475,7 @@ export class DungeonScene {
     this.glowTargetId = targetId;
 
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled) continue;
+      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
       const shouldGlow = enemy.id === targetId;
       if (enemy.capturableGlow === shouldGlow) continue;
       enemy.capturableGlow = shouldGlow;
@@ -381,7 +493,7 @@ export class DungeonScene {
 
   private tryLaunchCapture(): void {
     if (!this.input.consumeKey('q')) return;
-    if (this.flyingOrbs.length > 0) return;
+    if (this.activeCapture) return;
 
     if (this.state.orbs <= 0) {
       this.callbacks.showToast('Sem Orbes — compre na base!');
@@ -405,80 +517,207 @@ export class DungeonScene {
   }
 
   private launchOrb(target: LiveEnemy): void {
-    const gfx = createCaptureOrbGraphic();
-    gfx.x = this.playerX;
-    gfx.y = this.playerY - 8;
-    this.fxLayer.addChild(gfx);
-    this.flyingOrbs.push({ gfx, target });
+    const rollInput = { targetHp: target.hp, targetMaxHp: target.maxHp };
+    const plan = planCaptureSequence(rollInput);
+    const container = createCaptureOrbBall();
+    container.x = this.playerX;
+    container.y = this.playerY - 8;
+    const hud = createCaptureAttemptHud();
+    hud.visible = false;
+    this.fxLayer.addChild(container);
+    this.fxLayer.addChild(hud);
+    target.captureLocked = true;
+    target.container.alpha = 0.45;
+
+    this.activeCapture = {
+      container,
+      hud,
+      successBanner: null,
+      target,
+      plan,
+      phase: 'flying',
+      currentShake: 0,
+      shakeSubPhase: 'anim',
+      phaseTimer: 0,
+      wobbleTime: 0,
+    };
+  }
+
+  private getCaptureAnchor(enemy: LiveEnemy): { x: number; y: number } {
+    return { x: enemy.x, y: enemy.y - 6 };
+  }
+
+  private syncCaptureHud(cap: ActiveCaptureOrb): void {
+    const anchor = this.getCaptureAnchor(cap.target);
+    cap.hud.x = anchor.x;
+    cap.hud.y = anchor.y - 42;
+    cap.container.x = anchor.x;
+    cap.container.y = anchor.y;
+    if (cap.successBanner) {
+      cap.successBanner.x = anchor.x;
+      cap.successBanner.y = anchor.y - 58;
+    }
+  }
+
+  private applyOrbWobble(cap: ActiveCaptureOrb, intensity: number): void {
+    cap.wobbleTime += intensity;
+    const wobble = Math.sin(cap.wobbleTime * 16) * 0.14;
+    cap.container.scale.set(1 + wobble, 1 - wobble * 0.6);
+    cap.container.rotation = Math.sin(cap.wobbleTime * 11) * 0.28;
   }
 
   private updateCaptureOrbs(dt: number): void {
-    for (let i = this.flyingOrbs.length - 1; i >= 0; i--) {
-      const orb = this.flyingOrbs[i]!;
-      if (orb.target.dead || orb.target.fled) {
-        this.removeOrb(i, false);
-        this.callbacks.showToast('Alvo perdido — Orbe desperdiçado');
-        continue;
-      }
+    const cap = this.activeCapture;
+    if (!cap) return;
 
-      const tx = orb.target.x;
-      const ty = orb.target.y - 6;
-      const dir = normalize(tx - orb.gfx.x, ty - orb.gfx.y);
-      orb.gfx.x += dir.x * CAPTURE_ORB_SPEED * dt;
-      orb.gfx.y += dir.y * CAPTURE_ORB_SPEED * dt;
-
-      // Rastro luminescente
-      orb.gfx.rotation += dt * 8;
-
-      const dist = distance(orb.gfx.x, orb.gfx.y, tx, ty);
-      if (dist < 10) {
-        this.resolveCapture(orb.target);
-        this.removeOrb(i, true);
-      }
+    const { target, plan } = cap;
+    if (target.dead || target.fled) {
+      this.callbacks.showToast('Alvo perdido — Orbe desperdiçado');
+      this.clearActiveCapture();
+      return;
     }
-  }
 
-  private removeOrb(index: number, hit: boolean): void {
-    const orb = this.flyingOrbs[index]!;
-    const { x, y } = orb.gfx;
-    this.fxLayer.removeChild(orb.gfx);
-    orb.gfx.destroy();
-    this.flyingOrbs.splice(index, 1);
-    if (!hit) {
-      drawCaptureBurst(this.fxLayer, x, y, false);
-    }
-  }
+    const pct = formatCapturePercent(plan.chance);
+    const anchor = this.getCaptureAnchor(target);
 
-  private resolveCapture(enemy: LiveEnemy): void {
-    const species = getSpecies(enemy.speciesId);
-    const rollInput = { targetHp: enemy.hp, targetMaxHp: enemy.maxHp };
-    const success = rollCaptureSuccess(rollInput);
+    if (cap.phase === 'flying') {
+      cap.hud.visible = false;
+      const dir = normalize(anchor.x - cap.container.x, anchor.y - cap.container.y);
+      cap.container.x += dir.x * CAPTURE_ORB_FLY_SPEED * dt;
+      cap.container.y += dir.y * CAPTURE_ORB_FLY_SPEED * dt;
+      cap.container.rotation += dt * 6;
+      cap.wobbleTime += dt;
 
-    drawCaptureBurst(this.fxLayer, enemy.x, enemy.y - 6, success);
-
-    if (success) {
-      const creature: CreatureItem = {
-        kind: 'creature',
-        speciesId: species.id,
-        name: species.name,
-        baseValue: species.baseValue,
-      };
-      if (addToBag(this.state, creature)) {
-        if (!this.state.bestiary.includes(species.id)) {
-          this.state.bestiary.push(species.id);
-        }
-        enemy.dead = true;
-        enemy.container.visible = false;
-        this.callbacks.showToast(`Capturou ${species.name}! (${formatCaptureChance(rollInput)})`);
-        this.callbacks.onStateChange();
+      if (distance(cap.container.x, cap.container.y, anchor.x, anchor.y) < 10) {
+        cap.phase = 'arrived';
+        cap.phaseTimer = CAPTURE_ARRIVE_PAUSE;
+        cap.container.rotation = 0;
+        cap.container.scale.set(1);
+        this.syncCaptureHud(cap);
       }
       return;
     }
 
+    this.syncCaptureHud(cap);
+    cap.hud.visible = true;
+
+    if (cap.phase === 'arrived') {
+      updateCaptureAttemptHud(cap.hud, 0, plan.totalShakes, pct, 'waiting');
+      cap.phaseTimer -= dt;
+      if (cap.phaseTimer <= 0) {
+        cap.phase = 'shaking';
+        cap.currentShake = 1;
+        cap.shakeSubPhase = 'anim';
+        cap.phaseTimer = CAPTURE_SHAKE_DURATION;
+        cap.wobbleTime = 0;
+      }
+      return;
+    }
+
+    if (cap.phase === 'shaking') {
+      const shake = cap.currentShake;
+      const isFailShake = !plan.success && plan.failAtShake === shake;
+      const status = cap.shakeSubPhase === 'anim' ? 'shake' : isFailShake ? 'fail' : 'pass';
+      updateCaptureAttemptHud(cap.hud, shake, plan.totalShakes, pct, status);
+      this.applyOrbWobble(cap, dt);
+
+      cap.phaseTimer -= dt;
+      if (cap.phaseTimer > 0) return;
+
+      if (cap.shakeSubPhase === 'anim') {
+        cap.shakeSubPhase = 'pause';
+        cap.phaseTimer = CAPTURE_SHAKE_PAUSE;
+        cap.container.rotation = 0;
+        cap.container.scale.set(1);
+        return;
+      }
+
+      cap.shakeSubPhase = 'anim';
+      if (isFailShake) {
+        cap.phase = 'fail_fx';
+        cap.phaseTimer = CAPTURE_FAIL_FX_DURATION;
+        cap.hud.visible = false;
+        drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, false);
+        return;
+      }
+
+      if (shake >= plan.totalShakes) {
+        cap.phase = 'success_fx';
+        cap.phaseTimer = CAPTURE_SUCCESS_FX_DURATION;
+        cap.hud.visible = false;
+        const species = getSpecies(target.speciesId);
+        cap.successBanner = createCaptureSuccessBanner(species.name);
+        this.fxLayer.addChild(cap.successBanner);
+        this.syncCaptureHud(cap);
+        return;
+      }
+
+      cap.currentShake += 1;
+      cap.phaseTimer = CAPTURE_SHAKE_DURATION;
+      cap.wobbleTime = 0;
+      return;
+    }
+
+    if (cap.phase === 'success_fx') {
+      this.applyOrbWobble(cap, dt * 0.35);
+      const t = 1 - cap.phaseTimer / CAPTURE_SUCCESS_FX_DURATION;
+      cap.container.scale.set(1 + Math.sin(t * Math.PI * 6) * 0.08);
+      if (cap.successBanner) {
+        cap.successBanner.alpha = Math.min(1, t * 3);
+        cap.successBanner.scale.set(0.85 + Math.sin(t * Math.PI) * 0.12);
+      }
+      cap.container.alpha = 1 - t * 0.35;
+      cap.phaseTimer -= dt;
+      if (cap.phaseTimer > 0) return;
+      this.finishCaptureSuccess(target, plan);
+      this.clearActiveCapture();
+      return;
+    }
+
+    if (cap.phase === 'fail_fx') {
+      target.container.alpha = 1;
+      cap.container.alpha -= dt * 2.2;
+      cap.phaseTimer -= dt;
+      if (cap.phaseTimer > 0) return;
+      this.finishCaptureFail(target, plan);
+      this.clearActiveCapture();
+    }
+  }
+
+  private finishCaptureSuccess(enemy: LiveEnemy, plan: CaptureSequencePlan): void {
+    const species = getSpecies(enemy.speciesId);
+    const creature: CreatureItem = {
+      kind: 'creature',
+      speciesId: species.id,
+      name: species.name,
+      baseValue: species.baseValue,
+    };
+    if (addToBag(this.state, creature)) {
+      if (!this.state.bestiary.includes(species.id)) {
+        this.state.bestiary.push(species.id);
+      }
+      enemy.dead = true;
+      enemy.container.visible = false;
+      const anchor = this.getCaptureAnchor(enemy);
+      drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true);
+      this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
+      this.callbacks.onStateChange();
+    } else {
+      this.callbacks.showToast('Bolsa cheia — captura falhou!');
+      enemy.captureLocked = false;
+      enemy.container.alpha = 1;
+    }
+  }
+
+  private finishCaptureFail(enemy: LiveEnemy, plan: CaptureSequencePlan): void {
+    const species = getSpecies(enemy.speciesId);
+    enemy.captureLocked = false;
     const fail = rollCaptureFailure();
     if (fail === 'enrage') {
       enemy.enraged = true;
-      this.callbacks.showToast(`${species.name} enfureceu! (${formatCaptureChance(rollInput)} falhou)`);
+      enemy.aggroed = true;
+      enemy.container.alpha = 1;
+      this.callbacks.showToast(`${species.name} enfureceu! (${formatCapturePercent(plan.chance)} falhou)`);
     } else {
       enemy.fled = true;
       enemy.container.visible = false;
@@ -486,7 +725,220 @@ export class DungeonScene {
     }
   }
 
+  private clearActiveCapture(): void {
+    if (!this.activeCapture) return;
+    const cap = this.activeCapture;
+    cap.container.parent?.removeChild(cap.container);
+    cap.container.destroy({ children: true });
+    cap.hud.parent?.removeChild(cap.hud);
+    cap.hud.destroy({ children: true });
+    if (cap.successBanner) {
+      cap.successBanner.parent?.removeChild(cap.successBanner);
+      cap.successBanner.destroy({ children: true });
+    }
+    if (!cap.target.dead && !cap.target.fled) {
+      cap.target.captureLocked = false;
+      cap.target.container.alpha = 1;
+    }
+    this.activeCapture = null;
+  }
+
+  private clearInteractableBubble(item: LiveInteractable): void {
+    if (!item.bubble) return;
+    item.bubble.parent?.removeChild(item.bubble);
+    item.bubble.destroy({ children: true });
+    item.bubble = null;
+  }
+
+  private showInteractableBubble(item: LiveInteractable, lines: string[], accent: number): void {
+    this.clearInteractableBubble(item);
+    const bubble = createSpeechBubble(lines, accent);
+    bubble.x = item.data.x;
+    bubble.y = item.data.y - 36;
+    this.entityLayer.addChild(bubble);
+    item.bubble = bubble;
+  }
+
+  private updateInteractablePrompts(): void {
+    for (const item of this.interactables) {
+      this.clearInteractableBubble(item);
+    }
+
+    if (this.pendingChoices) {
+      const item = this.pendingChoices.interactable;
+      const accent = item.data.kind === 'event' ? 0x8a6ab8 : 0xe8a84a;
+      const header = item.data.kind === 'event' ? '— Escolha —' : '— Mercador —';
+      this.showInteractableBubble(
+        item,
+        [header, `[1] ${this.pendingChoices.labelA}`, `[2] ${this.pendingChoices.labelB}`],
+        accent,
+      );
+      return;
+    }
+
+    const near = this.getNearestInteractable(52);
+    if (!near) return;
+
+    if (near.used) {
+      this.showInteractableBubble(near, ['Já usado nesta run'], 0x6a6a78);
+      return;
+    }
+
+    if (near.data.kind === 'rest') {
+      this.showInteractableBubble(near, ['[E] Descansar aqui', 'Recupera 25% HP'], 0x5dbb63);
+    } else if (near.data.kind === 'event') {
+      this.showInteractableBubble(near, ['[E] Investigar altar', 'Um evento aguarda...'], 0x8a6ab8);
+    } else {
+      this.showInteractableBubble(near, ['[E] Falar com mercador', 'Compra Orbes de Vínculo'], 0xe8a84a);
+    }
+  }
+
+  private getNearestInteractable(maxDist = 30): LiveInteractable | null {
+    let best: LiveInteractable | null = null;
+    let bestDist = Infinity;
+    for (const item of this.interactables) {
+      const d = distance(this.playerX, this.playerY, item.data.x, item.data.y);
+      if (d < maxDist && d < bestDist) {
+        best = item;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  private resolvePendingChoices(): void {
+    if (!this.pendingChoices) return;
+
+    if (this.input.consumeKey('1')) {
+      this.pendingChoices.applyA();
+      if (this.pendingChoices.kind === 'event') {
+        this.pendingChoices.interactable.used = true;
+        this.refreshInteractableSprite(this.pendingChoices.interactable);
+      }
+      this.pendingChoices = null;
+      this.callbacks.onStateChange();
+      return;
+    }
+
+    if (this.input.consumeKey('2')) {
+      this.pendingChoices.applyB();
+      if (this.pendingChoices.kind === 'event') {
+        this.pendingChoices.interactable.used = true;
+        this.refreshInteractableSprite(this.pendingChoices.interactable);
+      }
+      this.pendingChoices = null;
+      this.callbacks.onStateChange();
+    }
+  }
+
+  private openRest(item: LiveInteractable): void {
+    if (item.used) {
+      this.callbacks.showToast('Fogueira já usada nesta run');
+      return;
+    }
+    const heal = Math.ceil(PLAYER_MAX_HP * 0.25);
+    this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + heal);
+    item.used = true;
+    this.refreshInteractableSprite(item);
+    this.callbacks.showToast(`Descanso — recuperou ${heal} HP`);
+    this.callbacks.onStateChange();
+  }
+
+  private openEvent(item: LiveInteractable): void {
+    if (item.used) {
+      this.callbacks.showToast('Altar já ativado nesta run');
+      return;
+    }
+
+    const pool = [
+      {
+        label: 'Beber orvalho (+15 HP)',
+        apply: () => {
+          this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + 15);
+          this.callbacks.showToast('Orvalho restaurador: +15 HP');
+        },
+      },
+      {
+        label: 'Colher esporos (+12 ouro)',
+        apply: () => {
+          this.state.gold += 12;
+          this.callbacks.showToast('Esporos trocados por 12 ouro');
+        },
+      },
+      {
+        label: 'Morder cogumelo (-10 HP)',
+        apply: () => {
+          this.playerHp = Math.max(1, this.playerHp - 10);
+          this.callbacks.showToast('Cogumelo amargo — perdeu 10 HP');
+        },
+      },
+      {
+        label: 'Saco surpresa (loot)',
+        apply: () => {
+          const lootDef = LOOT_TABLE.esporo_brilhante;
+          const loot: LootItem = {
+            kind: 'loot',
+            id: lootDef.id,
+            name: lootDef.name,
+            baseValue: lootDef.baseValue,
+            quantity: 1,
+          };
+          if (!addToBag(this.state, loot)) {
+            this.callbacks.showToast('Bolsa cheia!');
+          } else {
+            this.callbacks.showToast(`Encontrou ${lootDef.name}!`);
+          }
+        },
+      },
+      {
+        label: 'Relíquia antiga (+20 ouro, -8 HP)',
+        apply: () => {
+          this.playerHp = Math.max(1, this.playerHp - 8);
+          this.state.gold += 20;
+          this.callbacks.showToast('Relíquia vendida — +20 ouro, -8 HP');
+        },
+      },
+    ];
+
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const a = shuffled[0]!;
+    const b = shuffled[1]!;
+
+    this.pendingChoices = {
+      kind: 'event',
+      interactable: item,
+      labelA: a.label,
+      labelB: b.label,
+      applyA: a.apply,
+      applyB: b.apply,
+    };
+  }
+
+  private openMerchant(item: LiveInteractable): void {
+    this.pendingChoices = {
+      kind: 'merchant',
+      interactable: item,
+      labelA: `Orbe ×1 (${ORB_PRICE} ouro)`,
+      labelB: `Orbes ×3 (${ORB_BUNDLE_PRICE} ouro)`,
+      applyA: () => {
+        if (buyOrbPack(this.state, 'single')) {
+          this.callbacks.showToast('Comprou 1 Orbe');
+        } else {
+          this.callbacks.showToast('Ouro insuficiente');
+        }
+      },
+      applyB: () => {
+        if (buyOrbPack(this.state, 'bundle')) {
+          this.callbacks.showToast('Comprou 3 Orbes');
+        } else {
+          this.callbacks.showToast('Ouro insuficiente');
+        }
+      },
+    };
+  }
+
   private handleInteract(): void {
+    if (this.pendingChoices) return;
     if (!this.input.consumeKey('e')) return;
 
     const aliveEnemies = this.enemies.filter((e) => !e.dead && !e.fled).length;
@@ -529,11 +981,28 @@ export class DungeonScene {
       this.callbacks.onStateChange();
       return;
     }
+
+    const near = this.getNearestInteractable();
+    if (near) {
+      if (near.data.kind === 'rest') {
+        this.openRest(near);
+        return;
+      }
+      if (near.data.kind === 'event') {
+        this.openEvent(near);
+        return;
+      }
+      if (near.data.kind === 'merchant') {
+        this.openMerchant(near);
+        return;
+      }
+    }
   }
 
   private updatePortalState(): void {
     const aliveEnemies = this.enemies.filter((e) => !e.dead && !e.fled).length;
     this.portalActive = aliveEnemies === 0;
+    this.portalSprite.alpha = this.portalActive ? 1 : 0.35;
   }
 
   private checkPlayerDeath(): void {
@@ -547,8 +1016,19 @@ export class DungeonScene {
   }
 
   getHudHint(): string {
-    if (this.flyingOrbs.length > 0) {
-      return 'Orbe de Vínculo em voo...';
+    if (this.pendingChoices) {
+      return `[1] ${this.pendingChoices.labelA} · [2] ${this.pendingChoices.labelB}`;
+    }
+    if (this.activeCapture) {
+      const cap = this.activeCapture;
+      const pct = formatCapturePercent(cap.plan.chance);
+      if (cap.phase === 'flying') return 'Orbe de Vínculo em voo...';
+      if (cap.phase === 'arrived') return `Preparando captura — ${pct}`;
+      if (cap.phase === 'shaking') {
+        return `Tentativa ${cap.currentShake}/${cap.plan.totalShakes} — ${pct}`;
+      }
+      if (cap.phase === 'success_fx') return '✦ Capturado! ✦';
+      return 'Captura falhou...';
     }
     const target = this.getNearestCaptureTarget();
     if (target) {
@@ -564,6 +1044,16 @@ export class DungeonScene {
     );
     if (nearChest) {
       return '[E] Abrir baú';
+    }
+    const near = this.getNearestInteractable();
+    if (near && !near.used) {
+      if (near.data.kind === 'rest') return '[E] Descansar na fogueira (+25% HP)';
+      if (near.data.kind === 'event') return '[E] Investigar altar misterioso';
+      if (near.data.kind === 'merchant') return '[E] Falar com mercador ambulante';
+    }
+    const bossAlive = this.enemies.some((e) => !e.dead && !e.fled && e.speciesId === 'rei_esporas');
+    if (bossAlive) {
+      return 'Derrote o Rei das Esporas para ativar o portal';
     }
     return 'WASD mover · Clique atacar · Q lançar Orbe';
   }

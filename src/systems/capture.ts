@@ -4,6 +4,15 @@ export const CAPTURE_MAX_CHANCE = 0.85;
 /** Bônus quadrático conforme o monstro enfraquece. */
 export const CAPTURE_HP_CURVE = 0.8;
 
+/** Tentativas visíveis (balanços da orbe). */
+export const CAPTURE_MIN_SHAKES = 3;
+export const CAPTURE_ORB_FLY_SPEED = 130;
+export const CAPTURE_ARRIVE_PAUSE = 0.28;
+export const CAPTURE_SHAKE_DURATION = 0.52;
+export const CAPTURE_SHAKE_PAUSE = 0.38;
+export const CAPTURE_SUCCESS_FX_DURATION = 1.35;
+export const CAPTURE_FAIL_FX_DURATION = 0.55;
+
 export interface CaptureRollInput {
   targetHp: number;
   targetMaxHp: number;
@@ -42,4 +51,32 @@ export function rollCaptureSuccess(input: CaptureRollInput, rng: () => number = 
 
 export function rollCaptureFailure(rng: () => number = Math.random): CaptureFailResult {
   return rng() < 0.6 ? 'enrage' : 'flee';
+}
+
+export interface CaptureSequencePlan {
+  success: boolean;
+  /** Índice 1-based da tentativa em que a captura falha; null se sucesso. */
+  failAtShake: number | null;
+  chance: number;
+  totalShakes: number;
+}
+
+/** Define o resultado antes da animação (estilo Pokémon — balanços refletem o sorteio). */
+export function planCaptureSequence(
+  input: CaptureRollInput,
+  rng: () => number = Math.random,
+): CaptureSequencePlan {
+  const chance = rollCaptureChance(input);
+  const totalShakes = CAPTURE_MIN_SHAKES;
+  const success = rng() < chance;
+  if (success) {
+    return { success: true, failAtShake: null, chance, totalShakes };
+  }
+  const r = rng();
+  const failAtShake = r < 0.22 ? 1 : r < 0.58 ? 2 : 3;
+  return { success: false, failAtShake, chance, totalShakes };
+}
+
+export function formatCapturePercent(chance: number): string {
+  return `${Math.round(chance * 100)}%`;
 }

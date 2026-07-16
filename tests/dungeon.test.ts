@@ -3,12 +3,41 @@ import { generateDungeon } from '../src/world/dungeonGenerator.ts';
 import { isOnWalkableFloor, PLAYER_RADIUS } from '../src/world/collision.ts';
 
 describe('dungeonGenerator', () => {
-  it('generates 7-9 connected rooms with corridors', () => {
+  it('generates 8-11 connected rooms with corridors', () => {
     const layout = generateDungeon(12345);
-    expect(layout.rooms.length).toBeGreaterThanOrEqual(7);
-    expect(layout.rooms.length).toBeLessThanOrEqual(9);
+    expect(layout.rooms.length).toBeGreaterThanOrEqual(8);
+    expect(layout.rooms.length).toBeLessThanOrEqual(11);
     expect(layout.floors.length).toBeGreaterThan(layout.rooms.length);
     expect(layout.walls.length).toBeGreaterThan(10);
+  });
+
+  it('includes required room types (boss, treasure, rest, event)', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const layout = generateDungeon(seed);
+      const types = new Set(layout.rooms.map((r) => r.type));
+      expect(types.has('boss')).toBe(true);
+      expect(types.has('treasure')).toBe(true);
+      expect(types.has('rest')).toBe(true);
+      expect(types.has('event')).toBe(true);
+    }
+  });
+
+  it('places boss spawn and portal in the boss room', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const layout = generateDungeon(seed);
+      expect(layout.portalRoomIndex).toBe(layout.bossRoomIndex);
+      const bossSpawn = layout.enemySpawns.find((s) => s.isBoss);
+      expect(bossSpawn?.speciesId).toBe('rei_esporas');
+      expect(bossSpawn?.roomIndex).toBe(layout.bossRoomIndex);
+    }
+  });
+
+  it('adds interactables for special room types', () => {
+    const layout = generateDungeon(4242);
+    const rest = layout.interactables.filter((i) => i.kind === 'rest');
+    const events = layout.interactables.filter((i) => i.kind === 'event');
+    expect(rest.length).toBeGreaterThanOrEqual(1);
+    expect(events.length).toBeGreaterThanOrEqual(1);
   });
 
   it('can branch vertically with north/south doors', () => {

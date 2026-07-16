@@ -10,6 +10,8 @@ export const CORRIDOR_V_LEN = 48;
 
 export type DoorDir = 'n' | 's' | 'e' | 'w';
 
+export type RoomType = 'combat' | 'treasure' | 'event' | 'rest' | 'merchant' | 'boss';
+
 export interface RoomLayout {
   index: number;
   gx: number;
@@ -17,6 +19,7 @@ export interface RoomLayout {
   rect: Rect;
   decorSeed: number;
   doors: DoorDir[];
+  type: RoomType;
 }
 
 export interface DungeonEnemySpawn {
@@ -24,6 +27,15 @@ export interface DungeonEnemySpawn {
   x: number;
   y: number;
   roomIndex: number;
+  isBoss?: boolean;
+}
+
+export interface DungeonInteractable {
+  roomIndex: number;
+  kind: 'rest' | 'event' | 'merchant';
+  x: number;
+  y: number;
+  used: boolean;
 }
 
 export interface DungeonDecor {
@@ -59,10 +71,12 @@ export interface DungeonLayout {
   obstacles: DungeonObstacle[];
   chests: DungeonChest[];
   connections: { a: number; b: number }[];
+  bossRoomIndex: number;
   portalRoomIndex: number;
   spawn: { x: number; y: number };
   portal: { x: number; y: number };
   enemySpawns: DungeonEnemySpawn[];
+  interactables: DungeonInteractable[];
 }
 
 type Rng = () => number;
@@ -206,7 +220,7 @@ export function generateDungeon(seed?: number): DungeonLayout {
 
 function buildDungeon(seed: number): DungeonLayout {
   const rng = createRng(seed);
-  const targetRooms = randInt(rng, 7, 9);
+  const targetRooms = randInt(rng, 8, 11);
   const { nodes, edges } = generateGraph(rng, targetRooms);
   const doorMap = buildDoorMap(nodes, edges);
 
@@ -217,7 +231,10 @@ function buildDungeon(seed: number): DungeonLayout {
     rect: roomRect(n.gx, n.gy),
     decorSeed: randInt(rng, 1, 99999),
     doors: doorMap.get(n.id) ?? [],
+    type: 'combat' as RoomType,
   }));
+
+  const bossRoomIndex = assignRoomTypes(rooms, edges, rng);
 
   const floors: Rect[] = [];
   const walls: Rect[] = [];
@@ -259,7 +276,7 @@ function buildDungeon(seed: number): DungeonLayout {
   }
 
   const spawnRoom = rooms[0]!;
-  const portalRoomIndex = pickPortalRoom(rooms, edges, rng);
+  const portalRoomIndex = bossRoomIndex;
   const portalRoom = rooms[portalRoomIndex]!;
 
   const spawn = {
@@ -284,10 +301,14 @@ function buildDungeon(seed: number): DungeonLayout {
 
   for (const room of rooms) {
     populateRoomDecor(room, rng, decor, reserved, safeZones);
-    if (room.index !== 0) {
+    if (room.type === 'combat') {
       populateRoomObstacles(room, rng, obstacles, reserved, safeZones);
     }
-    maybeAddChest(room, rng, chests, reserved, safeZones);
+    if (room.type === 'treasure') {
+      populateTreasureRoom(room, rng, chests, reserved, safeZones);
+    } else if (room.type === 'combat' && room.index !== 0) {
+      maybeAddChest(room, rng, chests, reserved, safeZones);
+    }
   }
 
   for (const obs of obstacles) {
@@ -297,7 +318,8 @@ function buildDungeon(seed: number): DungeonLayout {
     }
   }
 
-  const enemySpawns = pickEnemySpawns(rooms, spawnRoom, rng);
+  const interactables = buildInteractables(rooms, reserved, safeZones, rng);
+  const enemySpawns = pickEnemySpawns(rooms, rng, safeZones);
 
   const connections = edges.map((e) => ({ a: e.a, b: e.b }));
 
@@ -311,28 +333,94 @@ function buildDungeon(seed: number): DungeonLayout {
     obstacles,
     chests,
     connections,
+    bossRoomIndex,
     portalRoomIndex,
     spawn,
     portal,
     enemySpawns,
+    interactables,
   });
 }
 
-function pickPortalRoom(rooms: RoomLayout[], edges: GraphEdge[], rng: Rng): number {
+function assignRoomTypes(rooms: RoomLayout[], edges: GraphEdge[], rng: Rng): number {
   const dist = bfsDistances(rooms, edges, 0);
-  let best = 0;
-  let bestD = -1;
+  let bossRoom = 0;
+  let maxD = -1;
   for (const room of rooms) {
     const d = dist.get(room.index) ?? 0;
-    if (d > bestD) {
-      bestD = d;
-      best = room.index;
+    if (d > maxD) {
+      maxD = d;
+      bossRoom = room.index;
     }
   }
-  if (bestD < 2 && rooms.length > 2) {
-    return rooms[randInt(rng, Math.floor(rooms.length / 2), rooms.length - 1)]!.index;
+
+  const pool = rooms.filter((r) => r.index !== 0 && r.index !== bossRoom);
+  shuffle(pool, rng);
+
+  rooms[0]!.type = 'combat';
+  rooms.find((r) => r.index === bossRoom)!.type = 'boss';
+
+  const guaranteed: RoomType[] = ['treasure', 'rest', 'event'];
+  if (rooms.length >= 9) guaranteed.push('merchant');
+
+  for (const type of guaranteed) {
+    const room = pool.pop();
+    if (room) room.type = type;
   }
-  return best;
+
+  for (const room of rooms) {
+    if (room.index === 0 || room.index === bossRoom) continue;
+    if (room.type !== 'combat') continue;
+    room.type = 'combat';
+  }
+
+  return bossRoom;
+}
+
+function buildInteractables(
+  rooms: RoomLayout[],
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+  rng: Rng,
+): DungeonInteractable[] {
+  const out: DungeonInteractable[] = [];
+  for (const room of rooms) {
+    if (room.type !== 'rest' && room.type !== 'event' && room.type !== 'merchant') continue;
+    const pt = randomInteriorPoint(room, rng, reserved, 40, safeZones);
+    const cx = room.rect.x + room.rect.width / 2;
+    const cy = room.rect.y + room.rect.height / 2;
+    const point = pt ?? { x: cx, y: cy };
+    reserved.push(point);
+    out.push({
+      roomIndex: room.index,
+      kind: room.type as 'rest' | 'event' | 'merchant',
+      x: point.x,
+      y: point.y,
+      used: false,
+    });
+  }
+  return out;
+}
+
+function populateTreasureRoom(
+  room: RoomLayout,
+  rng: Rng,
+  chests: DungeonChest[],
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+): void {
+  const count = randInt(rng, 1, 2);
+  for (let i = 0; i < count; i++) {
+    const pt = randomInteriorPoint(room, rng, reserved, 48, safeZones);
+    if (!pt) continue;
+    reserved.push(pt);
+    chests.push({
+      roomIndex: room.index,
+      x: pt.x,
+      y: pt.y,
+      lootId: CHEST_LOOT[randInt(rng, 0, CHEST_LOOT.length - 1)]!,
+    });
+  }
 }
 
 function bfsDistances(
@@ -362,30 +450,43 @@ function bfsDistances(
 
 function pickEnemySpawns(
   rooms: RoomLayout[],
-  spawnRoom: RoomLayout,
   rng: Rng,
+  safeZones: SafeZone[],
 ): DungeonEnemySpawn[] {
-  const candidates = rooms.filter((r) => r.index !== spawnRoom.index);
-  shuffle(candidates, rng);
-  const picks = candidates.slice(0, Math.min(ENEMY_SPECIES.length, candidates.length));
+  const spawns: DungeonEnemySpawn[] = [];
 
-  return picks.map((room, i) => {
-    const pt = randomInteriorPoint(room, rng, [], 40, []);
-    if (!pt) {
-      return {
-        speciesId: ENEMY_SPECIES[i]!,
-        roomIndex: room.index,
-        x: room.rect.x + room.rect.width / 2,
-        y: room.rect.y + room.rect.height / 2,
-      };
+  for (const room of rooms) {
+    if (room.type === 'combat' && room.index !== 0) {
+      const count = randInt(rng, 1, 2);
+      for (let i = 0; i < count; i++) {
+        const speciesId = ENEMY_SPECIES[randInt(rng, 0, ENEMY_SPECIES.length - 1)]!;
+        const pt = randomInteriorPoint(room, rng, [], 36, safeZones);
+        const cx = room.rect.x + room.rect.width / 2;
+        const cy = room.rect.y + room.rect.height / 2;
+        spawns.push({
+          speciesId,
+          roomIndex: room.index,
+          x: pt?.x ?? cx,
+          y: pt?.y ?? cy,
+        });
+      }
     }
-    return {
-      speciesId: ENEMY_SPECIES[i]!,
-      roomIndex: room.index,
-      x: pt.x,
-      y: pt.y,
-    };
-  });
+
+    if (room.type === 'boss') {
+      const pt = randomInteriorPoint(room, rng, [], 48, safeZones);
+      const cx = room.rect.x + room.rect.width / 2;
+      const cy = room.rect.y + room.rect.height / 2 + 20;
+      spawns.push({
+        speciesId: 'rei_esporas',
+        roomIndex: room.index,
+        x: pt?.x ?? cx,
+        y: pt?.y ?? cy,
+        isBoss: true,
+      });
+    }
+  }
+
+  return spawns;
 }
 
 function populateRoomDecor(
@@ -709,6 +810,10 @@ function normalizeDungeonLayout(layout: DungeonLayout): DungeonLayout {
       spawn.x += dx;
       spawn.y += dy;
     }
+    for (const item of layout.interactables) {
+      item.x += dx;
+      item.y += dy;
+    }
     shiftPoint(layout.spawn, dx, dy);
     shiftPoint(layout.portal, dx, dy);
   }
@@ -747,7 +852,13 @@ function validateLayout(layout: DungeonLayout): boolean {
   if (!isPortalWalkable(layout)) return false;
   if (!canLeaveSpawnRoom(layout)) return false;
   if (!allRoomsReachable(layout)) return false;
+  if (!hasRequiredRoomTypes(layout)) return false;
   return true;
+}
+
+function hasRequiredRoomTypes(layout: DungeonLayout): boolean {
+  const types = new Set(layout.rooms.map((r) => r.type));
+  return types.has('boss') && types.has('treasure') && types.has('rest') && types.has('event');
 }
 
 function isPortalWalkable(layout: DungeonLayout): boolean {

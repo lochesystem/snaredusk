@@ -2,6 +2,18 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.2.1] — 2026-07-16
+
+Tipos de sala na masmorra procedural.
+
+### Adicionado
+
+- 8–11 salas por run com tipos: combate, tesouro, evento, descanso, mercador (≥9 salas), chefe
+- Chefe **Rei das Esporas** na sala final; portal só ativa após derrotar inimigos
+- Interações na masmorra: fogueira (+25% HP), altar com escolhas (1/2), mercador ambulante
+- Tint de sala, sprites de interactables e minimapa por tipo
+- Testes: tipos obrigatórios, boss spawn, interactables
+
 ## [0.2.0] — 2026-07-16
 
 Início da **Fase 2** — sistema de loja expandido.

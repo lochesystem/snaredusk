@@ -78,12 +78,126 @@ export function createPortalSprite(): Container {
   return root;
 }
 
+function roomTypeTint(type?: string): number {
+  switch (type) {
+    case 'treasure':
+      return 0xc4a040;
+    case 'rest':
+      return 0x5dbb63;
+    case 'event':
+      return 0x8a6ab8;
+    case 'merchant':
+      return 0xe8a84a;
+    case 'boss':
+      return 0xe85d4a;
+    default:
+      return 0x3d5c3a;
+  }
+}
+
+export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', used = false): Container {
+  const root = new Container();
+  const g = new Graphics();
+  const alpha = used ? 0.35 : 1;
+  const accent =
+    kind === 'rest' ? 0x5dbb63 : kind === 'event' ? 0x8a6ab8 : 0xe8a84a;
+
+  if (!used) {
+    g.circle(0, -6, 18);
+    g.fill({ color: accent, alpha: 0.18 });
+  }
+
+  if (kind === 'rest') {
+    g.circle(0, -4, 12);
+    g.fill({ color: 0x5dbb63, alpha: 0.85 * alpha });
+    g.rect(-3, 4, 6, 12);
+    g.fill({ color: 0x8a5a30, alpha });
+    g.circle(0, -8, 4);
+    g.fill({ color: 0xffa040, alpha: 0.7 * alpha });
+  } else if (kind === 'event') {
+    g.roundRect(-12, -14, 24, 24, 4);
+    g.fill({ color: 0x6a5a8a, alpha: 0.92 * alpha });
+    g.roundRect(-12, -14, 24, 24, 4);
+    g.stroke({ width: 1, color: 0xc4f082, alpha });
+    g.circle(0, -2, 5);
+    g.fill({ color: 0xc4f082, alpha });
+    if (!used) {
+      const mark = new Text({
+        text: '!',
+        style: { fontFamily: 'monospace', fontSize: 12, fill: 0xfff0a0, fontWeight: 'bold' },
+      });
+      mark.anchor.set(0.5);
+      mark.y = -22;
+      root.addChild(mark);
+    }
+  } else {
+    g.roundRect(-14, -10, 28, 18, 3);
+    g.fill({ color: 0x6a5a48, alpha });
+    g.roundRect(-14, -10, 28, 18, 3);
+    g.stroke({ width: 1, color: 0xe8c868, alpha });
+    g.circle(-6, -2, 4);
+    g.fill({ color: 0xe8c868, alpha });
+  }
+  root.addChild(g);
+  const label = new Text({
+    text: kind === 'rest' ? 'Descanso' : kind === 'event' ? 'Evento' : 'Mercador',
+    style: { fontFamily: 'monospace', fontSize: 8, fill: 0xf0e6d3 },
+  });
+  label.alpha = alpha;
+  label.anchor.set(0.5);
+  label.y = -28;
+  root.addChild(label);
+  return root;
+}
+
+export function createSpeechBubble(lines: string[], accent = 0x5dbb63): Container {
+  const root = new Container();
+  const fontSize = 9;
+  const lineHeight = 12;
+  const padX = 8;
+  const padY = 6;
+  const charW = 5.2;
+  const contentW = Math.max(...lines.map((l) => l.length * charW), 40);
+  const w = Math.min(168, contentW + padX * 2);
+  const h = lines.length * lineHeight + padY * 2;
+  const top = -h - 12;
+
+  const bg = new Graphics();
+  bg.roundRect(-w / 2, top, w, h, 5);
+  bg.fill({ color: 0x120f1a, alpha: 0.96 });
+  bg.roundRect(-w / 2, top, w, h, 5);
+  bg.stroke({ width: 1.5, color: accent });
+  bg.moveTo(-7, top + h);
+  bg.lineTo(7, top + h);
+  bg.lineTo(0, top + h + 8);
+  bg.closePath();
+  bg.fill({ color: 0x120f1a, alpha: 0.96 });
+  bg.moveTo(-7, top + h);
+  bg.lineTo(7, top + h);
+  bg.lineTo(0, top + h + 8);
+  bg.closePath();
+  bg.stroke({ width: 1.5, color: accent });
+  root.addChild(bg);
+
+  for (let i = 0; i < lines.length; i++) {
+    const t = new Text({
+      text: lines[i],
+      style: { fontFamily: 'monospace', fontSize, fill: 0xf0e6d3 },
+    });
+    t.anchor.set(0.5, 0);
+    t.y = top + padY + i * lineHeight;
+    root.addChild(t);
+  }
+
+  return root;
+}
+
 export function drawDungeonLayout(
   g: Graphics,
   layout: {
     floors: { x: number; y: number; width: number; height: number }[];
     walls: { x: number; y: number; width: number; height: number }[];
-    rooms: { rect: { x: number; y: number; width: number; height: number } }[];
+    rooms: { rect: { x: number; y: number; width: number; height: number }; type?: string }[];
     decor: { kind: string; x: number; y: number; size: number; variant: number }[];
     obstacles: { kind: string; x: number; y: number; radius: number }[];
     chests: { x: number; y: number; opened?: boolean }[];
@@ -99,6 +213,13 @@ export function drawDungeonLayout(
   for (const floor of floors) {
     g.rect(floor.x, floor.y, floor.width, floor.height);
     g.fill(0x2a4a2a);
+  }
+
+  for (const room of rooms) {
+    const r = room.rect;
+    const tint = roomTypeTint(room.type);
+    g.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
+    g.fill({ color: tint, alpha: 0.22 });
   }
 
   for (const obs of obstacles) {
@@ -283,6 +404,22 @@ export function drawDamageNumber(parent: Container, amount: number, x: number, y
   requestAnimationFrame(tick);
 }
 
+export function createCaptureOrbBall(): Container {
+  const root = new Container();
+  const g = new Graphics();
+  g.circle(0, 0, 9);
+  g.fill({ color: 0x4a6ab8, alpha: 0.35 });
+  g.circle(0, 0, 7);
+  g.fill({ color: 0x8ab4f8, alpha: 0.95 });
+  g.circle(0, 0, 10);
+  g.stroke({ width: 2, color: 0xc4f082, alpha: 0.95 });
+  g.circle(-2.5, -2.5, 2.5);
+  g.fill({ color: 0xffffff, alpha: 0.75 });
+  root.addChild(g);
+  (root as Container & { orbCore?: Graphics }).orbCore = g;
+  return root;
+}
+
 export function createCaptureOrbGraphic(): Graphics {
   const g = new Graphics();
   g.circle(0, 0, 6);
@@ -292,6 +429,92 @@ export function createCaptureOrbGraphic(): Graphics {
   g.circle(-2, -2, 2);
   g.fill({ color: 0xffffff, alpha: 0.7 });
   return g;
+}
+
+export function createCaptureAttemptHud(): Container {
+  const root = new Container();
+  const bg = new Graphics();
+  bg.roundRect(-52, -28, 104, 36, 5);
+  bg.fill({ color: 0x120f1a, alpha: 0.94 });
+  bg.roundRect(-52, -28, 104, 36, 5);
+  bg.stroke({ width: 1.5, color: 0x8ab4f8 });
+  root.addChild(bg);
+
+  const attempt = new Text({
+    text: 'Tentativa 1/3',
+    style: { fontFamily: 'monospace', fontSize: 9, fill: 0xf0e6d3 },
+  });
+  attempt.anchor.set(0.5);
+  attempt.y = -18;
+  root.addChild(attempt);
+
+  const pct = new Text({
+    text: '0%',
+    style: { fontFamily: 'monospace', fontSize: 11, fill: 0xc4f082, fontWeight: 'bold' },
+  });
+  pct.anchor.set(0.5);
+  pct.y = -4;
+  root.addChild(pct);
+
+  (root as Container & { attemptText?: Text; pctText?: Text }).attemptText = attempt;
+  (root as Container & { attemptText?: Text; pctText?: Text }).pctText = pct;
+  return root;
+}
+
+export function updateCaptureAttemptHud(
+  hud: Container,
+  attempt: number,
+  total: number,
+  pct: string,
+  status: 'waiting' | 'shake' | 'pass' | 'fail',
+): void {
+  const attemptText = (hud as Container & { attemptText?: Text }).attemptText;
+  const pctText = (hud as Container & { pctText?: Text }).pctText;
+  if (!attemptText || !pctText) return;
+
+  attemptText.text = attempt <= 0 ? 'Preparando...' : `Tentativa ${attempt}/${total}`;
+  pctText.text = pct;
+
+  const accent =
+    status === 'fail' ? 0xe85d4a : status === 'pass' ? 0xc4f082 : status === 'shake' ? 0xe8c868 : 0x8ab4f8;
+  pctText.style.fill = accent;
+
+  const bg = hud.children[0] as Graphics | undefined;
+  if (bg) {
+    bg.clear();
+    bg.roundRect(-52, -28, 104, 36, 5);
+    bg.fill({ color: 0x120f1a, alpha: 0.94 });
+    bg.roundRect(-52, -28, 104, 36, 5);
+    bg.stroke({ width: 1.5, color: accent });
+  }
+}
+
+export function createCaptureSuccessBanner(speciesName: string): Container {
+  const root = new Container();
+  const bg = new Graphics();
+  bg.roundRect(-72, -22, 144, 44, 6);
+  bg.fill({ color: 0x1a2e1a, alpha: 0.96 });
+  bg.roundRect(-72, -22, 144, 44, 6);
+  bg.stroke({ width: 2, color: 0xc4f082 });
+  root.addChild(bg);
+
+  const title = new Text({
+    text: '✦ Capturado! ✦',
+    style: { fontFamily: 'monospace', fontSize: 11, fill: 0xc4f082, fontWeight: 'bold' },
+  });
+  title.anchor.set(0.5);
+  title.y = -10;
+  root.addChild(title);
+
+  const name = new Text({
+    text: speciesName,
+    style: { fontFamily: 'monospace', fontSize: 9, fill: 0xf0e6d3 },
+  });
+  name.anchor.set(0.5);
+  name.y = 6;
+  root.addChild(name);
+
+  return root;
 }
 
 export function drawCaptureBurst(parent: Container, x: number, y: number, success: boolean): void {

@@ -101,7 +101,7 @@ Semana 3: loja + habitat + save + deploy + playtest
 |---------|--------|--------|
 | **Loja completa** | 5 níveis upgrade, 6 arquétipos cliente, 4 faixas emoji | Parcial — níveis, clientes e faixas GDD; falta popularidade e display premium |
 | **3 biomas** | Floresta, Cristal, Termal com chefes | Pendente |
-| **Procedural** | 8–14 salas por run, tipos de sala | Pendente |
+| **Procedural** | 8–11 salas por run, tipos de sala (combate, tesouro, evento, descanso, mercador, chefe) | Parcial — tipos e chefe na run 1; biomas 2–3 pendentes |
 | **Party** | 2 companheiros ativos, IA básica | Pendente |
 | **Sentinelas** | 1 por bioma, 3 passivos implementados | Pendente |
 | **Base** | Escavação, habitat, oficina, baús, craft adjacente | Pendente |

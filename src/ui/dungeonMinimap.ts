@@ -81,12 +81,21 @@ export class DungeonMinimap {
       const rh = cell * 0.72;
       const isCurrent = room.index === currentRoomIndex;
       const isPortal = room.index === this.portalRoomIndex;
+      const roomType = (room as { type?: string }).type;
 
       this.gfx.rect(cx - rw / 2, cy - rh / 2, rw, rh);
       if (isCurrent) {
         this.gfx.fill(0xe8e8f0);
-      } else if (isPortal) {
-        this.gfx.fill(0x8fd894);
+      } else if (isPortal || roomType === 'boss') {
+        this.gfx.fill(0xe85d4a);
+      } else if (roomType === 'treasure') {
+        this.gfx.fill(0xc4a040);
+      } else if (roomType === 'rest') {
+        this.gfx.fill(0x5dbb63);
+      } else if (roomType === 'event') {
+        this.gfx.fill(0x8a6ab8);
+      } else if (roomType === 'merchant') {
+        this.gfx.fill(0xe8a84a);
       } else {
         this.gfx.fill(0x6a6a78);
       }

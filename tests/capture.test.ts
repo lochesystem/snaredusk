@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canTargetForCapture,
+  CAPTURE_MIN_SHAKES,
+  planCaptureSequence,
   rollCaptureChance,
   rollCaptureSuccess,
 } from '../src/systems/capture.ts';
@@ -28,5 +30,24 @@ describe('capture', () => {
   it('rollCaptureSuccess respects rng', () => {
     expect(rollCaptureSuccess({ targetHp: 10, targetMaxHp: 100 }, () => 0.1)).toBe(true);
     expect(rollCaptureSuccess({ targetHp: 10, targetMaxHp: 100 }, () => 0.9)).toBe(false);
+  });
+
+  it('planCaptureSequence always uses three shakes', () => {
+    const plan = planCaptureSequence({ targetHp: 40, targetMaxHp: 100 }, () => 0.5);
+    expect(plan.totalShakes).toBe(CAPTURE_MIN_SHAKES);
+    expect(plan.chance).toBeGreaterThan(0);
+  });
+
+  it('planCaptureSequence success has no fail shake', () => {
+    const plan = planCaptureSequence({ targetHp: 5, targetMaxHp: 100 }, () => 0.01);
+    expect(plan.success).toBe(true);
+    expect(plan.failAtShake).toBeNull();
+  });
+
+  it('planCaptureSequence failure picks a fail shake', () => {
+    const plan = planCaptureSequence({ targetHp: 100, targetMaxHp: 100 }, () => 0.99);
+    expect(plan.success).toBe(false);
+    expect(plan.failAtShake).toBeGreaterThanOrEqual(1);
+    expect(plan.failAtShake).toBeLessThanOrEqual(3);
   });
 });

@@ -34,6 +34,17 @@ export const SPECIES: Record<string, SpeciesDef> = {
     accent: 0x6b9a6b,
     capturable: true,
   },
+  rei_esporas: {
+    id: 'rei_esporas',
+    name: 'Rei das Esporas',
+    baseValue: 200,
+    maxHp: 120,
+    atk: 12,
+    speed: 38,
+    color: 0x6b4a8a,
+    accent: 0xc4f082,
+    capturable: false,
+  },
 };
 
 export function getSpecies(id: string): SpeciesDef {
