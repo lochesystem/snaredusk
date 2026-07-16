@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Snaredusk — capture criaturas, explore cavernas, venda na loja subterrânea" />
+  <title>Snaredusk</title>
+  <link rel="stylesheet" href="/src/ui/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="game-wrapper">
+      <canvas id="game-canvas"></canvas>
+      <div id="hud" class="hidden">
+        <div id="hud-top">
+          <span id="hud-hp">HP 100/100</span>
+          <span id="hud-gold">Ouro: 0</span>
+          <span id="hud-orbs">Orbes: 3</span>
+          <span id="hud-bag">Bolsa: 0/12</span>
+        </div>
+        <div id="hud-hint"></div>
+      </div>
+    </div>
+
+    <div id="title-screen">
+      <h1>Snaredusk</h1>
+      <p class="subtitle">Caça ao crepúsculo. Venda ao amanhecer.</p>
+      <button id="btn-continue" class="hidden">Continuar</button>
+      <button id="btn-new-game">Novo Jogo</button>
+    </div>
+
+    <div id="base-screen" class="screen hidden">
+      <header class="base-header">
+        <h2>Brumavale — Base</h2>
+        <p id="base-stats"></p>
+      </header>
+      <div class="base-scroll">
+        <div class="base-actions">
+          <button id="btn-dungeon">Entrar na Masmorra</button>
+          <button id="btn-shop">Abrir Loja</button>
+        </div>
+        <div id="merchant-panel">
+          <h3>Mercador de Orbes</h3>
+          <p class="panel-hint">Mira prepara Orbes de Vínculo. Necessários para capturar criaturas na masmorra (tecla Q).</p>
+          <div class="merchant-actions">
+            <button id="btn-buy-orb-1" type="button">Orbe ×1 — 25 ouro</button>
+            <button id="btn-buy-orb-3" type="button">Orbes ×3 — 70 ouro</button>
+          </div>
+        </div>
+        <div id="habitat-panel">
+          <h3>Habitat</h3>
+          <p class="panel-hint">À esquerda, as criaturas vagam pela câmara. Clique numa para retirá-la à bolsa, ou use os botões abaixo para adicionar.</p>
+          <h4 class="subheading">Criaturas na bolsa</h4>
+          <div id="base-bag-creatures"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="shop-screen" class="screen hidden">
+      <h2>Loja</h2>
+      <p id="shop-gold"></p>
+      <div id="shop-layout">
+        <div id="shop-depot">
+          <h3>Depósito (bolsa)</h3>
+          <div id="shop-depot-items"></div>
+        </div>
+        <div id="shop-shelves">
+          <h3>Prateleiras</h3>
+          <div id="shelf-slots"></div>
+          <h3>Gaiola viva</h3>
+          <div id="cage-slot" class="shop-slot"></div>
+        </div>
+      </div>
+      <div id="shop-controls">
+        <button id="btn-shop-open">Abrir loja ao público</button>
+        <button id="btn-shop-back">Voltar à base</button>
+      </div>
+      <div id="shop-log"></div>
+    </div>
+
+    <div id="price-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="price-modal-title">Definir preço</h3>
+        <p id="price-modal-hint"></p>
+        <div class="price-row">
+          <button id="price-down">−</button>
+          <span id="price-value">50</span>
+          <button id="price-up">+</button>
+        </div>
+        <p id="price-preview"></p>
+        <button id="price-confirm">Confirmar</button>
+        <button id="price-cancel">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
