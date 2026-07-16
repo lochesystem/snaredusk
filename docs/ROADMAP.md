@@ -89,26 +89,28 @@ Semana 3: loja + habitat + save + deploy + playtest
 
 ---
 
-## Fase 2 — Core loop completo (4–6 semanas)
+## Fase 2 — Core loop completo (em progresso)
 
 **Objetivo:** MVP jogável com todos os sistemas principais.
 
+**Iniciado:** 2026-07-16 — primeiro bloco: **loja completa** (parcial).
+
 ### Entregáveis
 
-| Sistema | Escopo |
-|---------|--------|
-| **3 biomas** | Floresta, Cristal, Termal com chefes |
-| **Procedural** | 8–14 salas por run, tipos de sala |
-| **Party** | 2 companheiros ativos, IA básica |
-| **Sentinelas** | 1 por bioma, 3 passivos implementados |
-| **Base** | Escavação, habitat, oficina, baús, craft adjacente |
-| **Loja completa** | 5 níveis upgrade, 6 arquétipos cliente, emoji 4 faixas |
-| **18 criaturas** | Todas capturáveis catalogadas no GDD |
-| **30 itens loot** | Tabela de valor base |
-| **20 receitas** | Orbes, armas, estações |
-| **Ciclo dia/noite** | Dormir, abrir loja, evento entardecer |
-| **Bestiário** | UI + bônus família completa |
-| **Tutorial** | 15 min com Mira |
+| Sistema | Escopo | Status |
+|---------|--------|--------|
+| **Loja completa** | 5 níveis upgrade, 6 arquétipos cliente, 4 faixas emoji | Parcial — níveis, clientes e faixas GDD; falta popularidade e display premium |
+| **3 biomas** | Floresta, Cristal, Termal com chefes | Pendente |
+| **Procedural** | 8–14 salas por run, tipos de sala | Pendente |
+| **Party** | 2 companheiros ativos, IA básica | Pendente |
+| **Sentinelas** | 1 por bioma, 3 passivos implementados | Pendente |
+| **Base** | Escavação, habitat, oficina, baús, craft adjacente | Pendente |
+| **18 criaturas** | Todas capturáveis catalogadas no GDD | Pendente |
+| **30 itens loot** | Tabela de valor base | Pendente |
+| **20 receitas** | Orbes, armas, estações | Pendente |
+| **Ciclo dia/noite** | Dormir, abrir loja, evento entardecer | Pendente |
+| **Bestiário** | UI + bônus família completa | Pendente |
+| **Tutorial** | 15 min com Mira | Pendente |
 
 ### Critérios de done
 
@@ -129,6 +131,9 @@ tests/
   dungeon.test.ts      # geração, walkability, portal
   habitat.test.ts      # bolsa ↔ habitat
   orbShop.test.ts      # compra de orbes
+  customers.test.ts    # arquétipos de cliente
+  shopUpgrade.test.ts  # níveis de loja
+  shopDay.test.ts      # simulação de dia de loja
   combat.test.ts       # dano + tipos (fase 2)
   save.test.ts         # serialização (fase 2)
   economy.test.ts      # sinks de ouro (fase 2)
@@ -245,10 +250,10 @@ flowchart LR
 
 ## Próxima ação imediata
 
-1. Playtest interno 10 min e ajuste de balance
-2. Fechar critérios restantes da Fase 1 (playtest)
-3. Iniciar **Fase 2** — biomas 2–3, party, tipos de sala, ciclo dia/noite
+1. **Playtest** com [docs/PLAYTEST.md](PLAYTEST.md) (10 min) e preencher checklist
+2. Fechar Fase 1 após playtest aprovado
+3. Continuar Fase 2 — popularidade na loja, depois **base escavável** ou **bioma 2**
 
 ---
 
-*Roadmap v0.2 — revisado 2026-07-16 (pós-deploy Pages).*
+*Roadmap v0.3 — revisado 2026-07-16 (início Fase 2: loja).*

@@ -52,4 +52,17 @@ describe('dungeonGenerator', () => {
       expect(isOnWalkableFloor(layout.spawn.x, layout.spawn.y, PLAYER_RADIUS, layout.floors)).toBe(true);
     }
   });
+
+  it('portal is never blocked by rocks', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const layout = generateDungeon(seed);
+      for (const obs of layout.obstacles) {
+        if (obs.kind !== 'rock') continue;
+        const dx = layout.portal.x - obs.x;
+        const dy = layout.portal.y - obs.y;
+        const minDist = obs.radius + PLAYER_RADIUS + 8;
+        expect(dx * dx + dy * dy).toBeGreaterThanOrEqual(minDist * minDist);
+      }
+    }
+  });
 });

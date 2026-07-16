@@ -45,8 +45,9 @@ export interface GameState {
   playerHp: number;
   bag: (BagEntry | null)[];
   habitat: CreatureItem[];
+  shopLevel: number;
   shopShelves: (ShopListing | null)[];
-  shopCage: ShopListing | null;
+  shopCages: (ShopListing | null)[];
   bestiary: string[];
   dungeonCleared: boolean;
 }
@@ -63,10 +64,18 @@ export interface Vec2 {
   y: number;
 }
 
-export type PriceTier = 'bargain' | 'good' | 'too_high';
+export type PriceTier = 'bargain' | 'perfect' | 'expensive' | 'refuse';
 
 export function createEmptyBag(): (BagEntry | null)[] {
   return Array.from({ length: 12 }, () => null);
+}
+
+export function createShopShelves(count: number): (ShopListing | null)[] {
+  return Array.from({ length: count }, () => null);
+}
+
+export function createShopCages(count: number): (ShopListing | null)[] {
+  return Array.from({ length: count }, () => null);
 }
 
 export function defaultGameState(): GameState {
@@ -76,8 +85,9 @@ export function defaultGameState(): GameState {
     playerHp: 100,
     bag: createEmptyBag(),
     habitat: [],
-    shopShelves: [null, null, null],
-    shopCage: null,
+    shopLevel: 1,
+    shopShelves: createShopShelves(6),
+    shopCages: createShopCages(1),
     bestiary: [],
     dungeonCleared: false,
   };

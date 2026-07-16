@@ -1,35 +1,79 @@
 import { SAVE_KEY } from '../engine/constants.ts';
-import { createEmptyBag, defaultGameState, type GameState } from '../types.ts';
+import {
+  createEmptyBag,
+  createShopCages,
+  createShopShelves,
+  defaultGameState,
+  type GameState,
+} from '../types.ts';
+import { getShopLevelDef } from './shopUpgrade.ts';
 
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
-interface SavePayload {
+interface SavePayloadV2 {
   version: number;
   state: GameState;
 }
 
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel'> {
+  shopCage?: GameState['shopCages'][number];
+  shopCages?: GameState['shopCages'];
+  shopLevel?: number;
+}
+
 export function serializeState(state: GameState): string {
-  const payload: SavePayload = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV2 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
 export function deserializeState(raw: string): GameState | null {
   try {
-    const payload = JSON.parse(raw) as SavePayload;
-    if (payload.version !== SAVE_VERSION || !payload.state) return null;
-    return normalizeState(payload.state);
+    const payload = JSON.parse(raw) as { version: number; state: LegacyGameState };
+    if (!payload.state) return null;
+    if (payload.version === 1) return normalizeState(migrateV1(payload.state));
+    if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
+    return null;
   } catch {
     return null;
   }
 }
 
-function normalizeState(partial: GameState): GameState {
+function migrateV1(partial: LegacyGameState): GameState {
+  const level = partial.shopLevel ?? 1;
+  const def = getShopLevelDef(level);
+  const shelves = createShopShelves(def.shelfCount);
+  const cages = createShopCages(def.cageCount);
+
+  if (partial.shopShelves) {
+    for (let i = 0; i < Math.min(partial.shopShelves.length, shelves.length); i++) {
+      shelves[i] = partial.shopShelves[i] ?? null;
+    }
+  }
+  if (partial.shopCage) {
+    cages[0] = { ...partial.shopCage, isCage: true, slotIndex: 0 };
+  }
+
+  return {
+    ...defaultGameState(),
+    ...partial,
+    shopLevel: level,
+    shopShelves: shelves,
+    shopCages: cages,
+  };
+}
+
+function normalizeState(partial: LegacyGameState): GameState {
   const base = defaultGameState();
+  const level = partial.shopLevel ?? base.shopLevel;
+  const def = getShopLevelDef(level);
+
   return {
     ...base,
     ...partial,
+    shopLevel: level,
     bag: padBag(partial.bag),
-    shopShelves: padShelves(partial.shopShelves),
+    shopShelves: padShelves(partial.shopShelves, def.shelfCount),
+    shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
     habitat: partial.habitat ?? [],
     bestiary: partial.bestiary ?? [],
   };
@@ -44,11 +88,31 @@ function padBag(bag: (GameState['bag'][number] | null)[] | undefined): GameState
   return slots;
 }
 
-function padShelves(shelves: (GameState['shopShelves'][number] | null)[] | undefined): GameState['shopShelves'] {
-  const slots: GameState['shopShelves'] = [null, null, null];
+function padShelves(
+  shelves: (GameState['shopShelves'][number] | null)[] | undefined,
+  count: number,
+): GameState['shopShelves'] {
+  const slots = createShopShelves(count);
   if (!shelves) return slots;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < Math.min(shelves.length, slots.length); i++) {
     slots[i] = shelves[i] ?? null;
+  }
+  return slots;
+}
+
+function padCages(
+  cages: (GameState['shopCages'][number] | null)[] | undefined,
+  legacyCage: LegacyGameState['shopCage'],
+  count: number,
+): GameState['shopCages'] {
+  const slots = createShopCages(count);
+  if (legacyCage) {
+    slots[0] = { ...legacyCage, isCage: true, slotIndex: 0 };
+  }
+  if (cages) {
+    for (let i = 0; i < Math.min(cages.length, slots.length); i++) {
+      slots[i] = cages[i] ?? null;
+    }
   }
   return slots;
 }
@@ -77,4 +141,11 @@ export function addToBag(state: GameState, entry: GameState['bag'][number]): boo
 
 export function bagCount(state: GameState): number {
   return state.bag.filter(Boolean).length;
+}
+
+export function resizeShopForLevel(state: GameState, level: number): void {
+  const def = getShopLevelDef(level);
+  state.shopLevel = level;
+  state.shopShelves = padShelves(state.shopShelves, def.shelfCount);
+  state.shopCages = padCages(state.shopCages, undefined, def.cageCount);
 }

@@ -325,51 +325,115 @@ button:hover {
   color: #a09880;
 }
 
-#shop-layout {
+#app.layout-shop {
+  --shop-sidebar-w: clamp(260px, 28vw, 320px);
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin: 16px 0;
+  grid-template-columns: minmax(0, 1fr) var(--shop-sidebar-w);
+  grid-template-rows: 1fr;
+  align-items: stretch;
+  width: min(94vw, 1280px);
+  height: min(90vh, 680px);
+  flex: 0 0 auto;
+  padding: 0;
+  gap: 0;
+  border: 2px solid #5a4a3a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
-.shop-slot {
-  border: 2px dashed #4a4a5a;
-  padding: 12px;
-  min-height: 72px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.shop-slot:hover {
-  border-color: #5dbb63;
-}
-
-.depot-item {
-  display: block;
+#app.layout-shop #game-wrapper {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
   width: 100%;
+  height: 100%;
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid #4a3a2a;
+  overflow: hidden;
+  background: #14101c;
+}
+
+#app.layout-shop #game-canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+  border-radius: 0;
+}
+
+#app.layout-shop #shop-screen {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  inset: unset;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #12121c;
+  overflow: hidden;
+  padding: 0;
+}
+
+.shop-header {
+  flex: 0 0 auto;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #3a3028;
+}
+
+.shop-header h2 {
   margin-bottom: 6px;
+  color: #e8a84a;
+}
+
+.shop-panel-block {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-bag-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  overflow: visible;
+}
+
+.bag-chip {
   min-width: unset;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 11px;
   text-align: left;
 }
 
-#shop-controls {
+.bag-chip.selected {
+  border-color: #e8a84a;
+  background: #4a3a20;
+}
+
+.shop-actions {
+  flex: 0 0 auto;
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #2a3d2a;
 }
 
-#shop-log {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #c0b8a0;
-  max-height: 120px;
-  overflow-y: auto;
+.shop-actions button {
+  width: 100%;
+  min-width: unset;
 }
 
-#shop-log p {
-  margin-bottom: 4px;
-}
 
 .empty {
   color: #a09880;

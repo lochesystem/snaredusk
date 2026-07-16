@@ -273,16 +273,21 @@ function buildDungeon(seed: number): DungeonLayout {
 
   const reserved: { x: number; y: number }[] = [spawn, portal];
   const spawnSafeRadius = 56;
+  const portalSafeRadius = 56;
+  const safeZones = [
+    { x: spawn.x, y: spawn.y, radius: spawnSafeRadius },
+    { x: portal.x, y: portal.y, radius: portalSafeRadius },
+  ];
   const decor: DungeonDecor[] = [];
   const obstacles: DungeonObstacle[] = [];
   const chests: DungeonChest[] = [];
 
   for (const room of rooms) {
-    populateRoomDecor(room, rng, decor, reserved);
+    populateRoomDecor(room, rng, decor, reserved, safeZones);
     if (room.index !== 0) {
-      populateRoomObstacles(room, rng, obstacles, reserved, spawn, spawnSafeRadius);
+      populateRoomObstacles(room, rng, obstacles, reserved, safeZones);
     }
-    maybeAddChest(room, rng, chests, reserved);
+    maybeAddChest(room, rng, chests, reserved, safeZones);
   }
 
   for (const obs of obstacles) {
@@ -365,7 +370,15 @@ function pickEnemySpawns(
   const picks = candidates.slice(0, Math.min(ENEMY_SPECIES.length, candidates.length));
 
   return picks.map((room, i) => {
-    const pt = randomInteriorPoint(room, rng, [], 40);
+    const pt = randomInteriorPoint(room, rng, [], 40, []);
+    if (!pt) {
+      return {
+        speciesId: ENEMY_SPECIES[i]!,
+        roomIndex: room.index,
+        x: room.rect.x + room.rect.width / 2,
+        y: room.rect.y + room.rect.height / 2,
+      };
+    }
     return {
       speciesId: ENEMY_SPECIES[i]!,
       roomIndex: room.index,
@@ -380,10 +393,12 @@ function populateRoomDecor(
   rng: Rng,
   decor: DungeonDecor[],
   reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
 ): void {
   const count = randInt(rng, 4, 8);
   for (let i = 0; i < count; i++) {
-    const pt = randomInteriorPoint(room, rng, reserved, 22);
+    const pt = randomInteriorPoint(room, rng, reserved, 22, safeZones);
+    if (!pt) continue;
     reserved.push(pt);
     decor.push({
       kind: 'mushroom',
@@ -400,48 +415,39 @@ function populateRoomObstacles(
   rng: Rng,
   obstacles: DungeonObstacle[],
   reserved: { x: number; y: number }[],
-  spawn: { x: number; y: number },
-  spawnSafeRadius: number,
+  safeZones: SafeZone[],
 ): void {
   if (rng() > 0.55) return;
 
   const rockCount = randInt(rng, 0, 2);
   for (let i = 0; i < rockCount; i++) {
-    const pt = randomInteriorPoint(room, rng, reserved, 36);
-    if (isNearPoint(pt, spawn, spawnSafeRadius)) continue;
+    const rockRadius = 10 + randInt(rng, 0, 4);
+    const pt = randomInteriorPoint(room, rng, reserved, 36, safeZones, rockRadius);
+    if (!pt) continue;
     reserved.push(pt);
     obstacles.push({
       kind: 'rock',
       x: pt.x,
       y: pt.y,
-      radius: 10 + randInt(rng, 0, 4),
+      radius: rockRadius,
       roomIndex: room.index,
     });
   }
 
   if (rng() < 0.35) {
-    const pt = randomInteriorPoint(room, rng, reserved, 32);
-    if (!isNearPoint(pt, spawn, spawnSafeRadius)) {
+    const holeRadius = 12 + randInt(rng, 0, 5);
+    const pt = randomInteriorPoint(room, rng, reserved, 32, safeZones, holeRadius);
+    if (pt) {
       reserved.push(pt);
       obstacles.push({
         kind: 'hole',
         x: pt.x,
         y: pt.y,
-        radius: 12 + randInt(rng, 0, 5),
+        radius: holeRadius,
         roomIndex: room.index,
       });
     }
   }
-}
-
-function isNearPoint(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-  radius: number,
-): boolean {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return dx * dx + dy * dy < radius * radius;
 }
 
 function maybeAddChest(
@@ -449,12 +455,14 @@ function maybeAddChest(
   rng: Rng,
   chests: DungeonChest[],
   reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
 ): void {
   if (room.index === 0) return;
   if (chests.length >= 2) return;
   if (rng() > 0.28) return;
 
-  const pt = randomInteriorPoint(room, rng, reserved, 44);
+  const pt = randomInteriorPoint(room, rng, reserved, 44, safeZones);
+  if (!pt) return;
   reserved.push(pt);
   chests.push({
     roomIndex: room.index,
@@ -464,32 +472,64 @@ function maybeAddChest(
   });
 }
 
+interface SafeZone {
+  x: number;
+  y: number;
+  radius: number;
+}
+
 function randomInteriorPoint(
   room: RoomLayout,
   rng: Rng,
   reserved: { x: number; y: number }[],
   minDist: number,
-): { x: number; y: number } {
+  safeZones: SafeZone[] = [],
+  obstacleRadius = 0,
+): { x: number; y: number } | null {
   const r = room.rect;
   const pad = WALL_THICKNESS + 20;
   const doorGuard = 56;
 
-  for (let attempt = 0; attempt < 40; attempt++) {
+  const isValid = (x: number, y: number): boolean => {
+    if (x < r.x + pad || x > r.x + r.width - pad) return false;
+    if (y < r.y + pad || y > r.y + r.height - pad) return false;
+    if (!isAwayFromDoors(x, y, room, doorGuard)) return false;
+    if (!isFarFromAll(x, y, reserved, minDist)) return false;
+    if (!isOutsideSafeZones(x, y, safeZones, obstacleRadius)) return false;
+    return true;
+  };
+
+  for (let attempt = 0; attempt < 48; attempt++) {
     const x = r.x + pad + rng() * (r.width - pad * 2);
     const y = r.y + pad + rng() * (r.height - pad * 2);
+    if (isValid(x, y)) return { x, y };
+  }
 
-    if (x < r.x + pad || x > r.x + r.width - pad) continue;
-    if (y < r.y + pad || y > r.y + r.height - pad) continue;
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const x = r.x + pad + rng() * (r.width - pad * 2);
+    const y = r.y + pad + rng() * (r.height - pad * 2);
     if (!isAwayFromDoors(x, y, room, doorGuard)) continue;
-    if (!isFarFromAll(x, y, reserved, minDist)) continue;
-
+    if (!isOutsideSafeZones(x, y, safeZones, obstacleRadius)) continue;
+    if (!isFarFromAll(x, y, reserved, minDist * 0.65)) continue;
     return { x, y };
   }
 
-  return {
-    x: r.x + r.width / 2 + randInt(rng, -20, 20),
-    y: r.y + r.height / 2 + randInt(rng, -15, 15),
-  };
+  return null;
+}
+
+function isOutsideSafeZones(
+  x: number,
+  y: number,
+  zones: SafeZone[],
+  obstacleRadius: number,
+): boolean {
+  for (const zone of zones) {
+    const dx = x - zone.x;
+    const dy = y - zone.y;
+    const minClear = zone.radius + obstacleRadius;
+    if (dx * dx + dy * dy < minClear * minClear) return false;
+  }
+  return true;
 }
 
 function isAwayFromDoors(x: number, y: number, room: RoomLayout, guard: number): boolean {
@@ -704,8 +744,21 @@ function validateLayout(layout: DungeonLayout): boolean {
   if (!spawnRoom || spawnRoom.doors.length === 0) return false;
 
   if (!isSpawnWalkable(layout)) return false;
+  if (!isPortalWalkable(layout)) return false;
   if (!canLeaveSpawnRoom(layout)) return false;
   if (!allRoomsReachable(layout)) return false;
+  return true;
+}
+
+function isPortalWalkable(layout: DungeonLayout): boolean {
+  const { x, y } = layout.portal;
+  if (!isPointWalkable(layout, x, y)) return false;
+  for (const obs of layout.obstacles) {
+    if (obs.kind !== 'rock') continue;
+    const dx = x - obs.x;
+    const dy = y - obs.y;
+    if (dx * dx + dy * dy < (obs.radius + PLAYER_RADIUS + 8) ** 2) return false;
+  }
   return true;
 }
 

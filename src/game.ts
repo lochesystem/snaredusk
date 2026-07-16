@@ -3,12 +3,13 @@ import { GAME_HEIGHT, GAME_WIDTH } from './engine/constants.ts';
 import { InputManager } from './engine/input.ts';
 import { DungeonScene } from './scenes/dungeonScene.ts';
 import { HabitatScene } from './scenes/habitatScene.ts';
-import { defaultGameState, type BagEntry, type GameState, type ShopListing } from './types.ts';
+import { ShopScene } from './scenes/shopScene.ts';
+import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame, bagCount } from './systems/saveManager.ts';
 import { moveCreatureToBag, moveCreatureToHabitat } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE } from './engine/constants.ts';
-import { customerBuys, getPriceTier, getPriceTierLabel } from './systems/pricing.ts';
+import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
@@ -20,6 +21,7 @@ export class Game {
   private screen: Screen = 'title';
   private dungeon: DungeonScene | null = null;
   private habitatScene: HabitatScene | null = null;
+  private shopScene: ShopScene | null = null;
   private pendingDungeonExit: boolean | null = null;
   private shopUI: ShopUI;
   private lastTime = 0;
@@ -29,11 +31,19 @@ export class Game {
       getState: () => this.state,
       onChange: () => {
         saveGame(this.state);
+        this.shopScene?.syncFromState(this.state);
+        this.shopUI.render();
         this.refreshBaseUI();
       },
       showToast: (m) => this.showToast(m),
       onBack: () => this.showScreen('base'),
-      runShopDay: () => this.simulateShopDay(),
+      onOpenShopDay: () => this.startShopDay(),
+      onUpgradeShop: () => this.upgradeShop(),
+      onBagSelect: (index) => {
+        this.shopScene?.setSelectedBag(index);
+        this.shopUI.render();
+      },
+      getSelectedBag: () => this.shopScene?.getSelectedBag() ?? -1,
     });
     this.bindDom();
   }
@@ -75,8 +85,9 @@ export class Game {
 
     const canvas = this.app.canvas;
     const onBase = appEl?.classList.contains('layout-base');
+    const onShop = appEl?.classList.contains('layout-shop');
 
-    if (onBase) {
+    if (onBase || onShop) {
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       return;
@@ -111,7 +122,6 @@ export class Game {
 
     document.getElementById('btn-shop')?.addEventListener('click', () => {
       this.showScreen('shop');
-      this.shopUI.render();
     });
 
     document.getElementById('btn-buy-orb-1')?.addEventListener('click', () => {
@@ -146,20 +156,59 @@ export class Game {
     document.querySelectorAll('.screen').forEach((el) => el.classList.add('hidden'));
     document.getElementById('hud')?.classList.toggle('hidden', screen !== 'dungeon');
     document.getElementById('app')?.classList.toggle('layout-base', screen === 'base');
+    document.getElementById('app')?.classList.toggle('layout-shop', screen === 'shop');
 
     if (screen === 'base') {
       document.getElementById('base-screen')?.classList.remove('hidden');
       this.showHabitatView();
       this.refreshBaseUI();
       requestAnimationFrame(() => this.fitCanvas());
+    } else if (screen === 'shop') {
+      document.getElementById('shop-screen')?.classList.remove('hidden');
+      this.showShopView();
+      this.shopUI.render();
+      requestAnimationFrame(() => this.fitCanvas());
     } else {
       this.destroyHabitat();
+      this.destroyShop();
       this.app.stage.removeChildren();
-      if (screen === 'shop') {
-        document.getElementById('shop-screen')?.classList.remove('hidden');
-      }
       requestAnimationFrame(() => this.fitCanvas());
     }
+  }
+
+  private showShopView(): void {
+    this.destroyHabitat();
+    this.destroyShop();
+
+    this.shopScene = new ShopScene(this.input, {
+      getState: () => this.state,
+      onStateChange: () => {
+        saveGame(this.state);
+        this.shopScene?.syncFromState(this.state);
+        this.shopUI.render();
+      },
+      showToast: (m) => this.showToast(m),
+      setHint: (text) => this.shopUI.setHint(text),
+      openPriceModal: (kind, index) => this.shopUI.openPriceModal(kind, index),
+      onShopDayEnd: (gold) => {
+        saveGame(this.state);
+        this.shopScene?.syncFromState(this.state);
+        this.shopUI.render();
+        this.shopUI.setShopDayBusy(false);
+        this.refreshBaseUI();
+        this.showToast(gold > 0 ? `Dia de loja: +${gold} ouro` : 'Nenhuma venda hoje');
+      },
+    });
+
+    this.app.stage.removeChildren();
+    this.app.stage.addChild(this.shopScene.root);
+    this.shopScene.enter();
+  }
+
+  private destroyShop(): void {
+    if (!this.shopScene) return;
+    this.shopScene.exit();
+    this.shopScene = null;
   }
 
   private showHabitatView(): void {
@@ -288,6 +337,10 @@ export class Game {
       this.habitatScene.update(dt);
     }
 
+    if (this.screen === 'shop' && this.shopScene) {
+      this.shopScene.update(dt);
+    }
+
     if (this.screen === 'dungeon' && this.dungeon) {
       this.dungeon.update(dt);
       const hint = document.getElementById('hud-hint');
@@ -315,51 +368,23 @@ export class Game {
     if (bag) bag.textContent = `Bolsa: ${bagCount(this.state)}/12`;
   }
 
-  private simulateShopDay(): void {
-    const log = document.getElementById('shop-log');
-    if (log) log.innerHTML = '';
-    let sales = 0;
-
-    const listings: ShopListing[] = [
-      ...this.state.shopShelves.filter((s): s is ShopListing => s !== null),
-      ...(this.state.shopCage ? [this.state.shopCage] : []),
-    ];
-
-    if (listings.length === 0) {
-      this.showToast('Coloque itens nas prateleiras primeiro!');
-      return;
+  private startShopDay(): void {
+    if (!this.shopScene) return;
+    if (this.shopScene.startShopDay()) {
+      this.shopUI.setShopDayBusy(true);
     }
-
-    for (const listing of [...listings]) {
-      const base = listing.entry.baseValue;
-      if (customerBuys(listing.price, base)) {
-        this.state.gold += listing.price;
-        sales += listing.price;
-        this.appendShopLog(
-          `Vendeu ${formatEntry(listing.entry)} por ${listing.price}g — ${getPriceTierLabel(getPriceTier(listing.price, base))}`,
-        );
-        if (listing.isCage) {
-          this.state.shopCage = null;
-        } else {
-          this.state.shopShelves[listing.slotIndex] = null;
-        }
-      } else {
-        this.appendShopLog(`Cliente recusou ${formatEntry(listing.entry)} (${listing.price}g)`);
-      }
-    }
-
-    saveGame(this.state);
-    this.shopUI.render();
-    this.refreshBaseUI();
-    this.showToast(sales > 0 ? `Dia de loja: +${sales} ouro` : 'Nenhuma venda hoje');
   }
 
-  private appendShopLog(line: string): void {
-    const log = document.getElementById('shop-log');
-    if (!log) return;
-    const p = document.createElement('p');
-    p.textContent = line;
-    log.appendChild(p);
+  private upgradeShop(): void {
+    const result = tryUpgradeShop(this.state);
+    this.showToast(result.message);
+    if (result.ok) {
+      saveGame(this.state);
+      this.shopScene?.rebuildLayout();
+      this.shopScene?.syncFromState(this.state);
+      this.shopUI.render();
+      this.refreshBaseUI();
+    }
   }
 
   private showToast(msg: string): void {
@@ -369,9 +394,4 @@ export class Game {
     el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 2200);
   }
-}
-
-function formatEntry(entry: BagEntry): string {
-  if (entry.kind === 'loot') return `${entry.name} x${entry.quantity}`;
-  return entry.name;
 }

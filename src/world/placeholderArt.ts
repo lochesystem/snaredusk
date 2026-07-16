@@ -318,3 +318,136 @@ export function drawCaptureBurst(parent: Container, x: number, y: number, succes
   requestAnimationFrame(tick);
 }
 
+/** Interior da loja — piso acolhedor, balcão e prateleiras. */
+export function drawShopLayout(
+  g: Graphics,
+  floors: { x: number; y: number; width: number; height: number }[],
+  walls: { x: number; y: number; width: number; height: number }[],
+  counter: { x: number; y: number },
+  decorSeed: number,
+  worldWidth: number,
+  worldHeight: number,
+): void {
+  g.rect(0, 0, worldWidth, worldHeight);
+  g.fill(0x14101c);
+
+  for (const floor of floors) {
+    g.rect(floor.x, floor.y, floor.width, floor.height);
+    g.fill(0x3d3228);
+    g.rect(floor.x + 4, floor.y + 4, floor.width - 8, floor.height - 8);
+    g.fill(0x4a3d32);
+  }
+
+  for (const wall of walls) {
+    g.rect(wall.x, wall.y, wall.width, wall.height);
+    g.fill(0x2a2420);
+    g.rect(wall.x, wall.y, wall.width, wall.height);
+    g.stroke({ width: 2, color: 0x5a4a3a });
+  }
+
+  const cx = counter.x;
+  const cy = counter.y;
+  g.roundRect(cx - 56, cy - 14, 112, 28, 4);
+  g.fill(0x6a5a48);
+  g.roundRect(cx - 56, cy - 14, 112, 28, 4);
+  g.stroke({ width: 2, color: 0x8a7a60 });
+
+  const floor = floors[0];
+  if (floor) {
+    for (let i = 0; i < 4; i++) {
+      const lx = floor.x + 30 + i * ((floor.width - 60) / 3);
+      g.circle(lx, floor.y + floor.height - 18, 8);
+      g.fill({ color: 0xe8a84a, alpha: 0.15 });
+      g.circle(lx, floor.y + floor.height - 18, 3);
+      g.fill(0xe8c868);
+    }
+  }
+
+  const rugW = 80 + (decorSeed % 20);
+  g.ellipse(cx, cy + 42, rugW * 0.5, 18);
+  g.fill({ color: 0x5a3a4a, alpha: 0.35 });
+}
+
+export function createShelfStandSprite(isCage: boolean): Container {
+  const root = new Container();
+  const g = new Graphics();
+  if (isCage) {
+    g.roundRect(-26, -20, 52, 40, 3);
+    g.fill(0x3a4a3a);
+    g.roundRect(-26, -20, 52, 40, 3);
+    g.stroke({ width: 2, color: 0x5dbb63 });
+    g.rect(-22, -16, 44, 4);
+    g.fill(0x2a3a2a);
+    g.rect(-22, 4, 44, 4);
+    g.fill(0x2a3a2a);
+  } else {
+    g.roundRect(-24, -6, 48, 12, 2);
+    g.fill(0x6a5a48);
+    g.rect(-22, -18, 4, 14);
+    g.fill(0x5a4a38);
+    g.rect(18, -18, 4, 14);
+    g.fill(0x5a4a38);
+    g.rect(-22, -18, 44, 3);
+    g.fill(0x7a6a58);
+  }
+  root.addChild(g);
+  return root;
+}
+
+export function createShopItemSprite(name: string, color: number, isCreature: boolean): Container {
+  const root = new Container();
+  const g = new Graphics();
+  if (isCreature) {
+    g.roundRect(-8, -8, 16, 14, 3);
+    g.fill(color);
+  } else {
+    g.roundRect(-7, -7, 14, 14, 2);
+    g.fill(color);
+  }
+  root.addChild(g);
+  const label = new Text({
+    text: name.length > 8 ? `${name.slice(0, 7)}…` : name,
+    style: { fontFamily: 'monospace', fontSize: 7, fill: 0xf0e6d3 },
+  });
+  label.anchor.set(0.5);
+  label.y = -16;
+  root.addChild(label);
+  return root;
+}
+
+export function createCustomerSprite(bodyColor: number): Container {
+  const root = new Container();
+  const shadow = drawShadow(root, 16);
+  shadow.y = 6;
+  const body = new Graphics();
+  body.roundRect(-7, -12, 14, 18, 3);
+  body.fill(bodyColor);
+  body.stroke({ width: 1, color: 0x1a1520 });
+  root.addChild(body);
+  const head = new Graphics();
+  head.circle(0, -16, 6);
+  head.fill(0xf0d8b8);
+  root.addChild(head);
+  (root as Container & { zOffset?: number }).zOffset = 0.5;
+  return root;
+}
+
+export function createEmojiBubble(emoji: string): Container {
+  const root = new Container();
+  const bg = new Graphics();
+  bg.roundRect(-16, -14, 32, 22, 6);
+  bg.fill({ color: 0x1a1520, alpha: 0.92 });
+  bg.roundRect(-16, -14, 32, 22, 6);
+  bg.stroke({ width: 1, color: 0x5dbb63 });
+  root.addChild(bg);
+  const t = new Text({
+    text: emoji,
+    style: { fontSize: 14 },
+  });
+  t.anchor.set(0.5);
+  t.y = -2;
+  root.addChild(t);
+  root.y = -32;
+  return root;
+}
+

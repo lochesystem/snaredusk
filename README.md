@@ -98,7 +98,7 @@ npm run build
 | [docs/GDD.md#0-estado-da-implementação-build-atual](docs/GDD.md#0-estado-da-implementação-build-atual) | O que já existe vs. plano |
 | [docs/art-bible.md](docs/art-bible.md) | Perspectiva 2.5D, pipeline visual, paletas |
 | [docs/UX-UI.md](docs/UX-UI.md) | Wireframes, HUD, fluxos de tela |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Fases de produção e critérios de done |
+| [docs/PLAYTEST.md](docs/PLAYTEST.md) | Roteiro de playtest 10 min (Fase 1) |
 | [CHANGELOG.md](CHANGELOG.md) | Histórico de versões |
 
 ## Referências (não clones)

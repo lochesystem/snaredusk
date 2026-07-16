@@ -4,21 +4,28 @@ import { customerBuys, getPriceTier, getPriceTierLabel } from '../src/systems/pr
 describe('pricing', () => {
   const base = 100;
 
-  it('classifies bargain, good, too_high', () => {
-    expect(getPriceTier(70, base)).toBe('bargain');
-    expect(getPriceTier(100, base)).toBe('good');
-    expect(getPriceTier(130, base)).toBe('too_high');
+  it('classifies bargain, perfect, expensive, refuse', () => {
+    expect(getPriceTier(60, base)).toBe('bargain');
+    expect(getPriceTier(100, base)).toBe('perfect');
+    expect(getPriceTier(120, base)).toBe('expensive');
+    expect(getPriceTier(150, base)).toBe('refuse');
   });
 
-  it('customer refuses too_high', () => {
-    expect(customerBuys(130, base, () => 0)).toBe(false);
+  it('customer refuses refuse tier', () => {
+    expect(customerBuys(150, base, () => 0)).toBe(false);
   });
 
   it('customer usually buys bargain', () => {
-    expect(customerBuys(70, base, () => 0.5)).toBe(true);
+    expect(customerBuys(60, base, () => 0.5)).toBe(true);
+  });
+
+  it('expensive tier is uncertain', () => {
+    expect(customerBuys(120, base, () => 0.5)).toBe(false);
+    expect(customerBuys(120, base, () => 0.1)).toBe(true);
   });
 
   it('labels are in portuguese', () => {
-    expect(getPriceTierLabel('good')).toContain('Bom preço');
+    expect(getPriceTierLabel('perfect')).toContain('Perfeito');
+    expect(getPriceTierLabel('refuse')).toContain('Recusa');
   });
 });

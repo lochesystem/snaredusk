@@ -1,0 +1,106 @@
+# Playtest interno — Fase 1 (10 min)
+
+Roteiro para validar o vertical slice antes de fechar a Fase 1. Marque cada item durante ou logo após jogar.
+
+**Onde jogar:** [lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/) ou `npm run dev` → http://localhost:5173/snaredusk/
+
+**Tempo alvo:** 10–15 minutos  
+**Anote:** bugs, confusão, tédio, momentos divertidos, sugestões de balance.
+
+---
+
+## Pré-check (automático)
+
+Antes do playtest manual, o CI/local deve passar:
+
+```bash
+npm test
+npm run build
+```
+
+---
+
+## Roteiro (siga na ordem)
+
+### 1. Título e save (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 1.1 | Clicar **Novo Jogo** | ☐ | |
+| 1.2 | Ver base **Brumavale** com ouro, orbes e painéis | ☐ | |
+| 1.3 | **F5** na página → **Continuar** restaura o save | ☐ | |
+
+### 2. Base e preparação (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 2.1 | Ler painel do **Mercador de Orbes**; comprar ×1 se fizer sentido | ☐ | |
+| 2.2 | Confirmar que orbes e ouro atualizam no HUD/base | ☐ | |
+
+### 3. Masmorra — exploração (4 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 3.1 | **Entrar na Masmorra**; layout diferente a cada run? | ☐ | |
+| 3.2 | **Minimapa** atualiza ao entrar em salas novas | ☐ | |
+| 3.3 | Câmera segue o jogador; sem andar no void | ☐ | |
+| 3.4 | Abrir um **baú** com **E** (se encontrar) | ☐ | |
+| 3.5 | Combater com clique; inimigos reagem | ☐ | |
+| 3.6 | Capturar com **Q** pelo menos 1 criatura | ☐ | |
+| 3.7 | Portal só ativa após limpar inimigos; sair com **E** | ☐ | |
+
+### 4. Habitat (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 4.1 | Colocar criatura da bolsa no **habitat** (botão) | ☐ | |
+| 4.2 | Criatura **vaga** na cena à esquerda | ☐ | |
+| 4.3 | Clicar na criatura para devolver à bolsa | ☐ | |
+
+### 5. Loja (2 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 5.1 | **Abrir Loja**; colocar loot/criatura nas prateleiras/gaiola | ☐ | |
+| 5.2 | Ajustar preço; preview de reação do cliente faz sentido? | ☐ | |
+| 5.3 | **Abrir loja ao público**; log de vendas/recusas | ☐ | |
+| 5.4 | Ouro sobe após vendas | ☐ | |
+
+### 6. Loop completo (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 6.1 | Reentrar na masmorra **sem travar** | ☐ | |
+| 6.2 | Segunda run: bolsa, habitat e ouro persistem | ☐ | |
+
+---
+
+## Critérios de sucesso (Fase 1)
+
+- [ ] Loop masmorra → captura → portal → habitat → loja → ouro completado sem softlock
+- [ ] Nenhum bug bloqueante (freeze, void, spawn preso)
+- [ ] Controles compreensíveis sem ler o README
+- [ ] Sensação geral ≥ **7/10** (anotar nota: ___/10)
+
+## Perguntas pós-playtest
+
+1. O que foi mais divertido?
+2. O que foi confuso ou frustrante?
+3. A precificação na loja parece um jogo ou só clique?
+4. A masmorra procedural enjoou ou variou o suficiente em 2 runs?
+5. O que você mudaria primeiro no balance?
+
+---
+
+## Resultado desta sessão
+
+| Campo | Valor |
+|-------|-------|
+| Data | 2026-07-16 |
+| Jogador | (preencher) |
+| Build | v0.1.0 + início Fase 2 (loja) |
+| Nota geral | /10 |
+| Bugs encontrados | |
+| Aprovado para Fase 2? | ☐ Sim ☐ Com ressalvas |
+
+*Após preencher, marcar playtest no [ROADMAP.md](ROADMAP.md) e registrar achados no [CHANGELOG.md](../CHANGELOG.md) se houver fixes.*

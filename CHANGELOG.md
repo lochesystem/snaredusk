@@ -2,6 +2,25 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.2.0] — 2026-07-16
+
+Início da **Fase 2** — sistema de loja expandido.
+
+### Adicionado
+
+- [docs/PLAYTEST.md](docs/PLAYTEST.md) — roteiro de playtest interno (10 min)
+- 4 faixas de preço GDD: barganha, perfeito, caro, recusa
+- 6 arquétipos de cliente na simulação de dia de loja
+- 5 níveis de upgrade de loja (6→24 prateleiras, 1→6 gaiolas)
+- Múltiplas gaiolas vivas; botão **Melhorar loja** na tela da loja
+- Save v2 com migração automática de saves v1
+- Loja visual navegável (PixiJS): andar pela loja, expor itens, clientes animados
+- Testes: `customers`, `shopUpgrade`, `shopDay`, `shopLayout`
+
+### Corrigido
+
+- Pedras e obstáculos não spawnam mais sobre o portal da masmorra
+
 ## [0.1.0] — 2026-07-16
 
 Primeiro vertical slice jogável, publicado em [GitHub Pages](https://lochesystem.github.io/snaredusk/).

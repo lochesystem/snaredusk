@@ -57,25 +57,21 @@
     </div>
 
     <div id="shop-screen" class="screen hidden">
-      <h2>Loja</h2>
-      <p id="shop-gold"></p>
-      <div id="shop-layout">
-        <div id="shop-depot">
-          <h3>Depósito (bolsa)</h3>
-          <div id="shop-depot-items"></div>
-        </div>
-        <div id="shop-shelves">
-          <h3>Prateleiras</h3>
-          <div id="shelf-slots"></div>
-          <h3>Gaiola viva</h3>
-          <div id="cage-slot" class="shop-slot"></div>
-        </div>
+      <header class="shop-header">
+        <h2>Loja subterrânea</h2>
+        <p id="shop-gold"></p>
+        <p id="shop-level" class="panel-hint"></p>
+        <p id="shop-hint" class="panel-hint">WASD para andar pela loja</p>
+      </header>
+      <div class="shop-panel-block">
+        <h3 class="subheading">Bolsa</h3>
+        <div id="shop-bag-strip" class="shop-bag-strip"></div>
       </div>
-      <div id="shop-controls">
-        <button id="btn-shop-open">Abrir loja ao público</button>
-        <button id="btn-shop-back">Voltar à base</button>
+      <div class="shop-actions">
+        <button id="btn-shop-open" type="button">Abrir loja ao público</button>
+        <button id="btn-shop-upgrade" type="button">Melhorar loja</button>
+        <button id="btn-shop-back" type="button">Voltar à base</button>
       </div>
-      <div id="shop-log"></div>
     </div>
 
     <div id="price-modal" class="modal hidden">

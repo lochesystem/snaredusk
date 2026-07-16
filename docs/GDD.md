@@ -21,7 +21,7 @@ Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GD
 | **Criaturas** | 3 espécies capturáveis | 18 catalogadas |
 | **Captura** | Orbe Q, taxa por HP | Igual + upgrades e tipos |
 | **Party / sentinelas** | — | 2 companheiros + 1 sentinela/bioma |
-| **Loja** | Prateleiras, gaiola, 2 faixas de preço | 5 níveis, 6 arquétipos cliente |
+| **Loja** | Prateleiras, gaiola, 2 faixas de preço | 5 níveis, 6 arquétipos, 4 faixas GDD (parcial) |
 | **Base** | Habitat visual (4 slots), mercador de orbes | Escavação, oficina, craft, baús |
 | **Ciclo dia/noite** | — | Dormir, loja diurna, evento entardecer |
 | **Craft / economia** | Compra de orbes | 20 receitas, sinks de ouro, reputação |
