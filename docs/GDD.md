@@ -2,6 +2,35 @@
 
 Documento mestre de design. Versão 0.1 — pré-produção.
 
+> **Build jogável:** [lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/) — ver [CHANGELOG.md](../CHANGELOG.md).
+
+---
+
+## 0. Estado da implementação (build atual)
+
+Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GDD descreve como **meta MVP**. Detalhes de release em [ROADMAP.md](ROADMAP.md).
+
+| Área | Implementado (v0.1) | Meta GDD (MVP) |
+|------|---------------------|----------------|
+| **Biomas** | 1 — Floresta Fúngica | 3 com chefes |
+| **Masmorra** | 7–9 salas procedural, grafo ramificado | 8–14 salas + tipos (combate, tesouro, evento, descanso, loja, chefe) |
+| **Obstáculos / decor** | Rochas, buracos, cogumelos | Hazards por bioma (esporos, cristal, termal) |
+| **Baús** | Raros na masmorra, tecla E | Salas tesouro + armadilhas |
+| **Portal** | Ativa após limpar inimigos; sem custo em ouro | Custo escalonado por uso na run |
+| **Minimapa** | Sim (explorado + portal) | Sim (+ salas secretas com sentinela) |
+| **Criaturas** | 3 espécies capturáveis | 18 catalogadas |
+| **Captura** | Orbe Q, taxa por HP | Igual + upgrades e tipos |
+| **Party / sentinelas** | — | 2 companheiros + 1 sentinela/bioma |
+| **Loja** | Prateleiras, gaiola, 2 faixas de preço | 5 níveis, 6 arquétipos cliente |
+| **Base** | Habitat visual (4 slots), mercador de orbes | Escavação, oficina, craft, baús |
+| **Ciclo dia/noite** | — | Dormir, loja diurna, evento entardecer |
+| **Craft / economia** | Compra de orbes | 20 receitas, sinks de ouro, reputação |
+| **Save** | localStorage | Igual + progresso por bioma |
+| **Áudio** | — | SFX procedural + 4 tracks |
+| **Arte** | Placeholder vetorial Pixi | Sprites pintados + normal maps (fase 3) |
+
+**Regra:** seções abaixo descrevem o **design alvo**. Onde não houver nota, assuma “ainda não implementado”.
+
 ---
 
 ## Índice

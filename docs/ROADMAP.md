@@ -38,7 +38,7 @@ flowchart LR
 
 ---
 
-## Fase 1 — Vertical slice (em progresso)
+## Fase 1 — Vertical slice (quase concluída)
 
 **Objetivo:** provar que o core loop é divertido com placeholder art mínima.
 
@@ -48,36 +48,43 @@ flowchart LR
 |------|--------|
 | Projeto Vite + TS + PixiJS | Feito |
 | Engine base (câmera, Y-sort, WASD + mouse) | Feito |
-| 1 bioma — 5 salas fixas | Feito |
+| 1 bioma — Floresta Fúngica | Feito |
+| Masmorra procedural (7–9 salas, grafo N/S/E/W) | Feito *(adiantou escopo)* |
+| Decor, obstáculos (rochas/buracos), baús raros | Feito *(adiantou escopo)* |
+| Minimapa (salas exploradas, portal) | Feito *(adiantou escopo)* |
 | Jogador (movimento, melee, HP) | Feito |
 | 3 criaturas capturáveis | Feito |
-| Captura (orbe 30%, UI capturável) | Feito |
-| Loja básica (3 prateleiras, 1 gaiola, 2 faixas de preço) | Feito |
+| Captura (orbe, taxa por HP) | Feito |
+| Loja básica (3 prateleiras, 1 gaiola, faixas de preço) | Feito |
+| Habitat visual na base (4 slots) | Feito *(adiantou escopo)* |
+| Mercador de orbes na base | Feito *(adiantou escopo)* |
 | Save localStorage | Feito |
-| Deploy GitHub Actions | Configurado |
+| Deploy GitHub Actions + Pages público | Feito |
 
 ### Critérios de done
 
 - [x] Loop masmorra → captura → venda → ouro
 - [x] Save/load persiste entre sessões
-- [x] Testes Vitest (captura, precificação)
+- [x] Testes Vitest (captura, precificação, masmorra, habitat, orbShop)
+- [x] URL pública funcional ([lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/))
 - [ ] Playtest interno 10 min
 
-### Fora da fase 1
+### Fora da fase 1 (permanece para fase 2+)
 
 - Biomas 2 e 3
-- Procedural de salas
-- Sentinelas
+- Tipos de sala (evento, descanso, loja ambulante, chefe)
+- Sentinelas e party
 - Craft completo
+- Ciclo dia/noite jogável
 - Iluminação com normal maps
 - Áudio além de beeps
 
 ### Milestones técnicos
 
 ```
-Semana 1: engine + movimento + 1 sala + inimigo
-Semana 2: captura + bolsa + transição base
-Semana 3: loja + save + deploy + playtest
+Semana 1: engine + movimento + masmorra + inimigos
+Semana 2: captura + bolsa + transição base + procedural
+Semana 3: loja + habitat + save + deploy + playtest
 ```
 
 ---
@@ -119,9 +126,12 @@ Semana 3: loja + save + deploy + playtest
 tests/
   capture.test.ts      # fórmula de taxa
   pricing.test.ts      # faixas de reação
-  combat.test.ts       # dano + tipos
-  save.test.ts         # serialização
-  economy.test.ts      # sinks de ouro
+  dungeon.test.ts      # geração, walkability, portal
+  habitat.test.ts      # bolsa ↔ habitat
+  orbShop.test.ts      # compra de orbes
+  combat.test.ts       # dano + tipos (fase 2)
+  save.test.ts         # serialização (fase 2)
+  economy.test.ts      # sinks de ouro (fase 2)
 ```
 
 ---
@@ -154,25 +164,27 @@ tests/
 
 ---
 
-## Fase 4 — Release (1 semana)
+## Fase 4 — Release (em progresso)
 
 **Objetivo:** publicar versão 1.0 jogável no GitHub Pages.
 
 ### Entregáveis
 
-| Item | Descrição |
-|------|-----------|
-| README jogável | Link, controles, GIF gameplay |
-| CI/CD | GitHub Actions → `lochesystem.github.io/snaredusk/` |
-| CONTINUIDADE-AGENTE.md | Handoff para sessões futuras |
-| CHANGELOG.md | v1.0.0 features |
-| Meta | Open Graph para compartilhamento |
+| Item | Descrição | Status |
+|------|-----------|--------|
+| README jogável | Link, controles, guia do slice | Feito |
+| CI/CD | GitHub Actions → `lochesystem.github.io/snaredusk/` | Feito |
+| CHANGELOG.md | v0.1.0 features | Feito |
+| GDD §0 | Tabela implementado vs. meta | Feito |
+| CONTINUIDADE-AGENTE.md | Handoff para sessões futuras | Pendente |
+| Meta | Open Graph para compartilhamento | Pendente |
+| README | GIF gameplay | Pendente |
 
 ### Critérios de done
 
-- [ ] URL pública funcional
+- [x] URL pública funcional
 - [ ] Novo jogador completa tutorial sem instruções externas
-- [ ] Save sobrevive refresh e fechar aba
+- [x] Save sobrevive refresh e fechar aba
 - [ ] Sem erros no console em fluxo feliz (Chrome + Firefox desktop)
 
 ---
@@ -195,7 +207,7 @@ tests/
 | Fase | Risco | Mitigação |
 |------|-------|-----------|
 | 1 | Engine oblíqua complexa | Reusar padrões de lotm-tactics (PixiJS) |
-| 1 | Scope creep | Só 1 bioma, salas fixas |
+| 1 | Scope creep | Procedural e habitat entraram na fase 1; tipos de sala e biomas 2–3 ficam na fase 2 |
 | 2 | 3 sistemas grandes | Implementar loja antes de base; base antes de bioma 3 |
 | 2 | Balance quebrado | Vitest desde semana 1 da fase 2 |
 | 3 | Arte demora | Composição modular de criaturas |
@@ -233,9 +245,10 @@ flowchart LR
 
 ## Próxima ação imediata
 
-1. Playtest do loop completo e ajuste de balance
-2. Iniciar **Fase 2** — biomas 2–3, party, base escavável
+1. Playtest interno 10 min e ajuste de balance
+2. Fechar critérios restantes da Fase 1 (playtest)
+3. Iniciar **Fase 2** — biomas 2–3, party, tipos de sala, ciclo dia/noite
 
 ---
 
-*Roadmap v0.1 — revisar ao fim de cada fase.*
+*Roadmap v0.2 — revisado 2026-07-16 (pós-deploy Pages).*
