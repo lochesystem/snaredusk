@@ -19,7 +19,6 @@ export interface CaptureRollInput {
   rarityPenalty?: number;
 }
 
-export type CaptureFailResult = 'enrage' | 'flee';
 
 /** Qualquer inimigo vivo pode ser alvo; a taxa é que penaliza HP alto. */
 export function canTargetForCapture(hp: number, maxHp: number): boolean {
@@ -47,10 +46,6 @@ export function formatCaptureChance(input: CaptureRollInput): string {
 
 export function rollCaptureSuccess(input: CaptureRollInput, rng: () => number = Math.random): boolean {
   return rng() < rollCaptureChance(input);
-}
-
-export function rollCaptureFailure(rng: () => number = Math.random): CaptureFailResult {
-  return rng() < 0.6 ? 'enrage' : 'flee';
 }
 
 export interface CaptureSequencePlan {

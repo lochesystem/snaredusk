@@ -268,25 +268,31 @@ export function drawDungeonLayout(
   }
 }
 
-export function drawChestGraphic(g: Graphics, x: number, y: number, opened: boolean): void {
-  const w = 18;
-  const h = 14;
-  g.roundRect(x - w / 2, y - h / 2, w, h, 2);
-  g.fill(opened ? 0x5a4a30 : 0x8a6a30);
-  g.roundRect(x - w / 2, y - h / 2, w, h, 2);
-  g.stroke({ width: 2, color: 0xc4a040 });
+export function drawChestGraphic(g: Graphics, x: number, y: number, opened: boolean, epic = false): void {
+  const w = epic ? 22 : 18;
+  const h = epic ? 17 : 14;
+  const body = opened ? 0x5a4a30 : epic ? 0x5a3a78 : 0x8a6a30;
+  const trim = epic ? 0xe8c868 : 0xc4a040;
+  g.roundRect(x - w / 2, y - h / 2, w, h, epic ? 3 : 2);
+  g.fill(body);
+  g.roundRect(x - w / 2, y - h / 2, w, h, epic ? 3 : 2);
+  g.stroke({ width: epic ? 2.5 : 2, color: trim });
   g.rect(x - w / 2 + 2, y - 2, w - 4, 3);
-  g.fill(0xc4a040);
+  g.fill(trim);
+  if (epic && !opened) {
+    g.circle(x, y - h / 2 - 4, 3);
+    g.fill({ color: 0xc4f082, alpha: 0.9 });
+  }
   if (opened) {
     g.rect(x - w / 2 + 1, y - h / 2 - 4, w - 2, 5);
     g.fill({ color: 0x3a3020, alpha: 0.8 });
   }
 }
 
-export function createChestSprite(opened = false): Container {
+export function createChestSprite(opened = false, epic = false): Container {
   const root = new Container();
   const gfx = new Graphics();
-  drawChestGraphic(gfx, 0, 0, opened);
+  drawChestGraphic(gfx, 0, 0, opened, epic);
   root.addChild(gfx);
   (root as Container & { zOffset?: number }).zOffset = 0.5;
   return root;

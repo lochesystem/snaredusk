@@ -43,7 +43,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     speed: 38,
     color: 0x6b4a8a,
     accent: 0xc4f082,
-    capturable: false,
+    capturable: true,
   },
 };
 

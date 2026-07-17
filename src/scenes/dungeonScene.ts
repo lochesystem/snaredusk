@@ -14,7 +14,7 @@ import type { InputManager } from '../engine/input.ts';
 import { DungeonMinimap } from '../ui/dungeonMinimap.ts';
 import { YSortLayer } from '../engine/ySortLayer.ts';
 import { getSpecies } from '../data/creatures.ts';
-import { LOOT_TABLE } from '../data/items.ts';
+import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
 import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
 import { calcDamage, distance, normalize } from '../systems/combat.ts';
@@ -29,7 +29,6 @@ import {
   formatCaptureChance,
   formatCapturePercent,
   planCaptureSequence,
-  rollCaptureFailure,
   type CaptureSequencePlan,
 } from '../systems/capture.ts';
 import { shouldEnemyAggro } from '../systems/enemyAi.ts';
@@ -101,6 +100,9 @@ interface LiveChest {
   x: number;
   y: number;
   lootId: string;
+  lootQuantity: number;
+  goldBonus: number;
+  epic: boolean;
   opened: boolean;
   container: Container;
 }
@@ -275,6 +277,9 @@ export class DungeonScene {
         x: chest.x,
         y: chest.y,
         lootId: chest.lootId,
+        lootQuantity: 1,
+        goldBonus: 0,
+        epic: false,
         opened: false,
         container,
       });
@@ -362,29 +367,32 @@ export class DungeonScene {
     }
   }
 
+  private spawnEnemyChest(enemy: LiveEnemy): void {
+    const drop = getEnemyChestDrop(enemy.speciesId, enemy.isBoss);
+    const container = createChestSprite(false, drop.epic);
+    container.x = enemy.x;
+    container.y = enemy.y;
+    this.entityLayer.addChild(container);
+    this.chests.push({
+      x: enemy.x,
+      y: enemy.y,
+      lootId: drop.lootId,
+      lootQuantity: drop.quantity,
+      goldBonus: drop.goldBonus,
+      epic: drop.epic,
+      opened: false,
+      container,
+    });
+  }
+
   private onEnemyKilled(enemy: LiveEnemy): void {
     const species = getSpecies(enemy.speciesId);
-    const lootKey =
-      enemy.speciesId === 'lumimorcego' || enemy.speciesId === 'rei_esporas'
-        ? 'esporo_brilhante'
-        : 'cogumelo_comum';
-    const lootDef = LOOT_TABLE[lootKey] ?? LOOT_TABLE.cogumelo_comum;
-    const loot: LootItem = {
-      kind: 'loot',
-      id: lootDef.id,
-      name: lootDef.name,
-      baseValue: lootDef.baseValue,
-      quantity: enemy.speciesId === 'rei_esporas' ? 2 : 1,
-    };
-    if (!addToBag(this.state, loot)) {
-      this.callbacks.showToast('Bolsa cheia!');
-    } else if (enemy.speciesId === 'rei_esporas') {
-      this.state.gold += 35;
-      this.callbacks.showToast('Rei das Esporas derrotado — tesouro épico!');
+    this.spawnEnemyChest(enemy);
+    if (enemy.isBoss) {
+      this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
     } else {
-      this.callbacks.showToast(`${species.name} derrotado — loot coletado`);
+      this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
     }
-    this.callbacks.onStateChange();
   }
 
   private updateEnemies(dt: number): void {
@@ -700,6 +708,7 @@ export class DungeonScene {
       enemy.container.visible = false;
       const anchor = this.getCaptureAnchor(enemy);
       drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true);
+      this.spawnEnemyChest(enemy);
       this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
       this.callbacks.onStateChange();
     } else {
@@ -712,17 +721,9 @@ export class DungeonScene {
   private finishCaptureFail(enemy: LiveEnemy, plan: CaptureSequencePlan): void {
     const species = getSpecies(enemy.speciesId);
     enemy.captureLocked = false;
-    const fail = rollCaptureFailure();
-    if (fail === 'enrage') {
-      enemy.enraged = true;
-      enemy.aggroed = true;
-      enemy.container.alpha = 1;
-      this.callbacks.showToast(`${species.name} enfureceu! (${formatCapturePercent(plan.chance)} falhou)`);
-    } else {
-      enemy.fled = true;
-      enemy.container.visible = false;
-      this.callbacks.showToast(`${species.name} fugiu!`);
-    }
+    enemy.container.alpha = 1;
+    enemy.aggroed = true;
+    this.callbacks.showToast(`${species.name} escapou da Orbe! (${formatCapturePercent(plan.chance)})`);
   }
 
   private clearActiveCapture(): void {
@@ -962,22 +963,33 @@ export class DungeonScene {
         id: lootDef.id,
         name: lootDef.name,
         baseValue: lootDef.baseValue,
-        quantity: 1,
+        quantity: chest.lootQuantity,
       };
       if (!addToBag(this.state, loot)) {
         this.callbacks.showToast('Bolsa cheia!');
         return;
       }
 
+      if (chest.goldBonus > 0) {
+        this.state.gold += chest.goldBonus;
+      }
+
       chest.opened = true;
       const parent = chest.container.parent;
       parent?.removeChild(chest.container);
       chest.container.destroy({ children: true });
-      chest.container = createChestSprite(true);
+      chest.container = createChestSprite(true, chest.epic);
       chest.container.x = chest.x;
       chest.container.y = chest.y;
       parent?.addChild(chest.container);
-      this.callbacks.showToast(`Baú: ${lootDef.name}!`);
+
+      const qtyLabel = chest.lootQuantity > 1 ? ` ×${chest.lootQuantity}` : '';
+      const goldLabel = chest.goldBonus > 0 ? ` +${chest.goldBonus} ouro` : '';
+      if (chest.epic) {
+        this.callbacks.showToast(`Baú épico: ${lootDef.name}${qtyLabel}${goldLabel}!`);
+      } else {
+        this.callbacks.showToast(`Baú: ${lootDef.name}${qtyLabel}!`);
+      }
       this.callbacks.onStateChange();
       return;
     }
@@ -1043,7 +1055,7 @@ export class DungeonScene {
       (c) => !c.opened && distance(this.playerX, this.playerY, c.x, c.y) < 30,
     );
     if (nearChest) {
-      return '[E] Abrir baú';
+      return nearChest.epic ? '[E] Abrir baú épico' : '[E] Abrir baú';
     }
     const near = this.getNearestInteractable();
     if (near && !near.used) {
