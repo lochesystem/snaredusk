@@ -1,6 +1,7 @@
 import type { Rect } from '../types.ts';
 
 export const PLAYER_RADIUS = 10;
+export const ENEMY_RADIUS = 9;
 export const WALL_THICKNESS = 14;
 export const CORRIDOR_WIDTH = 52;
 export const ROOM_W = 240;
@@ -319,7 +320,7 @@ function buildDungeon(seed: number): DungeonLayout {
   }
 
   const interactables = buildInteractables(rooms, reserved, safeZones, rng);
-  const enemySpawns = pickEnemySpawns(rooms, rng, safeZones);
+  const enemySpawns = pickEnemySpawns(rooms, rng, safeZones, floors, walls, obstacles);
 
   const connections = edges.map((e) => ({ a: e.a, b: e.b }));
 
@@ -452,41 +453,115 @@ function pickEnemySpawns(
   rooms: RoomLayout[],
   rng: Rng,
   safeZones: SafeZone[],
+  floors: Rect[],
+  walls: Rect[],
+  obstacles: DungeonObstacle[],
 ): DungeonEnemySpawn[] {
   const spawns: DungeonEnemySpawn[] = [];
+  const placed: { x: number; y: number }[] = [];
+
+  const pickClearPoint = (room: RoomLayout, minDist: number): { x: number; y: number } | null => {
+    for (let attempt = 0; attempt < 64; attempt++) {
+      const pt = randomInteriorPoint(room, rng, placed, minDist, safeZones);
+      if (!pt) continue;
+      if (!isEntitySpawnWalkable(pt.x, pt.y, ENEMY_RADIUS, floors, walls, obstacles)) continue;
+      return pt;
+    }
+    return findFallbackSpawnPoint(room, placed, floors, walls, obstacles);
+  };
 
   for (const room of rooms) {
     if (room.type === 'combat' && room.index !== 0) {
       const count = randInt(rng, 1, 2);
       for (let i = 0; i < count; i++) {
         const speciesId = ENEMY_SPECIES[randInt(rng, 0, ENEMY_SPECIES.length - 1)]!;
-        const pt = randomInteriorPoint(room, rng, [], 36, safeZones);
-        const cx = room.rect.x + room.rect.width / 2;
-        const cy = room.rect.y + room.rect.height / 2;
+        const pt = pickClearPoint(room, 36);
+        if (!pt) continue;
+        placed.push(pt);
         spawns.push({
           speciesId,
           roomIndex: room.index,
-          x: pt?.x ?? cx,
-          y: pt?.y ?? cy,
+          x: pt.x,
+          y: pt.y,
         });
       }
     }
 
     if (room.type === 'boss') {
-      const pt = randomInteriorPoint(room, rng, [], 48, safeZones);
-      const cx = room.rect.x + room.rect.width / 2;
-      const cy = room.rect.y + room.rect.height / 2 + 20;
+      const pt = pickClearPoint(room, 48);
+      if (!pt) continue;
+      placed.push(pt);
       spawns.push({
         speciesId: 'rei_esporas',
         roomIndex: room.index,
-        x: pt?.x ?? cx,
-        y: pt?.y ?? cy,
+        x: pt.x,
+        y: pt.y,
         isBoss: true,
       });
     }
   }
 
   return spawns;
+}
+
+function findFallbackSpawnPoint(
+  room: RoomLayout,
+  placed: { x: number; y: number }[],
+  floors: Rect[],
+  walls: Rect[],
+  obstacles: DungeonObstacle[],
+): { x: number; y: number } | null {
+  const r = room.rect;
+  const pad = WALL_THICKNESS + 20;
+  const step = 14;
+
+  for (let y = r.y + pad; y <= r.y + r.height - pad; y += step) {
+    for (let x = r.x + pad; x <= r.x + r.width - pad; x += step) {
+      if (!isFarFromAll(x, y, placed, 28)) continue;
+      if (!isEntitySpawnWalkable(x, y, ENEMY_RADIUS, floors, walls, obstacles)) continue;
+      return { x, y };
+    }
+  }
+
+  return null;
+}
+
+function isEntitySpawnWalkable(
+  x: number,
+  y: number,
+  radius: number,
+  floors: Rect[],
+  walls: Rect[],
+  obstacles: DungeonObstacle[],
+): boolean {
+  if (!isOnWalkableFloorPoint(x, y, radius, floors)) return false;
+  if (collidesCirclePoint(x, y, radius, walls)) return false;
+  for (const obs of obstacles) {
+    const dx = x - obs.x;
+    const dy = y - obs.y;
+    if (obs.kind === 'hole') {
+      if (dx * dx + dy * dy < (obs.radius + radius * 0.6) ** 2) return false;
+      continue;
+    }
+    if (dx * dx + dy * dy < (obs.radius + radius + 6) ** 2) return false;
+  }
+  return true;
+}
+
+function areEnemySpawnsWalkable(layout: DungeonLayout): boolean {
+  for (const spawn of layout.enemySpawns) {
+    if (!isEntitySpawnWalkable(
+      spawn.x,
+      spawn.y,
+      ENEMY_RADIUS,
+      layout.floors,
+      layout.walls,
+      layout.obstacles,
+    )) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function populateRoomDecor(
@@ -853,6 +928,7 @@ function validateLayout(layout: DungeonLayout): boolean {
   if (!canLeaveSpawnRoom(layout)) return false;
   if (!allRoomsReachable(layout)) return false;
   if (!hasRequiredRoomTypes(layout)) return false;
+  if (!areEnemySpawnsWalkable(layout)) return false;
   return true;
 }
 
@@ -885,14 +961,14 @@ function isSpawnWalkable(layout: DungeonLayout): boolean {
   return true;
 }
 
-function isPointWalkable(layout: DungeonLayout, x: number, y: number): boolean {
-  if (!isOnWalkableFloorPoint(x, y, PLAYER_RADIUS, layout.floors)) return false;
-  if (collidesCirclePoint(x, y, PLAYER_RADIUS, layout.walls)) return false;
+function isPointWalkable(layout: DungeonLayout, x: number, y: number, radius = PLAYER_RADIUS): boolean {
+  if (!isOnWalkableFloorPoint(x, y, radius, layout.floors)) return false;
+  if (collidesCirclePoint(x, y, radius, layout.walls)) return false;
   for (const obs of layout.obstacles) {
     if (obs.kind !== 'hole') continue;
     const dx = x - obs.x;
     const dy = y - obs.y;
-    if (dx * dx + dy * dy < (obs.radius + PLAYER_RADIUS * 0.6) ** 2) return false;
+    if (dx * dx + dy * dy < (obs.radius + radius * 0.6) ** 2) return false;
   }
   return true;
 }

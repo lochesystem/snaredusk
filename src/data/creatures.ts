@@ -11,6 +11,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x5dbb63,
     accent: 0xc4f082,
     capturable: true,
+    behaviorId: 'ranged',
+    def: 2,
   },
   esporo_dorminhoco: {
     id: 'esporo_dorminhoco',
@@ -22,6 +24,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x3d5c3a,
     accent: 0x8fd894,
     capturable: true,
+    behaviorId: 'melee',
+    def: 0,
   },
   carapaca_musgo: {
     id: 'carapaca_musgo',
@@ -33,6 +37,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x4a6a4a,
     accent: 0x6b9a6b,
     capturable: true,
+    behaviorId: 'shielded',
+    def: 8,
   },
   rei_esporas: {
     id: 'rei_esporas',
@@ -44,6 +50,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x6b4a8a,
     accent: 0xc4f082,
     capturable: true,
+    behaviorId: 'boss_burst',
+    def: 6,
   },
 };
 

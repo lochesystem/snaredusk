@@ -1,6 +1,16 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { SpeciesDef } from '../types.ts';
-
+import { LOOT_TABLE } from '../data/items.ts';
+import type { FxRunner } from '../engine/fxRunner.ts';
+import { createPixelText } from './pixelText.ts';
+import {
+  drawEnergyOrb,
+  drawKnifeBlade,
+  drawPickaxeHead,
+  drawSpearAlongX,
+  drawSpearProjectile,
+  drawSporeOrb,
+} from './graphicsPaths.ts';
 const SHADOW_COLOR = 0x000000;
 
 export function drawShadow(parent: Container, width: number): Graphics {
@@ -68,10 +78,7 @@ export function createPortalSprite(): Container {
   ring.fill({ color: 0x5dbb63, alpha: 0.35 });
   root.addChild(ring);
 
-  const label = new Text({
-    text: 'Portal',
-    style: { fontFamily: 'monospace', fontSize: 9, fill: 0xf0e6d3 },
-  });
+  const label = createPixelText('Portal', 10, 0xf0e6d3);
   label.anchor.set(0.5);
   label.y = -28;
   root.addChild(label);
@@ -122,10 +129,7 @@ export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', us
     g.circle(0, -2, 5);
     g.fill({ color: 0xc4f082, alpha });
     if (!used) {
-      const mark = new Text({
-        text: '!',
-        style: { fontFamily: 'monospace', fontSize: 12, fill: 0xfff0a0, fontWeight: 'bold' },
-      });
+      const mark = createPixelText('!', 12, 0xfff0a0, { fontWeight: 'bold' });
       mark.anchor.set(0.5);
       mark.y = -22;
       root.addChild(mark);
@@ -139,10 +143,11 @@ export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', us
     g.fill({ color: 0xe8c868, alpha });
   }
   root.addChild(g);
-  const label = new Text({
-    text: kind === 'rest' ? 'Descanso' : kind === 'event' ? 'Evento' : 'Mercador',
-    style: { fontFamily: 'monospace', fontSize: 8, fill: 0xf0e6d3 },
-  });
+  const label = createPixelText(
+    kind === 'rest' ? 'Descanso' : kind === 'event' ? 'Evento' : 'Mercador',
+    10,
+    0xf0e6d3,
+  );
   label.alpha = alpha;
   label.anchor.set(0.5);
   label.y = -28;
@@ -152,17 +157,17 @@ export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', us
 
 export function createSpeechBubble(lines: string[], accent = 0x5dbb63): Container {
   const root = new Container();
-  const fontSize = 9;
-  const lineHeight = 12;
+  const fontSize = 10;
+  const lineHeight = 13;
   const padX = 8;
   const padY = 6;
-  const charW = 5.2;
-  const contentW = Math.max(...lines.map((l) => l.length * charW), 40);
-  const w = Math.min(168, contentW + padX * 2);
+  const charW = 5.8;
+  const contentW = Math.max(...lines.map((l) => l.length * charW), 44);
+  const w = Math.min(176, contentW + padX * 2);
   const h = lines.length * lineHeight + padY * 2;
-  const top = -h - 12;
+  const top = -h - 14;
 
-  const bg = new Graphics();
+  const bg = new Graphics({ roundPixels: true });
   bg.roundRect(-w / 2, top, w, h, 5);
   bg.fill({ color: 0x120f1a, alpha: 0.96 });
   bg.roundRect(-w / 2, top, w, h, 5);
@@ -180,10 +185,7 @@ export function createSpeechBubble(lines: string[], accent = 0x5dbb63): Containe
   root.addChild(bg);
 
   for (let i = 0; i < lines.length; i++) {
-    const t = new Text({
-      text: lines[i],
-      style: { fontFamily: 'monospace', fontSize, fill: 0xf0e6d3 },
-    });
+    const t = createPixelText(lines[i]!, fontSize, 0xf0e6d3);
     t.anchor.set(0.5, 0);
     t.y = top + padY + i * lineHeight;
     root.addChild(t);
@@ -383,33 +385,127 @@ export function drawDungeonFloor(
   }
 }
 
-export function drawAttackSlash(g: Graphics, x: number, y: number, angle: number): void {
-  g.clear();
-  g.arc(x, y, 20, angle - 0.8, angle + 0.8);
-  g.stroke({ width: 4, color: 0xf0e6d3, alpha: 0.85 });
+export function createProjectileSprite(
+  style: 'orb' | 'spear' | 'spore' = 'orb',
+  color = 0xc4f082,
+): Container {
+  const root = new Container();
+  const g = new Graphics({ roundPixels: true });
+
+  if (style === 'spear') {
+    drawSpearProjectile(g, color);
+    root.pivot.set(0, 6);
+  } else if (style === 'spore') {
+    drawSporeOrb(g, color);
+  } else {
+    drawEnergyOrb(g, color);
+  }
+
+  root.addChild(g);
+  return root;
+}
+export function createShieldGraphic(maxHp: number): Graphics {
+  const g = new Graphics();
+  const r = 12 + Math.min(5, maxHp / 12);
+  g.circle(0, 0, r);
+  g.stroke({ width: 2, color: 0x8a6ab8, alpha: 0.85 });
+  g.circle(0, 0, r - 3);
+  g.stroke({ width: 1, color: 0xc4f082, alpha: 0.45 });
+  return g;
 }
 
-export function drawDamageNumber(parent: Container, amount: number, x: number, y: number): void {
-  const t = new Text({
-    text: String(amount),
-    style: { fontFamily: 'monospace', fontSize: 11, fill: 0xffffff, fontWeight: 'bold' },
-  });
+export function createLootIcon(lootId: string): Container {
+  const root = new Container();
+  const g = new Graphics();
+  const def = LOOT_TABLE[lootId];
+  const color =
+    def?.rarity === 'epic'
+      ? 0xc4a040
+      : def?.rarity === 'rare'
+        ? 0x8ab4f8
+        : def?.rarity === 'uncommon'
+          ? 0x5dbb63
+          : 0x8a6a48;
+
+  if (lootId === 'fibra_musgo') {
+    g.roundRect(-8, -4, 16, 10, 2);
+    g.fill(color);
+    for (let i = -6; i <= 6; i += 4) {
+      g.moveTo(i, -4);
+      g.lineTo(i + 2, 6);
+      g.stroke({ width: 1.5, color: 0x3d5c3a });
+    }
+  } else if (lootId === 'esporo_brilhante') {
+    g.circle(0, 0, 8);
+    g.fill(color);
+    g.circle(-2, -2, 2);
+    g.fill({ color: 0xffffff, alpha: 0.7 });
+  } else if (lootId === 'coroa_esporas') {
+    g.moveTo(-8, 4);
+    g.lineTo(-4, -6);
+    g.lineTo(0, 2);
+    g.lineTo(4, -6);
+    g.lineTo(8, 4);
+    g.closePath();
+    g.fill(color);
+    g.stroke({ width: 1, color: 0xe8c868 });
+  } else if (lootId === 'nucleo_fungico') {
+    g.circle(0, 0, 9);
+    g.fill(color);
+    g.circle(0, 0, 4);
+    g.fill(0x3d5c3a);
+  } else {
+    g.circle(0, 2, 7);
+    g.fill(color);
+    g.roundRect(-2, -6, 4, 5, 1);
+    g.fill(0xf0e6d3);
+  }
+
+  root.addChild(g);
+  return root;
+}
+
+export function createWeaponIcon(weaponId: string): Container {
+  const root = new Container();
+  const g = new Graphics({ roundPixels: true });
+
+  if (weaponId === 'picareta_combate') {
+    drawPickaxeHead(g, 14, 0xc4a040);
+  } else if (weaponId === 'lanca_esporo') {
+    drawSpearAlongX(g, 12, 0xc4f082);
+  } else {
+    drawKnifeBlade(g, 12, 0xc0c0c0, 1);
+  }
+
+  root.addChild(g);
+  return root;
+}
+
+export function drawDamageNumber(
+  parent: Container,
+  amount: number,
+  x: number,
+  y: number,
+  fx: FxRunner,
+): void {
+  const t = createPixelText(String(amount), 11, 0xffffff, { fontWeight: 'bold' });
   t.anchor.set(0.5);
   t.x = x;
   t.y = y;
   parent.addChild(t);
 
-  let life = 0.6;
-  const tick = () => {
-    life -= 0.016;
-    t.y -= 0.6;
-    t.alpha = Math.max(0, life);
-    if (life > 0) requestAnimationFrame(tick);
-    else parent.removeChild(t);
-  };
-  requestAnimationFrame(tick);
+  fx.spawn(
+    0.6,
+    (_progress, dt) => {
+      t.y -= 36 * dt;
+      t.alpha = Math.max(0, t.alpha - dt * 1.65);
+    },
+    () => {
+      parent.removeChild(t);
+      t.destroy();
+    },
+  );
 }
-
 export function createCaptureOrbBall(): Container {
   const root = new Container();
   const g = new Graphics();
@@ -446,18 +542,12 @@ export function createCaptureAttemptHud(): Container {
   bg.stroke({ width: 1.5, color: 0x8ab4f8 });
   root.addChild(bg);
 
-  const attempt = new Text({
-    text: 'Tentativa 1/3',
-    style: { fontFamily: 'monospace', fontSize: 9, fill: 0xf0e6d3 },
-  });
+  const attempt = createPixelText('Tentativa 1/3', 10, 0xf0e6d3);
   attempt.anchor.set(0.5);
   attempt.y = -18;
   root.addChild(attempt);
 
-  const pct = new Text({
-    text: '0%',
-    style: { fontFamily: 'monospace', fontSize: 11, fill: 0xc4f082, fontWeight: 'bold' },
-  });
+  const pct = createPixelText('0%', 11, 0xc4f082, { fontWeight: 'bold' });
   pct.anchor.set(0.5);
   pct.y = -4;
   root.addChild(pct);
@@ -504,18 +594,12 @@ export function createCaptureSuccessBanner(speciesName: string): Container {
   bg.stroke({ width: 2, color: 0xc4f082 });
   root.addChild(bg);
 
-  const title = new Text({
-    text: '✦ Capturado! ✦',
-    style: { fontFamily: 'monospace', fontSize: 11, fill: 0xc4f082, fontWeight: 'bold' },
-  });
+  const title = createPixelText('✦ Capturado! ✦', 11, 0xc4f082, { fontWeight: 'bold' });
   title.anchor.set(0.5);
   title.y = -10;
   root.addChild(title);
 
-  const name = new Text({
-    text: speciesName,
-    style: { fontFamily: 'monospace', fontSize: 9, fill: 0xf0e6d3 },
-  });
+  const name = createPixelText(speciesName, 10, 0xf0e6d3);
   name.anchor.set(0.5);
   name.y = 6;
   root.addChild(name);
@@ -523,30 +607,39 @@ export function createCaptureSuccessBanner(speciesName: string): Container {
   return root;
 }
 
-export function drawCaptureBurst(parent: Container, x: number, y: number, success: boolean): void {
-  const burst = new Graphics();
+export function drawCaptureBurst(
+  parent: Container,
+  x: number,
+  y: number,
+  success: boolean,
+  fx: FxRunner,
+): void {
+  const burst = new Graphics({ roundPixels: true });
   const color = success ? 0xc4f082 : 0xe85d4a;
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    burst.moveTo(x, y);
-    burst.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16);
+    burst.moveTo(0, 0);
+    burst.lineTo(Math.cos(a) * 16, Math.sin(a) * 16);
   }
-  burst.stroke({ width: 3, color, alpha: 0.9 });
-  burst.circle(x, y, success ? 14 : 10);
+  burst.stroke({ width: 3, color, alpha: 0.9, cap: 'round' });
+  burst.circle(0, 0, success ? 14 : 10);
   burst.stroke({ width: 2, color, alpha: 0.6 });
+  burst.x = x;
+  burst.y = y;
   parent.addChild(burst);
 
-  let life = 0.35;
-  const tick = () => {
-    life -= 0.016;
-    burst.alpha = Math.max(0, life * 2);
-    burst.scale.set(1 + (0.35 - life) * 2);
-    if (life > 0) requestAnimationFrame(tick);
-    else parent.removeChild(burst);
-  };
-  requestAnimationFrame(tick);
+  fx.spawn(
+    0.35,
+    (progress) => {
+      burst.alpha = Math.max(0, (1 - progress) * 2);
+      burst.scale.set(1 + progress * 2);
+    },
+    () => {
+      parent.removeChild(burst);
+      burst.destroy();
+    },
+  );
 }
-
 /** Interior da loja — piso acolhedor, balcão e prateleiras. */
 export function drawShopLayout(
   g: Graphics,
@@ -634,10 +727,7 @@ export function createShopItemSprite(name: string, color: number, isCreature: bo
     g.fill(color);
   }
   root.addChild(g);
-  const label = new Text({
-    text: name.length > 8 ? `${name.slice(0, 7)}…` : name,
-    style: { fontFamily: 'monospace', fontSize: 7, fill: 0xf0e6d3 },
-  });
+  const label = createPixelText(name.length > 8 ? `${name.slice(0, 7)}…` : name, 8, 0xf0e6d3);
   label.anchor.set(0.5);
   label.y = -16;
   root.addChild(label);
@@ -669,10 +759,7 @@ export function createEmojiBubble(emoji: string): Container {
   bg.roundRect(-16, -14, 32, 22, 6);
   bg.stroke({ width: 1, color: 0x5dbb63 });
   root.addChild(bg);
-  const t = new Text({
-    text: emoji,
-    style: { fontSize: 14 },
-  });
+  const t = createPixelText(emoji, 14, 0xffffff);
   t.anchor.set(0.5);
   t.y = -2;
   root.addChild(t);

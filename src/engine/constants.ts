@@ -4,8 +4,16 @@ export const TILE_SIZE = 32;
 
 export const PLAYER_SPEED = 120;
 export const PLAYER_MAX_HP = 100;
+export const PLAYER_MAX_STAMINA = 80;
+export const DODGE_STAMINA_COST = 20;
+export const DODGE_DURATION = 0.3;
+export const DODGE_DISTANCE = 60;
+export const STAMINA_REGEN = 15;
+/** @deprecated Use weapon defs */
 export const PLAYER_ATTACK_DAMAGE = 15;
+/** @deprecated Use weapon defs */
 export const PLAYER_ATTACK_COOLDOWN = 0.45;
+/** @deprecated Use weapon defs */
 export const PLAYER_ATTACK_RANGE = 36;
 
 export const BAG_SLOTS = 12;

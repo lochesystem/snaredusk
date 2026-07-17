@@ -2,6 +2,20 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.3.0] — 2026-07-17
+
+Sistema de combate variado com craft de armas.
+
+### Adicionado
+
+- 3 armas: Faca (inicial), Picareta de combate, Lança esporo (projétil)
+- Oficina e Arsenal na base — craft com materiais da bolsa, equipar antes da masmorra
+- Melee com arco direcional (mira com mouse)
+- Projéteis do jogador e inimigos; esquiva com stamina (R)
+- Lumimorcego ranged, Carapaça com escudo + DEF, Rei das Esporas com rajada
+- Save v3 (armas, stamina, equipamento)
+- Testes: combat, projectiles, craft, weaponAttack
+
 ## [0.2.1] — 2026-07-16
 
 Tipos de sala na masmorra procedural.

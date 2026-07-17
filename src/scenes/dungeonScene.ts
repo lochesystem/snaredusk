@@ -1,10 +1,19 @@
 import { Container, Graphics } from 'pixi.js';
+import { FxRunner } from '../engine/fxRunner.ts';
 import {
-  PLAYER_ATTACK_COOLDOWN,
-  PLAYER_ATTACK_DAMAGE,
-  PLAYER_ATTACK_RANGE,
+  createEnemyStatusBars,
+  updateEnemyStatusBars,
+  type EnemyStatusBars,
+} from '../world/enemyStatusBars.ts';
+import { snapContainer } from '../world/pixelText.ts';
+import {
   PLAYER_MAX_HP,
+  PLAYER_MAX_STAMINA,
   PLAYER_SPEED,
+  DODGE_STAMINA_COST,
+  DODGE_DURATION,
+  DODGE_DISTANCE,
+  STAMINA_REGEN,
   CAPTURE_RANGE,
   ORB_BUNDLE_PRICE,
   ORB_PRICE,
@@ -17,7 +26,29 @@ import { getSpecies } from '../data/creatures.ts';
 import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
 import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
+import {
+  createWeaponAttackFx,
+  tickWeaponAttackFx,
+  type AttackFxStyle,
+  type WeaponAttackFxState,
+} from '../world/weaponAttackFx.ts';
+import { getEquippedWeapon } from '../data/weapons.ts';
+import { getEnemyBehavior } from '../data/enemyBehaviors.ts';
 import { calcDamage, distance, normalize } from '../systems/combat.ts';
+import {
+  applyShieldDamage,
+  initEnemyCombatFields,
+  tickEnemyCombat,
+  type EnemyCombatPhase,
+} from '../systems/enemyCombat.ts';
+import {
+  advanceProjectile,
+  markProjectileHit,
+  projectileHitEnemy,
+  projectileHitPlayer,
+  type Projectile,
+} from '../systems/projectiles.ts';
+import { buildPlayerProjectile, findMeleeHits } from '../systems/weaponAttack.ts';
 import {
   canTargetForCapture,
   CAPTURE_ARRIVE_PAUSE,
@@ -47,9 +78,10 @@ import {
   updateCaptureAttemptHud,
   createCaptureSuccessBanner,
   drawCaptureBurst,
-  drawAttackSlash,
   drawDamageNumber,
   drawDungeonLayout,
+  createProjectileSprite,
+  createShieldGraphic,
 } from '../world/placeholderArt.ts';
 
 export interface DungeonCallbacks {
@@ -70,14 +102,25 @@ interface LiveEnemy {
   y: number;
   atk: number;
   speed: number;
+  def: number;
+  behaviorId: string;
   attackCd: number;
   enraged: boolean;
   aggroed: boolean;
   fled: boolean;
   dead: boolean;
+  lootDropped: boolean;
   container: Container;
+  shieldGfx: Graphics | null;
+  statusBars: EnemyStatusBars | null;
   capturableGlow: boolean;
   captureLocked: boolean;
+  shieldHp: number;
+  shieldMax: number;
+  shieldRegenCd: number;
+  combatPhase: EnemyCombatPhase;
+  phaseTimer: number;
+  burstShotsLeft: number;
 }
 
 type CaptureOrbPhase = 'flying' | 'arrived' | 'shaking' | 'success_fx' | 'fail_fx';
@@ -131,12 +174,16 @@ export class DungeonScene {
   private camera = new Camera();
   private playerSprite = createPlayerSprite();
   private portalSprite = createPortalSprite();
-  private slashGfx = new Graphics();
+  private attackFx: WeaponAttackFxState | null = null;
 
   private playerX = 0;
   private playerY = 0;
   private playerHp: number;
+  private playerStamina: number;
+  private invincibleTimer = 0;
+  private dodgeTimer = 0;
   private attackCd = 0;
+  private projectiles: Projectile[] = [];
   private enemies: LiveEnemy[] = [];
   private active = false;
   private portalActive = false;
@@ -147,6 +194,8 @@ export class DungeonScene {
   private layout: DungeonLayout;
   private glowTargetId: string | null = null;
   private minimap: DungeonMinimap;
+  private deathHandled = false;
+  private fxRunner = new FxRunner();
 
   private state: GameState;
   private input: InputManager;
@@ -162,6 +211,7 @@ export class DungeonScene {
     this.input = input;
     this.callbacks = callbacks;
     this.playerHp = state.playerHp;
+    this.playerStamina = state.playerStamina;
     this.layout = generateDungeon(dungeonSeed);
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
 
@@ -177,6 +227,7 @@ export class DungeonScene {
       height: this.layout.height,
     });
     this.world.addChild(floorGfx);
+    floorGfx.cacheAsTexture(true);
 
     this.playerX = this.layout.spawn.x;
     this.playerY = this.layout.spawn.y;
@@ -192,7 +243,6 @@ export class DungeonScene {
 
     this.world.addChild(this.entityLayer);
     this.world.addChild(this.fxLayer);
-    this.fxLayer.addChild(this.slashGfx);
     this.root.addChild(this.world);
     this.root.addChild(this.minimap.container);
 
@@ -209,11 +259,16 @@ export class DungeonScene {
   exit(): void {
     this.active = false;
     this.state.playerHp = this.playerHp;
+    this.state.playerStamina = this.playerStamina;
     this.clearActiveCapture();
+    this.clearAttackFx();
+    this.fxRunner.clear();
+    this.clearProjectiles();
     this.root.destroy({ children: true });
   }
 
   private spawnEnemies(): void {
+    let nextEnemyId = 0;
     for (const spawn of this.layout.enemySpawns) {
       const species = getSpecies(spawn.speciesId);
       const container = createCreatureSprite(species);
@@ -223,8 +278,9 @@ export class DungeonScene {
         container.scale.set(1.35);
       }
       this.entityLayer.addChild(container);
-      this.enemies.push({
-        id: `${spawn.speciesId}-${spawn.roomIndex}`,
+      const combatInit = initEnemyCombatFields(species.behaviorId);
+      const enemy: LiveEnemy = {
+        id: `enemy-${nextEnemyId++}`,
         speciesId: spawn.speciesId,
         roomIndex: spawn.roomIndex,
         isBoss: spawn.isBoss ?? false,
@@ -234,15 +290,24 @@ export class DungeonScene {
         y: spawn.y,
         atk: species.atk,
         speed: species.speed,
+        def: species.def,
+        behaviorId: species.behaviorId,
         attackCd: 0,
         enraged: false,
         aggroed: false,
         fled: false,
         dead: false,
+        lootDropped: false,
         container,
+        shieldGfx: null,
+        statusBars: null,
         capturableGlow: false,
         captureLocked: false,
-      });
+        ...combatInit,
+      };
+      this.attachEnemyShield(enemy);
+      this.attachEnemyStatusBars(enemy);
+      this.enemies.push(enemy);
     }
   }
 
@@ -289,7 +354,11 @@ export class DungeonScene {
   update(dt: number): void {
     if (!this.active) return;
 
+    this.tryDodge(dt);
     this.movePlayer(dt);
+    this.fxRunner.update(dt);
+    this.updateAttackFx(dt);
+    this.updateProjectiles(dt);
     this.updateEnemies(dt);
     this.updateCaptureOrbs(dt);
     this.tryLaunchCapture();
@@ -308,10 +377,50 @@ export class DungeonScene {
     this.minimap.update(this.layout, this.playerX, this.playerY);
 
     this.state.playerHp = Math.round(this.playerHp);
+    this.state.playerStamina = Math.round(this.playerStamina);
     this.callbacks.updateHud();
   }
 
+  private tryDodge(dt: number): void {
+    if (this.dodgeTimer > 0) {
+      this.dodgeTimer -= dt;
+      this.invincibleTimer = Math.max(this.invincibleTimer, this.dodgeTimer);
+    }
+    if (this.invincibleTimer > 0) {
+      this.invincibleTimer -= dt;
+      this.playerSprite.alpha = 0.45 + Math.sin(Date.now() * 0.04) * 0.2;
+    } else {
+      this.playerSprite.alpha = 1;
+    }
+    if (this.playerStamina < PLAYER_MAX_STAMINA) {
+      this.playerStamina = Math.min(PLAYER_MAX_STAMINA, this.playerStamina + STAMINA_REGEN * dt);
+    }
+    if (!this.input.consumeKey('r')) return;
+    if (this.playerStamina < DODGE_STAMINA_COST || this.dodgeTimer > 0) return;
+    const move = this.input.getMovement();
+    const dir = move.x !== 0 || move.y !== 0 ? move : { x: 1, y: 0 };
+    const norm = normalize(dir.x, dir.y);
+    const moved = moveWithCollision(
+      this.playerX,
+      this.playerY,
+      norm.x * DODGE_DISTANCE,
+      norm.y * DODGE_DISTANCE,
+      PLAYER_RADIUS,
+      this.layout.walls,
+      this.layout.floors,
+      this.layout.obstacles,
+    );
+    this.playerX = moved.x;
+    this.playerY = moved.y;
+    this.playerSprite.x = moved.x;
+    this.playerSprite.y = moved.y;
+    this.playerStamina -= DODGE_STAMINA_COST;
+    this.dodgeTimer = DODGE_DURATION;
+    this.invincibleTimer = DODGE_DURATION;
+  }
+
   private movePlayer(dt: number): void {
+    if (this.dodgeTimer > 0) return;
     const move = this.input.getMovement();
     const dx = move.x * PLAYER_SPEED * dt;
     const dy = move.y * PLAYER_SPEED * dt;
@@ -338,33 +447,210 @@ export class DungeonScene {
   }
 
   private performAttack(): void {
+    const weapon = getEquippedWeapon(this.state.equippedWeaponId);
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
     const dir = normalize(worldMouse.x - this.playerX, worldMouse.y - this.playerY);
     const angle = Math.atan2(dir.y, dir.x);
 
-    drawAttackSlash(this.slashGfx, this.playerX, this.playerY, angle);
-    setTimeout(() => this.slashGfx.clear(), 80);
+    if (weapon.kind === 'melee') {
+      this.playAttackFx(weapon.attackFx ?? 'knife', angle, weapon.range, weapon.slashColor ?? 0xf0e6d3);
+      const hits = findMeleeHits(
+        this.playerX,
+        this.playerY,
+        angle,
+        weapon,
+        this.enemies.map((e) => ({
+          id: e.id,
+          x: e.x,
+          y: e.y,
+          def: e.def,
+          dead: e.dead,
+          fled: e.fled,
+          captureLocked: e.captureLocked,
+        })),
+      );
+      for (const hit of hits) {
+        const enemy = this.enemies.find((e) => e.id === hit.id);
+        if (enemy) this.damageEnemy(enemy, hit.damage);
+      }
+    } else {
+      this.playAttackFx(weapon.attackFx ?? 'spear_thrust', angle, weapon.range, weapon.slashColor ?? 0xc4f082);
+      const data = buildPlayerProjectile(this.playerX, this.playerY, angle, weapon);
+      this.spawnProjectile(data, 'player', weapon.projectileStyle ?? 'orb');
+    }
 
-    this.attackCd = PLAYER_ATTACK_COOLDOWN;
+    this.attackCd = weapon.cooldown;
+  }
 
-    for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
-      const dist = distance(this.playerX, this.playerY, enemy.x, enemy.y);
-      if (dist <= PLAYER_ATTACK_RANGE + 8) {
-        this.damageEnemy(enemy, calcDamage(PLAYER_ATTACK_DAMAGE));
+  private playAttackFx(style: AttackFxStyle, angle: number, range: number, color: number): void {
+    this.clearAttackFx();
+    const fx = createWeaponAttackFx(style, angle, range, color);
+    this.attackFx = fx;
+    this.fxLayer.addChild(fx.root);
+    tickWeaponAttackFx(fx, 0, this.playerX, this.playerY);
+  }
+
+  private updateAttackFx(dt: number): void {
+    if (!this.attackFx) return;
+    const alive = tickWeaponAttackFx(this.attackFx, dt, this.playerX, this.playerY);
+    if (!alive) this.clearAttackFx();
+  }
+
+  private clearAttackFx(): void {
+    if (!this.attackFx) return;
+    this.attackFx.root.parent?.removeChild(this.attackFx.root);
+    this.attackFx.root.destroy({ children: true });
+    this.attackFx = null;
+  }
+
+  private spawnProjectile(
+    data: Omit<Projectile, 'container' | 'hitIds'>,
+    owner: 'player' | 'enemy',
+    style: 'orb' | 'spear' | 'spore' = 'orb',
+  ): void {
+    const color = owner === 'player' ? 0xc4f082 : 0x8fd894;
+    const container = createProjectileSprite(style, color);
+    container.x = data.x;
+    container.y = data.y;
+    if (style === 'spear') {
+      container.rotation = Math.atan2(data.vy, data.vx) + Math.PI / 2;
+    }
+    this.fxLayer.addChild(container);
+    this.projectiles.push({
+      ...data,
+      owner,
+      container,
+      hitIds: new Set(),
+      visualStyle: style,
+    });
+  }
+
+  private clearProjectiles(): void {
+    for (const p of this.projectiles) {
+      p.container.parent?.removeChild(p.container);
+      p.container.destroy({ children: true });
+    }
+    this.projectiles = [];
+  }
+
+  private updateProjectiles(dt: number): void {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i]!;
+      const alive = advanceProjectile(
+        p,
+        dt,
+        this.layout.walls,
+        this.layout.floors,
+        this.layout.obstacles,
+      );
+      if (!alive) {
+        this.fxLayer.removeChild(p.container);
+        p.container.destroy({ children: true });
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
+      if (p.owner === 'player') {
+        for (const enemy of this.enemies) {
+          if (enemy.dead || enemy.fled) continue;
+          if (!projectileHitEnemy(p, enemy.id, enemy.x, enemy.y)) continue;
+          this.damageEnemy(enemy, p.damage);
+          if (!markProjectileHit(p, enemy.id)) {
+            this.fxLayer.removeChild(p.container);
+            p.container.destroy({ children: true });
+            this.projectiles.splice(i, 1);
+          }
+          break;
+        }
+      } else if (this.invincibleTimer <= 0) {
+        if (projectileHitPlayer(p, this.playerX, this.playerY, PLAYER_RADIUS)) {
+          const dmg = calcDamage(p.damage, this.state.playerDef);
+          this.playerHp = Math.max(0, this.playerHp - dmg);
+          drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+          this.fxLayer.removeChild(p.container);
+          p.container.destroy({ children: true });
+          this.projectiles.splice(i, 1);
+        }
       }
     }
   }
 
-  private damageEnemy(enemy: LiveEnemy, dmg: number): void {
+  private damageEnemy(enemy: LiveEnemy, rawDmg: number): void {
+    if (enemy.dead || enemy.fled) return;
     enemy.aggroed = true;
-    enemy.hp = Math.max(0, enemy.hp - dmg);
-    drawDamageNumber(this.fxLayer, dmg, enemy.x, enemy.y - 20);
+    const behavior = getEnemyBehavior(enemy.behaviorId);
+    const afterShield = applyShieldDamage(enemy, rawDmg, behavior);
+    this.updateEnemyShieldGfx(enemy);
+    this.updateEnemyStatusBars(enemy);
+    if (afterShield <= 0) return;
+    const finalDmg = calcDamage(afterShield, enemy.def);
+    enemy.hp = Math.max(0, enemy.hp - finalDmg);
+    drawDamageNumber(this.fxLayer, finalDmg, enemy.x, enemy.y - 20, this.fxRunner);
     if (enemy.hp <= 0) {
-      enemy.dead = true;
-      this.onEnemyKilled(enemy);
-      enemy.container.visible = false;
+      this.eliminateEnemy(enemy);
     }
+  }
+
+  private eliminateEnemy(enemy: LiveEnemy, options?: { skipToast?: boolean }): void {
+    if (enemy.dead) return;
+    enemy.dead = true;
+    enemy.aggroed = false;
+    enemy.captureLocked = false;
+    enemy.container.visible = false;
+    enemy.container.alpha = 1;
+    if (enemy.shieldGfx) enemy.shieldGfx.visible = false;
+    if (enemy.statusBars) enemy.statusBars.root.visible = false;
+    if (!enemy.lootDropped) {
+      enemy.lootDropped = true;
+      this.spawnEnemyChest(enemy);
+      if (!options?.skipToast) {
+        const species = getSpecies(enemy.speciesId);
+        if (enemy.isBoss) {
+          this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
+        } else {
+          this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
+        }
+      }
+    }
+  }
+
+  private attachEnemyStatusBars(enemy: LiveEnemy): void {
+    enemy.statusBars?.root.parent?.removeChild(enemy.statusBars.root);
+    const bars = createEnemyStatusBars(enemy.shieldMax > 0, enemy.isBoss);
+    enemy.statusBars = bars;
+    enemy.container.addChild(bars.root);
+    this.updateEnemyStatusBars(enemy);
+  }
+
+  private updateEnemyStatusBars(enemy: LiveEnemy): void {
+    if (!enemy.statusBars || enemy.dead) return;
+    updateEnemyStatusBars(
+      enemy.statusBars,
+      enemy.hp,
+      enemy.maxHp,
+      enemy.shieldHp,
+      enemy.shieldMax,
+    );
+  }
+
+  private attachEnemyShield(enemy: LiveEnemy): void {
+    if (enemy.shieldMax <= 0) {
+      enemy.shieldGfx = null;
+      return;
+    }
+    if (enemy.shieldGfx?.parent === enemy.container) return;
+    enemy.shieldGfx?.parent?.removeChild(enemy.shieldGfx);
+    const shieldGfx = createShieldGraphic(enemy.shieldMax);
+    shieldGfx.y = -2;
+    enemy.container.addChildAt(shieldGfx, 0);
+    enemy.shieldGfx = shieldGfx;
+    this.updateEnemyShieldGfx(enemy);
+  }
+
+  private updateEnemyShieldGfx(enemy: LiveEnemy): void {
+    if (!enemy.shieldGfx) return;
+    enemy.shieldGfx.visible = enemy.shieldHp > 0 && !enemy.dead;
+    enemy.shieldGfx.alpha = 0.35 + (enemy.shieldHp / Math.max(1, enemy.shieldMax)) * 0.55;
   }
 
   private spawnEnemyChest(enemy: LiveEnemy): void {
@@ -385,16 +671,6 @@ export class DungeonScene {
     });
   }
 
-  private onEnemyKilled(enemy: LiveEnemy): void {
-    const species = getSpecies(enemy.speciesId);
-    this.spawnEnemyChest(enemy);
-    if (enemy.isBoss) {
-      this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
-    } else {
-      this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
-    }
-  }
-
   private updateEnemies(dt: number): void {
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
@@ -408,39 +684,42 @@ export class DungeonScene {
         playerInSpawnRoom: this.isPlayerInRoom(enemy.roomIndex),
       });
 
-      if (enemy.aggroed) {
-        if (dist > 8) {
-          const dir = normalize(this.playerX - enemy.x, this.playerY - enemy.y);
-          const spd = enemy.speed * (enemy.enraged ? 1.2 : 1);
-          const stepX = dir.x * spd * dt;
-          const stepY = dir.y * spd * dt;
-          const moved = moveWithCollision(
-            enemy.x,
-            enemy.y,
-            stepX,
-            stepY,
-            9,
-            this.layout.walls,
-            this.layout.floors,
-            this.layout.obstacles,
-          );
-          enemy.x = moved.x;
-          enemy.y = moved.y;
-        }
+      const result = tickEnemyCombat(enemy, {
+        playerX: this.playerX,
+        playerY: this.playerY,
+        dt,
+      });
 
-        enemy.attackCd -= dt;
-        if (dist < 18 && enemy.attackCd <= 0) {
-          enemy.attackCd = 1.1;
-          const dmg = calcDamage(enemy.atk);
-          this.playerHp = Math.max(0, this.playerHp - dmg);
-          drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24);
-        }
-      } else {
-        enemy.attackCd -= dt;
+      if (enemy.aggroed || enemy.combatPhase !== 'idle') {
+        const moved = moveWithCollision(
+          enemy.x,
+          enemy.y,
+          result.moveX - enemy.x,
+          result.moveY - enemy.y,
+          9,
+          this.layout.walls,
+          this.layout.floors,
+          this.layout.obstacles,
+        );
+        enemy.x = moved.x;
+        enemy.y = moved.y;
+      }
+
+      for (const shot of result.projectiles) {
+        this.spawnProjectile(shot.data, 'enemy');
+      }
+
+      if (result.playerDamage > 0 && this.invincibleTimer <= 0) {
+        const dmg = calcDamage(result.playerDamage, this.state.playerDef);
+        this.playerHp = Math.max(0, this.playerHp - dmg);
+        drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
       }
 
       enemy.container.x = enemy.x;
       enemy.container.y = enemy.y;
+      snapContainer(enemy.container);
+      this.updateEnemyShieldGfx(enemy);
+      this.updateEnemyStatusBars(enemy);
     }
 
     if (this.attackCd > 0) this.attackCd -= dt;
@@ -493,8 +772,11 @@ export class DungeonScene {
       parent.removeChild(enemy.container);
       enemy.container.destroy({ children: true });
       enemy.container = createCreatureSprite(species, shouldGlow);
+      if (enemy.isBoss) enemy.container.scale.set(1.35);
       enemy.container.x = enemy.x;
       enemy.container.y = enemy.y;
+      this.attachEnemyShield(enemy);
+      this.attachEnemyStatusBars(enemy);
       parent.addChild(enemy.container);
     }
   }
@@ -645,7 +927,7 @@ export class DungeonScene {
         cap.phase = 'fail_fx';
         cap.phaseTimer = CAPTURE_FAIL_FX_DURATION;
         cap.hud.visible = false;
-        drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, false);
+        drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, false, this.fxRunner);
         return;
       }
 
@@ -704,11 +986,9 @@ export class DungeonScene {
       if (!this.state.bestiary.includes(species.id)) {
         this.state.bestiary.push(species.id);
       }
-      enemy.dead = true;
-      enemy.container.visible = false;
+      this.eliminateEnemy(enemy, { skipToast: true });
       const anchor = this.getCaptureAnchor(enemy);
-      drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true);
-      this.spawnEnemyChest(enemy);
+      drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true, this.fxRunner);
       this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
       this.callbacks.onStateChange();
     } else {
@@ -756,6 +1036,7 @@ export class DungeonScene {
     const bubble = createSpeechBubble(lines, accent);
     bubble.x = item.data.x;
     bubble.y = item.data.y - 36;
+    snapContainer(bubble);
     this.entityLayer.addChild(bubble);
     item.bubble = bubble;
   }
@@ -1018,13 +1299,14 @@ export class DungeonScene {
   }
 
   private checkPlayerDeath(): void {
-    if (this.playerHp <= 0) {
-      this.state.bag = this.state.bag.map(() => null);
-      this.state.playerHp = PLAYER_MAX_HP;
-      this.callbacks.showToast('Você desmaiou — perdeu a bolsa!');
-      this.active = false;
-      this.callbacks.onReturnToBase(true);
-    }
+    if (this.deathHandled || this.playerHp > 0) return;
+    this.deathHandled = true;
+    this.state.bag = this.state.bag.map(() => null);
+    this.playerHp = PLAYER_MAX_HP;
+    this.state.playerHp = PLAYER_MAX_HP;
+    this.callbacks.showToast('Você desmaiou — perdeu a bolsa!');
+    this.active = false;
+    this.callbacks.onReturnToBase(true);
   }
 
   getHudHint(): string {
@@ -1067,6 +1349,6 @@ export class DungeonScene {
     if (bossAlive) {
       return 'Derrote o Rei das Esporas para ativar o portal';
     }
-    return 'WASD mover · Clique atacar · Q lançar Orbe';
+    return 'WASD mover · Clique atacar · R esquivar · Q lançar Orbe';
   }
 }

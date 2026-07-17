@@ -37,12 +37,18 @@ export interface SpeciesDef {
   color: number;
   accent: number;
   capturable: boolean;
+  behaviorId: string;
+  def: number;
 }
 
 export interface GameState {
   gold: number;
   orbs: number;
   playerHp: number;
+  playerStamina: number;
+  playerDef: number;
+  equippedWeaponId: string;
+  ownedWeapons: string[];
   bag: (BagEntry | null)[];
   habitat: CreatureItem[];
   shopLevel: number;
@@ -78,11 +84,17 @@ export function createShopCages(count: number): (ShopListing | null)[] {
   return Array.from({ length: count }, () => null);
 }
 
+import { STARTING_WEAPON_ID } from './data/weapons.ts';
+
 export function defaultGameState(): GameState {
   return {
     gold: 20,
     orbs: 3,
     playerHp: 100,
+    playerStamina: 80,
+    playerDef: 5,
+    equippedWeaponId: STARTING_WEAPON_ID,
+    ownedWeapons: [STARTING_WEAPON_ID],
     bag: createEmptyBag(),
     habitat: [],
     shopLevel: 1,

@@ -1,4 +1,5 @@
 import { SAVE_KEY } from '../engine/constants.ts';
+import { STARTING_WEAPON_ID } from '../data/weapons.ts';
 import {
   createEmptyBag,
   createShopCages,
@@ -8,21 +9,25 @@ import {
 } from '../types.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
 
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
-interface SavePayloadV2 {
+interface SavePayloadV3 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
+  playerStamina?: number;
+  playerDef?: number;
+  equippedWeaponId?: string;
+  ownedWeapons?: string[];
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV2 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV3 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -31,11 +36,23 @@ export function deserializeState(raw: string): GameState | null {
     const payload = JSON.parse(raw) as { version: number; state: LegacyGameState };
     if (!payload.state) return null;
     if (payload.version === 1) return normalizeState(migrateV1(payload.state));
+    if (payload.version === 2) return normalizeState(migrateV2(payload.state));
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
     return null;
   }
+}
+
+function migrateV2(partial: LegacyGameState): GameState {
+  return {
+    ...defaultGameState(),
+    ...partial,
+    playerStamina: partial.playerStamina ?? 80,
+    playerDef: partial.playerDef ?? 5,
+    equippedWeaponId: partial.equippedWeaponId ?? STARTING_WEAPON_ID,
+    ownedWeapons: partial.ownedWeapons ?? [STARTING_WEAPON_ID],
+  };
 }
 
 function migrateV1(partial: LegacyGameState): GameState {
@@ -71,6 +88,10 @@ function normalizeState(partial: LegacyGameState): GameState {
     ...base,
     ...partial,
     shopLevel: level,
+    playerStamina: partial.playerStamina ?? base.playerStamina,
+    playerDef: partial.playerDef ?? base.playerDef,
+    equippedWeaponId: partial.equippedWeaponId ?? base.equippedWeaponId,
+    ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
     bag: padBag(partial.bag),
     shopShelves: padShelves(partial.shopShelves, def.shelfCount),
     shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),

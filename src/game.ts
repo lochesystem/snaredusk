@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import { GAME_HEIGHT, GAME_WIDTH } from './engine/constants.ts';
 import { InputManager } from './engine/input.ts';
 import { DungeonScene } from './scenes/dungeonScene.ts';
@@ -11,6 +11,10 @@ import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
+import { getEquippedWeapon, WEAPONS } from './data/weapons.ts';
+import { craftWeapon, equipWeapon, formatCraftMissing, getCraftStatus, listRecipes } from './systems/craft.ts';
+import { LOOT_TABLE } from './data/items.ts';
+import { createLootIcon, createWeaponIcon } from './world/placeholderArt.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -24,7 +28,7 @@ export class Game {
   private shopScene: ShopScene | null = null;
   private pendingDungeonExit: boolean | null = null;
   private shopUI: ShopUI;
-  private lastTime = 0;
+  private iconCache = new Map<string, string>();
 
   constructor() {
     this.shopUI = new ShopUI({
@@ -58,6 +62,7 @@ export class Game {
       backgroundColor: 0x1a1520,
       antialias: false,
       resolution: 1,
+      autoStart: false,
     });
 
     this.fitCanvas();
@@ -69,13 +74,21 @@ export class Game {
       document.getElementById('btn-continue')?.classList.remove('hidden');
     }
 
-    this.lastTime = performance.now();
-    this.app.ticker.add(() => {
-      const now = performance.now();
-      const dt = Math.min(0.05, (now - this.lastTime) / 1000);
-      this.lastTime = now;
-      this.update(dt);
-    });
+    this.app.ticker.add(
+      (ticker) => {
+        if (this.screen === 'title') return;
+        const dt = Math.min(0.05, ticker.deltaMS / 1000);
+        this.update(dt);
+      },
+      undefined,
+      UPDATE_PRIORITY.HIGH,
+    );
+    this.app.stop();
+  }
+
+  private setRenderLoop(active: boolean): void {
+    if (active) this.app.start();
+    else this.app.stop();
   }
 
   private fitCanvas(): void {
@@ -93,12 +106,18 @@ export class Game {
       return;
     }
 
-    const scale = Math.max(1, Math.floor(Math.min(
-      wrapper.clientWidth / GAME_WIDTH,
-      wrapper.clientHeight / GAME_HEIGHT,
-    )));
-    canvas.style.width = `${GAME_WIDTH * scale}px`;
-    canvas.style.height = `${GAME_HEIGHT * scale}px`;
+    if (!onBase && !onShop) {
+      const scale = Math.max(1, Math.floor(Math.min(
+        wrapper.clientWidth / GAME_WIDTH,
+        wrapper.clientHeight / GAME_HEIGHT,
+      )));
+      if (this.app.renderer.resolution !== scale) {
+        this.app.renderer.resolution = scale;
+      }
+      this.app.renderer.resize(GAME_WIDTH, GAME_HEIGHT);
+      canvas.style.width = `${GAME_WIDTH * scale}px`;
+      canvas.style.height = `${GAME_HEIGHT * scale}px`;
+    }
   }
 
   private bindDom(): void {
@@ -147,12 +166,14 @@ export class Game {
 
   private startGame(): void {
     document.getElementById('title-screen')?.classList.add('hidden');
+    this.setRenderLoop(true);
     this.showScreen('base');
     saveGame(this.state);
   }
 
   private showScreen(screen: Screen): void {
     this.screen = screen;
+    this.setRenderLoop(screen !== 'title');
     document.querySelectorAll('.screen').forEach((el) => el.classList.add('hidden'));
     document.getElementById('hud')?.classList.toggle('hidden', screen !== 'dungeon');
     document.getElementById('app')?.classList.toggle('layout-base', screen === 'base');
@@ -242,7 +263,171 @@ export class Game {
     this.updateBaseStats();
     this.habitatScene?.syncCreatures(this.state.habitat);
     this.renderBaseBagCreatures();
+    this.renderWorkshop();
+    this.renderArmory();
     this.updateMerchantButtons();
+  }
+
+  private renderWorkshop(): void {
+    const container = document.getElementById('workshop-recipes');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (const recipe of listRecipes()) {
+      const weapon = WEAPONS[recipe.weaponId];
+      if (!weapon) continue;
+      const status = getCraftStatus(this.state, recipe.id);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'depot-item craft-recipe-btn';
+      btn.disabled = status.owned;
+
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'craft-icon-wrap';
+      const iconImg = document.createElement('img');
+      iconImg.className = 'craft-icon';
+      iconImg.alt = weapon.name;
+      iconWrap.appendChild(iconImg);
+      void this.setPixiIcon(iconImg, () => createWeaponIcon(recipe.weaponId), `weapon-${recipe.weaponId}`);
+
+      const body = document.createElement('span');
+      body.className = 'craft-recipe-body';
+
+      const title = document.createElement('span');
+      title.className = 'craft-recipe-title';
+      title.textContent = status.owned ? `${weapon.name} — possui` : `Craft: ${weapon.name}`;
+
+      const ingIcons = document.createElement('span');
+      ingIcons.className = 'craft-ing-icons';
+      for (const ing of recipe.ingredients) {
+        const ingImg = document.createElement('img');
+        ingImg.className = 'craft-ing-icon';
+        ingImg.alt = LOOT_TABLE[ing.lootId]?.name ?? ing.lootId;
+        ingImg.title = `${ing.quantity}× ${ingImg.alt}`;
+        ingIcons.appendChild(ingImg);
+        void this.setPixiIcon(ingImg, () => createLootIcon(ing.lootId), `loot-${ing.lootId}`);
+      }
+
+      const reqs = document.createElement('span');
+      reqs.className = 'craft-recipe-reqs';
+      const ingText = recipe.ingredients
+        .map((i) => {
+          const name = LOOT_TABLE[i.lootId]?.name ?? i.lootId;
+          const have = this.countLootInBag(i.lootId);
+          const ok = have >= i.quantity;
+          return `${i.quantity}× ${name} (${have}/${i.quantity})${ok ? '' : ' ✗'}`;
+        })
+        .join(' · ');
+      const goldText =
+        recipe.goldCost > 0 ? ` · ${recipe.goldCost} ouro (${this.state.gold}/${recipe.goldCost})` : '';
+      reqs.textContent = ingText + goldText;
+
+      const missing = document.createElement('span');
+      missing.className = 'craft-recipe-missing';
+      if (!status.owned && status.missing.length > 0) {
+        missing.textContent = formatCraftMissing(status.missing);
+      }
+
+      body.appendChild(title);
+      body.appendChild(ingIcons);
+      body.appendChild(reqs);
+      body.appendChild(missing);
+      btn.appendChild(iconWrap);
+      btn.appendChild(body);
+
+      btn.addEventListener('click', () => {
+        if (status.owned) return;
+        const fresh = getCraftStatus(this.state, recipe.id);
+        if (!fresh.canCraft) {
+          this.showToast(formatCraftMissing(fresh.missing));
+          return;
+        }
+        if (craftWeapon(this.state, recipe.id)) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.showToast(`${weapon.name} craftada!`);
+        }
+      });
+      container.appendChild(btn);
+    }
+  }
+
+  private countLootInBag(lootId: string): number {
+    let total = 0;
+    for (const entry of this.state.bag) {
+      if (!entry || entry.kind !== 'loot') continue;
+      if (entry.id === lootId) total += entry.quantity;
+    }
+    return total;
+  }
+
+  private async setPixiIcon(
+    img: HTMLImageElement,
+    createIcon: () => Container,
+    cacheKey: string,
+  ): Promise<void> {
+    const cached = this.iconCache.get(cacheKey);
+    if (cached) {
+      img.src = cached;
+      return;
+    }
+    const icon = createIcon();
+    const wrapper = new Container();
+    wrapper.addChild(icon);
+    const base64 = await this.app.renderer.extract.base64({
+      target: wrapper,
+      clearColor: [0, 0, 0, 0],
+      resolution: 2,
+    });
+    wrapper.destroy({ children: true });
+    this.iconCache.set(cacheKey, base64);
+    img.src = base64;
+  }
+
+  private renderArmory(): void {
+    const container = document.getElementById('armory-weapons');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (const weaponId of this.state.ownedWeapons) {
+      const weapon = WEAPONS[weaponId];
+      if (!weapon) continue;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'depot-item craft-recipe-btn';
+      const equipped = this.state.equippedWeaponId === weaponId;
+      if (equipped) btn.disabled = true;
+
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'craft-icon-wrap';
+      const iconImg = document.createElement('img');
+      iconImg.className = 'craft-icon';
+      iconImg.alt = weapon.name;
+      iconWrap.appendChild(iconImg);
+      void this.setPixiIcon(iconImg, () => createWeaponIcon(weaponId), `weapon-${weaponId}`);
+
+      const body = document.createElement('span');
+      body.className = 'craft-recipe-body';
+      const title = document.createElement('span');
+      title.className = 'craft-recipe-title';
+      title.textContent = equipped
+        ? `✓ ${weapon.name} (ATK ${weapon.atk})`
+        : `Equipar ${weapon.name} (ATK ${weapon.atk})`;
+      body.appendChild(title);
+
+      btn.appendChild(iconWrap);
+      btn.appendChild(body);
+
+      btn.addEventListener('click', () => {
+        if (equipWeapon(this.state, weaponId)) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.showToast(`Equipou ${weapon.name}`);
+        }
+      });
+      container.appendChild(btn);
+    }
   }
 
   private updateMerchantButtons(): void {
@@ -362,10 +547,15 @@ export class Game {
     const gold = document.getElementById('hud-gold');
     const orbs = document.getElementById('hud-orbs');
     const bag = document.getElementById('hud-bag');
+    const weapon = document.getElementById('hud-weapon');
+    const stamina = document.getElementById('hud-stamina');
+    const w = getEquippedWeapon(this.state.equippedWeaponId);
     if (hp) hp.textContent = `HP ${this.state.playerHp}/100`;
     if (gold) gold.textContent = `Ouro: ${this.state.gold}`;
     if (orbs) orbs.textContent = `Orbes: ${this.state.orbs}`;
     if (bag) bag.textContent = `Bolsa: ${bagCount(this.state)}/12`;
+    if (weapon) weapon.textContent = `Arma: ${w.name} · ATK ${w.atk}`;
+    if (stamina) stamina.textContent = `Stamina: ${Math.round(this.state.playerStamina)}`;
   }
 
   private startShopDay(): void {

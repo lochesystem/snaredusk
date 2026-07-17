@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { generateDungeon } from '../src/world/dungeonGenerator.ts';
-import { isOnWalkableFloor, PLAYER_RADIUS } from '../src/world/collision.ts';
+import { ENEMY_RADIUS, generateDungeon } from '../src/world/dungeonGenerator.ts';
+import { collidesCircle, isOnWalkableFloor, PLAYER_RADIUS } from '../src/world/collision.ts';
 
 describe('dungeonGenerator', () => {
   it('generates 8-11 connected rooms with corridors', () => {
@@ -91,6 +91,23 @@ describe('dungeonGenerator', () => {
         const dy = layout.portal.y - obs.y;
         const minDist = obs.radius + PLAYER_RADIUS + 8;
         expect(dx * dx + dy * dy).toBeGreaterThanOrEqual(minDist * minDist);
+      }
+    }
+  });
+
+  it('enemy spawns never overlap rocks or walls', () => {
+    for (let seed = 1; seed <= 500; seed++) {
+      const layout = generateDungeon(seed);
+      for (const spawn of layout.enemySpawns) {
+        expect(collidesCircle(spawn.x, spawn.y, ENEMY_RADIUS, layout.walls)).toBe(false);
+        expect(isOnWalkableFloor(spawn.x, spawn.y, ENEMY_RADIUS, layout.floors)).toBe(true);
+        for (const obs of layout.obstacles) {
+          if (obs.kind !== 'rock') continue;
+          const dx = spawn.x - obs.x;
+          const dy = spawn.y - obs.y;
+          const minDist = obs.radius + ENEMY_RADIUS + 6;
+          expect(dx * dx + dy * dy).toBeGreaterThanOrEqual(minDist * minDist);
+        }
       }
     }
   });

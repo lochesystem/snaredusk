@@ -38,6 +38,8 @@ body {
   border: 2px solid #3d5c3a;
   border-radius: 4px;
   background: #1a2e1a;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 #hud {
@@ -312,6 +314,99 @@ button:hover {
 #base-bag-creatures .empty {
   font-size: 13px;
   color: #8a8070;
+}
+
+.depot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: #e8dcc8;
+  background: #2a2438;
+  border: 1px solid #4a3a5a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.depot-item:hover:not(:disabled) {
+  border-color: #c4a040;
+  background: #322a42;
+}
+
+.depot-item:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.craft-recipe-btn {
+  flex-direction: row;
+}
+
+.craft-icon-wrap {
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.craft-icon,
+.craft-ing-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.craft-recipe-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.craft-recipe-title {
+  font-weight: bold;
+  color: #e8c878;
+}
+
+.craft-recipe-reqs {
+  font-size: 12px;
+  color: #a09880;
+  line-height: 1.35;
+}
+
+.craft-recipe-missing {
+  font-size: 12px;
+  color: #e87878;
+}
+
+.craft-ing-icons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.craft-ing-icon {
+  width: 24px;
+  height: 24px;
+}
+
+#workshop-panel,
+#armory-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #3d5c3a;
+  border-radius: 4px;
+}
+
+#workshop-panel h3,
+#armory-panel h3 {
+  font-size: 15px;
+  color: #e8c878;
+  margin-bottom: 4px;
 }
 
 #habitat-list {

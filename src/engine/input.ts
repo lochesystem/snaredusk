@@ -1,3 +1,5 @@
+import { clientToGameScreen } from './pointer.ts';
+
 export class InputManager {
   private keys = new Set<string>();
   mouseX = 0;
@@ -13,22 +15,25 @@ export class InputManager {
       this.keys.delete(e.key.toLowerCase());
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      this.mouseX = (e.clientX - rect.left) * scaleX;
-      this.mouseY = (e.clientY - rect.top) * scaleY;
+    const updatePointer = (clientX: number, clientY: number) => {
+      const pos = clientToGameScreen(canvas, clientX, clientY);
+      this.mouseX = pos.x;
+      this.mouseY = pos.y;
+    };
+
+    canvas.addEventListener('pointermove', (e) => {
+      updatePointer(e.clientX, e.clientY);
     });
 
-    canvas.addEventListener('mousedown', (e) => {
+    canvas.addEventListener('pointerdown', (e) => {
+      updatePointer(e.clientX, e.clientY);
       if (e.button === 0) {
         this.mouseDown = true;
         this.clickQueued = true;
       }
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('pointerup', () => {
       this.mouseDown = false;
     });
 
