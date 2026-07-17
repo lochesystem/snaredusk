@@ -1,4 +1,5 @@
 import type { BagEntry, GameState } from '../types.ts';
+import { discardBagSlot, formatBagEntry } from '../systems/inventory.ts';
 import { getNextShopLevel, getShopLevelDef } from '../systems/shopUpgrade.ts';
 
 export interface ShopUICallbacks {
@@ -110,6 +111,10 @@ export class ShopUI {
 
     state.bag.forEach((entry, index) => {
       if (!entry) return;
+
+      const wrap = document.createElement('span');
+      wrap.className = 'bag-chip-wrap';
+
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'bag-chip';
@@ -121,7 +126,25 @@ export class ShopUI {
         this.cb.onBagSelect(next);
         this.renderBagStrip();
       });
-      container.appendChild(btn);
+      wrap.appendChild(btn);
+
+      const discard = document.createElement('button');
+      discard.type = 'button';
+      discard.className = 'bag-chip-discard';
+      discard.textContent = '×';
+      discard.title = 'Descartar';
+      discard.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const result = discardBagSlot(state, index, 'all');
+        if (result.ok) {
+          if (index === selected) this.cb.onBagSelect(-1);
+          this.cb.onChange();
+          this.cb.showToast(result.message);
+        }
+      });
+      wrap.appendChild(discard);
+
+      container.appendChild(wrap);
     });
 
     if (!container.children.length) {
@@ -157,6 +180,5 @@ export class ShopUI {
 }
 
 function formatEntry(entry: BagEntry): string {
-  if (entry.kind === 'loot') return `${entry.name} x${entry.quantity}`;
-  return entry.name;
+  return formatBagEntry(entry);
 }

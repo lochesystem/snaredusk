@@ -18,6 +18,18 @@ export const PLAYER_ATTACK_RANGE = 36;
 
 export const BAG_SLOTS = 12;
 export const HABITAT_CAPACITY = 4;
+
+export const PARTY_AGGRO_RANGE = 130;
+export const PARTY_ATTACK_RANGE = 36;
+export const PARTY_FOLLOW_GAP = 28;
+export const PARTY_ATTACK_COOLDOWN = 0.85;
+/** Velocidade ao seguir o jogador (~93% do player). */
+export const PARTY_FOLLOW_SPEED = 112;
+/** Velocidade ao perseguir inimigos. */
+export const PARTY_CHASE_SPEED = 105;
+export const PARTY_HP_SCALE = 0.85;
+export const PARTY_ATK_SCALE = 0.8;
+
 export const CAPTURE_RANGE = 120;
 /** @deprecated Use CAPTURE_ORB_FLY_SPEED from capture.ts */
 export const CAPTURE_ORB_SPEED = 130;

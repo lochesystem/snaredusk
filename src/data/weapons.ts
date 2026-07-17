@@ -13,6 +13,7 @@ export interface WeaponDef {
   slashColor?: number;
   projectileStyle?: 'orb' | 'spear' | 'spore';
   attackFx?: 'knife' | 'pickaxe' | 'spear_thrust';
+  staminaCost: number;
 }
 
 export const WEAPONS: Record<string, WeaponDef> = {
@@ -26,6 +27,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     arcAngle: 2.09,
     slashColor: 0xf0e6d3,
     attackFx: 'knife',
+    staminaCost: 6,
   },
   picareta_combate: {
     id: 'picareta_combate',
@@ -37,6 +39,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     arcAngle: 1.57,
     slashColor: 0xc4a040,
     attackFx: 'pickaxe',
+    staminaCost: 14,
   },
   lanca_esporo: {
     id: 'lanca_esporo',
@@ -50,6 +53,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     slashColor: 0xc4f082,
     projectileStyle: 'spear',
     attackFx: 'spear_thrust',
+    staminaCost: 10,
   },
 };
 

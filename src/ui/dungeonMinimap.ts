@@ -2,19 +2,32 @@ import { Container, Graphics } from 'pixi.js';
 import { GAME_WIDTH } from '../engine/constants.ts';
 import type { DungeonLayout } from '../world/dungeonGenerator.ts';
 
-const MAP_W = 112;
-const MAP_H = 84;
-const MAP_MARGIN = 8;
+const MAP_W = 92;
+const MAP_H = 68;
+const MAP_MARGIN = 6;
+const BG_ALPHA = 0.48;
 
 export class DungeonMinimap {
   readonly container = new Container();
   private gfx = new Graphics();
   private explored = new Set<number>();
   private portalRoomIndex: number;
+  private hidden = false;
 
   constructor(portalRoomIndex: number) {
     this.portalRoomIndex = portalRoomIndex;
+    this.container.alpha = 0.88;
     this.container.addChild(this.gfx);
+  }
+
+  toggle(): boolean {
+    this.hidden = !this.hidden;
+    this.container.visible = !this.hidden;
+    return this.hidden;
+  }
+
+  isHidden(): boolean {
+    return this.hidden;
   }
 
   update(layout: DungeonLayout, playerX: number, playerY: number): void {
@@ -51,9 +64,9 @@ export class DungeonMinimap {
     this.gfx.clear();
 
     this.gfx.roundRect(0, 0, MAP_W, MAP_H, 4);
-    this.gfx.fill({ color: 0x080810, alpha: 0.92 });
+    this.gfx.fill({ color: 0x080810, alpha: BG_ALPHA });
     this.gfx.roundRect(0, 0, MAP_W, MAP_H, 4);
-    this.gfx.stroke({ width: 2, color: 0x4a4a58 });
+    this.gfx.stroke({ width: 1, color: 0x4a4a58, alpha: 0.65 });
 
     for (const link of layout.connections) {
       if (!this.explored.has(link.a) || !this.explored.has(link.b)) continue;

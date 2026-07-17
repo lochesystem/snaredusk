@@ -49,12 +49,16 @@ export interface GameState {
   playerDef: number;
   equippedWeaponId: string;
   ownedWeapons: string[];
+  /** Slots 1–2 na hotbar (armas possuídas). */
+  weaponHotbar: [string | null, string | null];
   bag: (BagEntry | null)[];
   habitat: CreatureItem[];
   shopLevel: number;
   shopShelves: (ShopListing | null)[];
   shopCages: (ShopListing | null)[];
   shopDayUsed: boolean;
+  /** Criatura escolhida na base para acompanhar na masmorra. */
+  partyCompanion: CreatureItem | null;
   bestiary: string[];
   dungeonCleared: boolean;
 }
@@ -86,6 +90,7 @@ export function createShopCages(count: number): (ShopListing | null)[] {
 }
 
 import { STARTING_WEAPON_ID } from './data/weapons.ts';
+import { defaultWeaponHotbar } from './systems/weaponHotbar.ts';
 
 export function defaultGameState(): GameState {
   return {
@@ -96,12 +101,14 @@ export function defaultGameState(): GameState {
     playerDef: 5,
     equippedWeaponId: STARTING_WEAPON_ID,
     ownedWeapons: [STARTING_WEAPON_ID],
+    weaponHotbar: defaultWeaponHotbar(),
     bag: createEmptyBag(),
     habitat: [],
     shopLevel: 1,
     shopShelves: createShopShelves(6),
     shopCages: createShopCages(1),
     shopDayUsed: false,
+    partyCompanion: null,
     bestiary: [],
     dungeonCleared: false,
   };

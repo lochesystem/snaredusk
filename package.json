@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "playtest:smoke": "node scripts/playtest-smoke.mjs",
     "sprites:placeholders": "node scripts/generate-creature-placeholders.mjs"
   },
   "devDependencies": {
+    "playwright": "^1.61.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.0",
     "vitest": "^4.1.9"

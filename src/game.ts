@@ -8,7 +8,7 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame, bagCount } from './systems/saveManager.ts';
 import { moveCreatureToBag, moveCreatureToHabitat } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
-import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
+import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
 import { getEquippedWeapon, WEAPONS } from './data/weapons.ts';
@@ -17,6 +17,24 @@ import { LOOT_TABLE } from './data/items.ts';
 import { createLootIcon, createWeaponIcon } from './world/placeholderArt.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
+import {
+  bindInventoryModal,
+  closeInventoryModal,
+  isInventoryModalOpen,
+  openInventoryModal,
+  renderInventoryGrid,
+  type InventoryUICallbacks,
+} from './ui/inventoryUI.ts';
+import {
+  bindAbandonModal,
+  closeAbandonModal,
+  isAbandonModalOpen,
+  openAbandonModal,
+} from './ui/abandonUI.ts';
+import type { DungeonExitReason } from './scenes/dungeonScene.ts';
+import { assignPartyCompanion, stashPartyCompanion } from './systems/party.ts';
+import { renderWeaponHotbar } from './ui/hotbarUI.ts';
+import { syncWeaponHotbar } from './systems/weaponHotbar.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -28,7 +46,7 @@ export class Game {
   private dungeon: DungeonScene | null = null;
   private habitatScene: HabitatScene | null = null;
   private shopScene: ShopScene | null = null;
-  private pendingDungeonExit: boolean | null = null;
+  private pendingDungeonExit: DungeonExitReason | null = null;
   private shopUI: ShopUI;
   private iconCache = new Map<string, string>();
 
@@ -52,6 +70,23 @@ export class Game {
       getSelectedBag: () => this.shopScene?.getSelectedBag() ?? -1,
     });
     this.bindDom();
+    bindInventoryModal();
+    bindAbandonModal();
+  }
+
+  private inventoryCallbacks(): InventoryUICallbacks {
+    return {
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.renderInventoryPanel();
+        this.renderPartyPanel();
+        this.shopUI.render();
+        this.updateHud();
+        this.habitatScene?.syncCreatures(this.state.habitat);
+      },
+      showToast: (m) => this.showToast(m),
+    };
   }
 
   async init(): Promise<void> {
@@ -265,11 +300,87 @@ export class Game {
 
   private refreshBaseUI(): void {
     this.updateBaseStats();
+    this.renderInventoryPanel();
+    this.renderPartyPanel();
     this.habitatScene?.syncCreatures(this.state.habitat);
     this.renderBaseBagCreatures();
     this.renderWorkshop();
     this.renderArmory();
     this.updateMerchantButtons();
+  }
+
+  private renderInventoryPanel(): void {
+    renderInventoryGrid('inventory-grid', this.inventoryCallbacks());
+  }
+
+  private renderPartyPanel(): void {
+    const current = document.getElementById('party-current');
+    const picks = document.getElementById('party-picks');
+    if (!current || !picks) return;
+
+    current.textContent = this.state.partyCompanion
+      ? `Na party: ${this.state.partyCompanion.name}`
+      : 'Nenhum companheiro';
+
+    picks.innerHTML = '';
+
+    if (this.state.partyCompanion) {
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'party-pick selected';
+      clearBtn.textContent = `Retirar ${this.state.partyCompanion.name}`;
+      clearBtn.addEventListener('click', () => {
+        if (stashPartyCompanion(this.state)) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.showToast('Companheiro guardado');
+        } else {
+          this.showToast('Bolsa e habitat cheios — libere espaço');
+        }
+      });
+      picks.appendChild(clearBtn);
+    }
+
+    this.state.bag.forEach((entry, index) => {
+      if (!entry || entry.kind !== 'creature') return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'party-pick';
+      btn.textContent = entry.name;
+      btn.addEventListener('click', () => {
+        const c = assignPartyCompanion(this.state, { kind: 'bag', index });
+        if (c) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.showToast(`${c.name} vai com você!`);
+        } else {
+          this.showToast('Libere o companheiro atual primeiro');
+        }
+      });
+      picks.appendChild(btn);
+    });
+
+    this.state.habitat.forEach((creature, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'party-pick';
+      btn.textContent = `${creature.name} (habitat)`;
+      btn.addEventListener('click', () => {
+        const c = assignPartyCompanion(this.state, { kind: 'habitat', index });
+        if (c) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.showToast(`${c.name} vai com você!`);
+        } else {
+          this.showToast('Libere o companheiro atual primeiro');
+        }
+      });
+      picks.appendChild(btn);
+    });
+
+    if (!picks.children.length) {
+      picks.innerHTML = '<span class="empty">Capture criaturas na masmorra</span>';
+    }
   }
 
   private renderWorkshop(): void {
@@ -501,12 +612,14 @@ export class Game {
     this.destroyHabitat();
     document.getElementById('app')?.classList.remove('layout-base');
     this.destroyDungeon();
-    this.state.playerHp = Math.min(this.state.playerHp, 100);
+    this.state.playerHp = PLAYER_MAX_HP;
+    this.state.playerStamina = PLAYER_MAX_STAMINA;
+    syncWeaponHotbar(this.state);
     const seed = Date.now();
 
     this.dungeon = new DungeonScene(this.state, this.input, {
-      onReturnToBase: (died) => {
-        this.pendingDungeonExit = died;
+      onReturnToBase: (reason) => {
+        this.pendingDungeonExit = reason;
       },
       onStateChange: () => saveGame(this.state),
       showToast: (m) => this.showToast(m),
@@ -539,18 +652,33 @@ export class Game {
     }
 
     if (this.screen === 'dungeon' && this.dungeon) {
+      if (this.input.consumeKey('i')) {
+        if (isInventoryModalOpen()) closeInventoryModal();
+        else openInventoryModal(this.inventoryCallbacks());
+      }
+      if (this.input.consumeKey('escape')) {
+        if (isInventoryModalOpen()) closeInventoryModal();
+        else if (isAbandonModalOpen()) closeAbandonModal();
+        else if (this.dungeon.canAbandon()) {
+          openAbandonModal(() => this.dungeon!.abandon());
+        }
+      }
+
       this.dungeon.update(dt);
       const hint = document.getElementById('hud-hint');
       if (hint) hint.textContent = this.dungeon.getHudHint();
     }
 
     if (this.pendingDungeonExit !== null) {
-      const died = this.pendingDungeonExit;
+      const reason = this.pendingDungeonExit;
       this.pendingDungeonExit = null;
+      closeAbandonModal();
+      closeInventoryModal();
       this.destroyDungeon();
       saveGame(this.state);
       this.showScreen('base');
-      if (!died) this.showToast('Retornou à base com a bolsa!');
+      if (reason === 'portal') this.showToast('Retornou à base com a bolsa!');
+      else if (reason === 'abandon') this.showToast('Desistiu — voltou à base com a bolsa.');
     }
   }
 
@@ -559,13 +687,12 @@ export class Game {
     const hpFill = document.getElementById('hud-hp-fill');
     const gold = document.getElementById('hud-gold');
     const orbs = document.getElementById('hud-orbs');
-    const bag = document.getElementById('hud-bag');
-    const weapon = document.getElementById('hud-weapon');
     const stamina = document.getElementById('hud-stamina');
     const staminaFill = document.getElementById('hud-stamina-fill');
     const w = getEquippedWeapon(this.state.equippedWeaponId);
     const hpVal = Math.max(0, Math.min(100, this.state.playerHp));
     const staVal = Math.max(0, Math.min(PLAYER_MAX_STAMINA, Math.round(this.state.playerStamina)));
+    const staLowThreshold = Math.min(DODGE_STAMINA_COST, w.staminaCost);
 
     if (hp) hp.textContent = String(hpVal);
     if (hpFill) {
@@ -574,14 +701,19 @@ export class Game {
     }
     if (gold) gold.textContent = `Ouro: ${this.state.gold}`;
     if (orbs) orbs.textContent = `Orbes: ${this.state.orbs}`;
-    if (bag) bag.textContent = `Bolsa: ${bagCount(this.state)}/12`;
-    if (weapon) weapon.textContent = `Arma: ${w.name} · ATK ${w.atk}`;
     if (stamina) stamina.textContent = String(staVal);
     if (staminaFill) {
       const pct = (staVal / PLAYER_MAX_STAMINA) * 100;
       staminaFill.style.width = `${pct}%`;
-      staminaFill.classList.toggle('low', staVal < DODGE_STAMINA_COST);
+      staminaFill.classList.toggle('low', staVal < staLowThreshold);
     }
+
+    syncWeaponHotbar(this.state);
+    renderWeaponHotbar(this.state, {
+      setIcon: (img, weaponId) => {
+        void this.setPixiIcon(img, () => createWeaponIcon(weaponId), `weapon-${weaponId}`);
+      },
+    });
   }
 
   private startShopDay(): void {

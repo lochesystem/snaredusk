@@ -2,7 +2,11 @@
 
 Roteiro para validar o vertical slice antes de fechar a Fase 1. Marque cada item durante ou logo após jogar.
 
-**Onde jogar:** [lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/) ou `npm run dev` → http://localhost:5173/snaredusk/
+**Onde jogar:** [lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/) ou `npm run dev` → URL do Vite (ex. http://localhost:5176/snaredusk/)
+
+**No Cursor:** `Ctrl+Shift+P` → **Simple Browser: Show** → colar a URL local acima.
+
+**Smoke automático (DOM):** `node scripts/playtest-smoke.mjs http://localhost:5176/snaredusk/`
 
 **Tempo alvo:** 10–15 minutos  
 **Anote:** bugs, confusão, tédio, momentos divertidos, sugestões de balance.
@@ -62,9 +66,18 @@ npm run build
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
 | 5.1 | **Abrir Loja**; colocar loot/criatura nas prateleiras/gaiola | ☐ | |
-| 5.2 | Ajustar preço; preview de reação do cliente faz sentido? | ☐ | |
-| 5.3 | **Abrir loja ao público**; log de vendas/recusas | ☐ | |
+| 5.2 | Ajustar preço (**sem** dica caro/barato — reação só pelos clientes) | ☐ | |
+| 5.3 | **Abrir loja ao público**; clientes com emoji na loja | ☐ | |
 | 5.4 | Ouro sobe após vendas | ☐ | |
+| 5.5 | Tentar abrir loja de novo no mesmo dia → deve bloquear | ☐ | |
+
+### 5b. Combate e craft (v0.3 — 2 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 5b.1 | Craftar arma na **Oficina** (se tiver materiais) | ☐ | |
+| 5b.2 | Equipar no **Arsenal** | ☐ | |
+| 5b.3 | **Esquiva** com R; barra **STA** no HUD desce e regenera | ☐ | |
 
 ### 6. Loop completo (1 min)
 
@@ -96,11 +109,14 @@ npm run build
 
 | Campo | Valor |
 |-------|-------|
-| Data | 2026-07-16 |
-| Jogador | (preencher) |
-| Build | v0.1.0 + início Fase 2 (loja) |
-| Nota geral | /10 |
-| Bugs encontrados | |
-| Aprovado para Fase 2? | ☐ Sim ☐ Com ressalvas |
+| Data | 2026-07-17 |
+| Jogador | Adrian |
+| Build | v0.3.1 local |
+| Smoke automático | 19/19 OK (`scripts/playtest-smoke.mjs`) |
+| Nota geral | **10/10** |
+| Bugs encontrados | Nenhum |
+| Aprovado Fase 1? | ☑ Sim ☐ Com ressalvas |
+
+**Notas da sessão manual:** loop completo (masmorra → captura → habitat → loja → trava diária). Emojis dos clientes visíveis; precificação por tentativa funcionou; nenhum softlock.
 
 *Após preencher, marcar playtest no [ROADMAP.md](ROADMAP.md) e registrar achados no [CHANGELOG.md](../CHANGELOG.md) se houver fixes.*

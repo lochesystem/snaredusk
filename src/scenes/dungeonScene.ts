@@ -15,6 +15,14 @@ import {
   DODGE_DISTANCE,
   STAMINA_REGEN,
   CAPTURE_RANGE,
+  PARTY_AGGRO_RANGE,
+  PARTY_ATTACK_COOLDOWN,
+  PARTY_ATTACK_RANGE,
+  PARTY_ATK_SCALE,
+  PARTY_FOLLOW_GAP,
+  PARTY_CHASE_SPEED,
+  PARTY_FOLLOW_SPEED,
+  PARTY_HP_SCALE,
   ORB_BUNDLE_PRICE,
   ORB_PRICE,
 } from '../engine/constants.ts';
@@ -34,7 +42,7 @@ import {
 } from '../world/weaponAttackFx.ts';
 import { getEquippedWeapon } from '../data/weapons.ts';
 import { getEnemyBehavior } from '../data/enemyBehaviors.ts';
-import { calcDamage, distance, normalize } from '../systems/combat.ts';
+import { calcDamage, circlesOverlap, distance, normalize } from '../systems/combat.ts';
 import {
   applyShieldDamage,
   initEnemyCombatFields,
@@ -65,6 +73,8 @@ import {
 import { shouldEnemyAggro } from '../systems/enemyAi.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
+import { losePartyCompanion } from '../systems/party.ts';
+import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
   createChestSprite,
@@ -85,8 +95,10 @@ import {
   createShieldGraphic,
 } from '../world/placeholderArt.ts';
 
+export type DungeonExitReason = 'portal' | 'death' | 'abandon';
+
 export interface DungeonCallbacks {
-  onReturnToBase: (died: boolean) => void;
+  onReturnToBase: (reason: DungeonExitReason) => void;
   onStateChange: () => void;
   showToast: (msg: string) => void;
   updateHud: () => void;
@@ -140,6 +152,20 @@ interface ActiveCaptureOrb {
   wobbleTime: number;
 }
 
+interface LiveCompanion {
+  creature: CreatureItem;
+  speciesId: string;
+  hp: number;
+  maxHp: number;
+  atk: number;
+  speed: number;
+  x: number;
+  y: number;
+  attackCd: number;
+  container: CreatureSprite;
+  dead: boolean;
+}
+
 interface LiveChest {
   x: number;
   y: number;
@@ -186,6 +212,7 @@ export class DungeonScene {
   private attackCd = 0;
   private projectiles: Projectile[] = [];
   private enemies: LiveEnemy[] = [];
+  private companion: LiveCompanion | null = null;
   private active = false;
   private portalActive = false;
   private activeCapture: ActiveCaptureOrb | null = null;
@@ -250,6 +277,7 @@ export class DungeonScene {
     this.spawnEnemies();
     this.spawnChests();
     this.spawnInteractables();
+    this.spawnCompanion();
   }
 
   enter(): void {
@@ -356,11 +384,13 @@ export class DungeonScene {
     if (!this.active) return;
 
     this.tryDodge(dt);
+    this.tryWeaponHotbar();
     this.movePlayer(dt);
     this.fxRunner.update(dt);
     this.updateAttackFx(dt);
     this.updateProjectiles(dt);
     this.updateEnemies(dt);
+    this.updateCompanion(dt);
     this.updateCaptureOrbs(dt);
     this.tryLaunchCapture();
     this.resolvePendingChoices();
@@ -369,6 +399,11 @@ export class DungeonScene {
     this.updateCapturableGlow();
     this.updatePortalState();
     this.updateInteractablePrompts();
+
+    if (this.input.consumeKey('m')) {
+      const hidden = this.minimap.toggle();
+      this.callbacks.showToast(hidden ? 'Minimapa oculto [M]' : 'Minimapa visível [M]');
+    }
 
     this.entityLayer.resort();
     this.camera.follow(this.playerX, this.playerY, this.layout.width, this.layout.height);
@@ -396,7 +431,7 @@ export class DungeonScene {
     if (this.playerStamina < PLAYER_MAX_STAMINA) {
       this.playerStamina = Math.min(PLAYER_MAX_STAMINA, this.playerStamina + STAMINA_REGEN * dt);
     }
-    if (!this.input.consumeKey('r')) return;
+    if (!this.input.consumeKey('shift')) return;
     if (this.playerStamina < DODGE_STAMINA_COST || this.dodgeTimer > 0) return;
     const move = this.input.getMovement();
     const dir = move.x !== 0 || move.y !== 0 ? move : { x: 1, y: 0 };
@@ -444,12 +479,26 @@ export class DungeonScene {
     this.playerSprite.setLocomotion(move.x !== 0 || move.y !== 0, move.x);
 
     if (this.input.consumeClick() && this.attackCd <= 0) {
-      this.performAttack();
+      const weapon = getEquippedWeapon(this.state.equippedWeaponId);
+      if (this.playerStamina >= weapon.staminaCost) {
+        this.performAttack();
+      }
+    }
+  }
+
+  private tryWeaponHotbar(): void {
+    if (this.pendingChoices) return;
+    if (this.input.consumeKey('1')) {
+      if (selectHotbarSlot(this.state, 0)) this.callbacks.onStateChange();
+    }
+    if (this.input.consumeKey('2')) {
+      if (selectHotbarSlot(this.state, 1)) this.callbacks.onStateChange();
     }
   }
 
   private performAttack(): void {
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
+    if (this.playerStamina < weapon.staminaCost) return;
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
     const dir = normalize(worldMouse.x - this.playerX, worldMouse.y - this.playerY);
     const angle = Math.atan2(dir.y, dir.x);
@@ -482,6 +531,7 @@ export class DungeonScene {
     }
 
     this.attackCd = weapon.cooldown;
+    this.playerStamina -= weapon.staminaCost;
   }
 
   private playAttackFx(style: AttackFxStyle, angle: number, range: number, color: number): void {
@@ -565,10 +615,20 @@ export class DungeonScene {
           break;
         }
       } else if (this.invincibleTimer <= 0) {
-        if (projectileHitPlayer(p, this.playerX, this.playerY, PLAYER_RADIUS)) {
+        let hit = false;
+        if (this.companion && !this.companion.dead) {
+          if (circlesOverlap(p.x, p.y, p.radius, this.companion.x, this.companion.y, 9)) {
+            this.damageCompanion(p.damage);
+            hit = true;
+          }
+        }
+        if (!hit && projectileHitPlayer(p, this.playerX, this.playerY, PLAYER_RADIUS)) {
           const dmg = calcDamage(p.damage, this.state.playerDef);
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+          hit = true;
+        }
+        if (hit) {
           this.fxLayer.removeChild(p.container);
           p.container.destroy({ children: true });
           this.projectiles.splice(i, 1);
@@ -801,7 +861,7 @@ export class DungeonScene {
     }
 
     if (bagCount(this.state) >= 12) {
-      this.callbacks.showToast('Bolsa cheia!');
+      this.callbacks.showToast('Bolsa cheia — pressione I para descartar');
       return;
     }
 
@@ -996,7 +1056,7 @@ export class DungeonScene {
       this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
       this.callbacks.onStateChange();
     } else {
-      this.callbacks.showToast('Bolsa cheia — captura falhou!');
+      this.callbacks.showToast('Bolsa cheia — pressione I para descartar');
       enemy.captureLocked = false;
       enemy.container.alpha = 1;
     }
@@ -1170,7 +1230,7 @@ export class DungeonScene {
             quantity: 1,
           };
           if (!addToBag(this.state, loot)) {
-            this.callbacks.showToast('Bolsa cheia!');
+            this.callbacks.showToast('Bolsa cheia — pressione I para descartar');
           } else {
             this.callbacks.showToast(`Encontrou ${lootDef.name}!`);
           }
@@ -1234,7 +1294,7 @@ export class DungeonScene {
     if (this.portalActive && portalDist < 28) {
       this.state.dungeonCleared = true;
       this.active = false;
-      this.callbacks.onReturnToBase(false);
+      this.callbacks.onReturnToBase('portal');
       return;
     }
 
@@ -1251,7 +1311,7 @@ export class DungeonScene {
         quantity: chest.lootQuantity,
       };
       if (!addToBag(this.state, loot)) {
-        this.callbacks.showToast('Bolsa cheia!');
+        this.callbacks.showToast('Bolsa cheia — pressione I para descartar');
         return;
       }
 
@@ -1296,6 +1356,127 @@ export class DungeonScene {
     }
   }
 
+  private spawnCompanion(): void {
+    const creature = this.state.partyCompanion;
+    if (!creature) return;
+
+    const species = getSpecies(creature.speciesId);
+    const container = createCreatureSprite(species);
+    const startX = this.playerX - 22;
+    const startY = this.playerY + 2;
+    container.x = startX;
+    container.y = startY;
+    this.entityLayer.addChild(container);
+
+    this.companion = {
+      creature,
+      speciesId: species.id,
+      hp: Math.round(species.maxHp * PARTY_HP_SCALE),
+      maxHp: Math.round(species.maxHp * PARTY_HP_SCALE),
+      atk: Math.max(3, Math.round(species.atk * PARTY_ATK_SCALE)),
+      speed: PARTY_FOLLOW_SPEED,
+      x: startX,
+      y: startY,
+      attackCd: 0,
+      container,
+      dead: false,
+    };
+  }
+
+  private findCompanionTarget(): LiveEnemy | null {
+    if (!this.companion || this.companion.dead) return null;
+    let best: LiveEnemy | null = null;
+    let bestDist = PARTY_AGGRO_RANGE;
+    for (const enemy of this.enemies) {
+      if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
+      const d = distance(this.companion.x, this.companion.y, enemy.x, enemy.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = enemy;
+      }
+    }
+    return best;
+  }
+
+  private updateCompanion(dt: number): void {
+    const comp = this.companion;
+    if (!comp || comp.dead) return;
+
+    if (comp.attackCd > 0) comp.attackCd -= dt;
+
+    const target = this.findCompanionTarget();
+    let moveDx = 0;
+    let moveDy = 0;
+    const moveSpeed = target ? PARTY_CHASE_SPEED : PARTY_FOLLOW_SPEED;
+
+    if (target) {
+      const dx = target.x - comp.x;
+      const dy = target.y - comp.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= PARTY_ATTACK_RANGE && comp.attackCd <= 0) {
+        const dmg = calcDamage(comp.atk, target.def);
+        this.damageEnemy(target, dmg);
+        drawDamageNumber(this.fxLayer, dmg, target.x, target.y - 16, this.fxRunner);
+        comp.attackCd = PARTY_ATTACK_COOLDOWN;
+      } else if (dist > PARTY_ATTACK_RANGE * 0.6) {
+        const dir = normalize(dx, dy);
+        moveDx = dir.x * moveSpeed * dt;
+        moveDy = dir.y * moveSpeed * dt;
+      }
+    } else {
+      const tx = this.playerX - 20;
+      const ty = this.playerY + 2;
+      const dx = tx - comp.x;
+      const dy = ty - comp.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > PARTY_FOLLOW_GAP) {
+        const dir = normalize(dx, dy);
+        moveDx = dir.x * moveSpeed * dt;
+        moveDy = dir.y * moveSpeed * dt;
+      }
+    }
+
+    if (moveDx !== 0 || moveDy !== 0) {
+      const prevX = comp.x;
+      const moved = moveWithCollision(
+        comp.x,
+        comp.y,
+        moveDx,
+        moveDy,
+        8,
+        this.layout.walls,
+        this.layout.floors,
+        this.layout.obstacles,
+      );
+      comp.x = moved.x;
+      comp.y = moved.y;
+      comp.container.setFacing(moved.x - prevX);
+    }
+
+    comp.container.x = comp.x;
+    comp.container.y = comp.y;
+    comp.container.alpha = comp.hp / comp.maxHp < 0.35 ? 0.65 : 1;
+  }
+
+  private damageCompanion(rawDmg: number): void {
+    const comp = this.companion;
+    if (!comp || comp.dead) return;
+
+    const dmg = Math.max(1, Math.round(rawDmg * 0.7));
+    comp.hp = Math.max(0, comp.hp - dmg);
+    drawDamageNumber(this.fxLayer, dmg, comp.x, comp.y - 18, this.fxRunner);
+
+    if (comp.hp <= 0) {
+      comp.dead = true;
+      const name = comp.creature.name;
+      losePartyCompanion(this.state);
+      comp.container.alpha = 0.25;
+      this.callbacks.showToast(`${name} foi derrotado!`);
+      this.callbacks.onStateChange();
+      this.callbacks.updateHud();
+    }
+  }
+
   private updatePortalState(): void {
     const aliveEnemies = this.enemies.filter((e) => !e.dead && !e.fled).length;
     this.portalActive = aliveEnemies === 0;
@@ -1306,11 +1487,22 @@ export class DungeonScene {
     if (this.deathHandled || this.playerHp > 0) return;
     this.deathHandled = true;
     this.state.bag = this.state.bag.map(() => null);
+    losePartyCompanion(this.state);
     this.playerHp = PLAYER_MAX_HP;
     this.state.playerHp = PLAYER_MAX_HP;
     this.callbacks.showToast('Você desmaiou — perdeu a bolsa!');
     this.active = false;
-    this.callbacks.onReturnToBase(true);
+    this.callbacks.onReturnToBase('death');
+  }
+
+  canAbandon(): boolean {
+    return this.active && !this.activeCapture && !this.pendingChoices;
+  }
+
+  abandon(): void {
+    if (!this.canAbandon()) return;
+    this.active = false;
+    this.callbacks.onReturnToBase('abandon');
   }
 
   getHudHint(): string {
@@ -1353,6 +1545,12 @@ export class DungeonScene {
     if (bossAlive) {
       return 'Derrote o Rei das Esporas para ativar o portal';
     }
-    return 'WASD mover · Clique atacar · R esquivar · Q lançar Orbe';
+    if (this.companion && !this.companion.dead) {
+      const c = this.companion;
+      const map = this.minimap.isHidden() ? 'M mapa' : 'M ocultar mapa';
+      return `${c.creature.name} ${Math.ceil(c.hp)}/${c.maxHp} · WASD · Clique · Shift · 1/2 · Q · I · Esc · ${map}`;
+    }
+    const mapHint = this.minimap.isHidden() ? 'M mapa' : 'M ocultar mapa';
+    return `WASD · Clique · Shift · 1/2 arma · Q · I bolsa · Esc desistir · ${mapHint}`;
   }
 }

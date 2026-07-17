@@ -8,6 +8,7 @@ import {
   type GameState,
 } from '../types.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
+import { defaultWeaponHotbar } from './weaponHotbar.ts';
 
 const SAVE_VERSION = 3;
 
@@ -92,13 +93,26 @@ function normalizeState(partial: LegacyGameState): GameState {
     playerDef: partial.playerDef ?? base.playerDef,
     equippedWeaponId: partial.equippedWeaponId ?? base.equippedWeaponId,
     ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
+    weaponHotbar: normalizeWeaponHotbar(partial.weaponHotbar, partial.ownedWeapons ?? base.ownedWeapons),
     bag: padBag(partial.bag),
     shopShelves: padShelves(partial.shopShelves, def.shelfCount),
     shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
     shopDayUsed: partial.shopDayUsed ?? false,
+    partyCompanion: partial.partyCompanion ?? null,
     habitat: partial.habitat ?? [],
     bestiary: partial.bestiary ?? [],
   };
+}
+
+function normalizeWeaponHotbar(
+  hotbar: [string | null, string | null] | undefined,
+  owned: string[],
+): [string | null, string | null] {
+  const slots = hotbar ?? defaultWeaponHotbar();
+  return [
+    slots[0] && owned.includes(slots[0]) ? slots[0] : owned[0] ?? null,
+    slots[1] && owned.includes(slots[1]) ? slots[1] : null,
+  ];
 }
 
 function padBag(bag: (GameState['bag'][number] | null)[] | undefined): GameState['bag'] {

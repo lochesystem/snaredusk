@@ -38,7 +38,9 @@ flowchart LR
 
 ---
 
-## Fase 1 — Vertical slice (quase concluída)
+## Fase 1 — Vertical slice (concluída)
+
+**Playtest:** 10/10 em 2026-07-17 — loop completo validado.
 
 **Objetivo:** provar que o core loop é divertido com placeholder art mínima.
 
@@ -67,7 +69,7 @@ flowchart LR
 - [x] Save/load persiste entre sessões
 - [x] Testes Vitest (captura, precificação, masmorra, habitat, orbShop)
 - [x] URL pública funcional ([lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/))
-- [ ] Playtest interno 10 min
+- [x] Playtest interno 10 min — **10/10**, 2026-07-17 ([PLAYTEST.md](PLAYTEST.md))
 
 ### Fora da fase 1 (permanece para fase 2+)
 
@@ -251,9 +253,9 @@ flowchart LR
 
 ## Próxima ação imediata
 
-1. **Playtest** com [docs/PLAYTEST.md](PLAYTEST.md) (10 min) e preencher checklist
-2. Fechar Fase 1 após playtest aprovado
-3. Continuar Fase 2 — popularidade na loja, depois **base escavável** ou **bioma 2**
+1. ~~Playtest Fase 1~~ — concluído (10/10)
+2. Continuar Fase 2 — **ciclo dia/noite** ou **bioma 2 (Cristal)**
+3. Popularidade na loja + base escavável
 
 ---
 

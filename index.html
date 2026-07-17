@@ -32,11 +32,10 @@
           <div class="hud-meta">
             <span id="hud-gold">Ouro: 0</span>
             <span id="hud-orbs">Orbes: 3</span>
-            <span id="hud-bag">Bolsa: 0/12</span>
-            <span id="hud-weapon">Arma: Faca</span>
           </div>
         </div>
         <div id="hud-hint"></div>
+        <div id="hud-hotbar"></div>
       </div>
     </div>
 
@@ -75,6 +74,17 @@
             <button id="btn-buy-orb-3" type="button">Orbes ×3 — 70 ouro</button>
           </div>
         </div>
+        <div id="inventory-panel">
+          <h3>Bolsa</h3>
+          <p class="panel-hint">Organize itens — descarte o que não quiser levar. Na masmorra, pressione <strong>I</strong>.</p>
+          <div id="inventory-grid" class="inventory-grid"></div>
+        </div>
+        <div id="party-panel">
+          <h3>Companheiro</h3>
+          <p class="panel-hint">Leve 1 criatura capturada para ajudar na masmorra.</p>
+          <p id="party-current" class="party-current">Nenhum companheiro</p>
+          <div id="party-picks" class="party-picks"></div>
+        </div>
         <div id="habitat-panel">
           <h3>Habitat</h3>
           <p class="panel-hint">À esquerda, as criaturas vagam pela câmara. Clique numa para retirá-la à bolsa, ou use os botões abaixo para adicionar.</p>
@@ -99,6 +109,24 @@
         <button id="btn-shop-open" type="button">Abrir loja ao público</button>
         <button id="btn-shop-upgrade" type="button">Melhorar loja</button>
         <button id="btn-shop-back" type="button">Voltar à base</button>
+      </div>
+    </div>
+
+    <div id="inventory-modal" class="modal hidden">
+      <div class="modal-content inventory-modal-content">
+        <h3>Bolsa</h3>
+        <p class="panel-hint">Descarte itens para liberar espaço. [I] ou Esc para fechar.</p>
+        <div id="inventory-modal-grid" class="inventory-grid"></div>
+        <button id="inventory-modal-close" type="button">Fechar</button>
+      </div>
+    </div>
+
+    <div id="abandon-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Desistir da masmorra?</h3>
+        <p class="panel-hint">Você volta à base com a bolsa. O progresso desta run é perdido.</p>
+        <button id="abandon-confirm" type="button">Voltar à base</button>
+        <button id="abandon-cancel" type="button">Continuar explorando</button>
       </div>
     </div>
 
