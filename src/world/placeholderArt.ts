@@ -372,6 +372,18 @@ export function drawDungeonLayout(
       g.closePath();
       g.fill(color);
       g.stroke({ width: 1, color: 0xe8f4ff, alpha: 0.5 });
+      continue;
+    }
+    if (d.kind === 'thermal') {
+      const pool = d.variant === 0 ? 0xc06030 : d.variant === 1 ? 0xe87840 : 0xa04828;
+      g.ellipse(d.x, d.y + 2, d.size * 1.4, d.size * 0.7);
+      g.fill({ color: pool, alpha: 0.85 });
+      g.ellipse(d.x, d.y + 1, d.size * 0.9, d.size * 0.45);
+      g.fill({ color: 0xffc080, alpha: 0.35 });
+      g.moveTo(d.x - 2, d.y - d.size);
+      g.quadraticCurveTo(d.x - 4, d.y - d.size * 2, d.x, d.y - d.size * 2.4);
+      g.quadraticCurveTo(d.x + 4, d.y - d.size * 2, d.x + 2, d.y - d.size);
+      g.stroke({ width: 1.5, color: 0xe8e8e8, alpha: 0.45 });
     }
   }
 

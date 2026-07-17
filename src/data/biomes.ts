@@ -1,6 +1,6 @@
-export type BiomeId = 'floresta' | 'cristal';
+export type BiomeId = 'floresta' | 'cristal' | 'termal';
 
-export type DecorKind = 'mushroom' | 'crystal';
+export type DecorKind = 'mushroom' | 'crystal' | 'thermal';
 
 export interface BiomeTheme {
   void: number;
@@ -25,6 +25,8 @@ export interface BiomeDef {
   theme: BiomeTheme;
   /** Bioma que precisa ter o chefe derrotado para desbloquear. */
   unlockAfterBossIn: BiomeId | null;
+  /** Texto quando o bioma ainda está bloqueado. */
+  lockHint: string;
 }
 
 export const BIOMES: Record<BiomeId, BiomeDef> = {
@@ -48,6 +50,7 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
       rockHighlight: 0x6a6a7a,
     },
     unlockAfterBossIn: null,
+    lockHint: '',
   },
   cristal: {
     id: 'cristal',
@@ -69,10 +72,33 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
       rockHighlight: 0x7ab8e8,
     },
     unlockAfterBossIn: 'floresta',
+    lockHint: 'Derrote o Rei das Esporas na Floresta',
+  },
+  termal: {
+    id: 'termal',
+    name: 'Pântano Termal',
+    shortName: 'Termal',
+    description: 'Vapor quente, poças fumegantes e criaturas de fogo.',
+    bossSpeciesId: 'salamandra_ancia',
+    bossPortalHint: 'Derrote a Salamandra Anciã para ativar o portal',
+    enemySpecies: ['salamandra', 'vaporoso', 'caranguejo_termal'],
+    chestLoot: ['escama_termal', 'concha_vapor', 'essencia_termal'],
+    decorKind: 'thermal',
+    theme: {
+      void: 0x140c0a,
+      floor: 0x3a2a1a,
+      wall: 0x2a1e14,
+      wallStroke: 0x6a4a30,
+      roomCeiling: 0x2a1e14,
+      rock: 0x5a4030,
+      rockHighlight: 0x8a6040,
+    },
+    unlockAfterBossIn: 'cristal',
+    lockHint: 'Derrote a Matriarca Prismática no Cristal',
   },
 };
 
-export const BIOME_ORDER: BiomeId[] = ['floresta', 'cristal'];
+export const BIOME_ORDER: BiomeId[] = ['floresta', 'cristal', 'termal'];
 
 export function getBiomeDef(id: BiomeId): BiomeDef {
   return BIOMES[id];

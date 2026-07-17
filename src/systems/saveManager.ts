@@ -19,7 +19,7 @@ interface SavePayloadV4 {
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -31,6 +31,7 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   unlockedBiomes?: BiomeId[];
   biomeBossDefeated?: Partial<Record<BiomeId, boolean>>;
   hasSporeKey?: boolean;
+  hasPrismaticKey?: boolean;
 }
 
 export function serializeState(state: GameState): string {
@@ -113,6 +114,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     unlockedBiomes: partial.unlockedBiomes?.length ? [...partial.unlockedBiomes] : [...base.unlockedBiomes],
     biomeBossDefeated: { ...partial.biomeBossDefeated },
     hasSporeKey: partial.hasSporeKey ?? false,
+    hasPrismaticKey: partial.hasPrismaticKey ?? false,
   };
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;

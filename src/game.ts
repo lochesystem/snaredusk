@@ -332,9 +332,7 @@ export class Game {
 
       const hint = document.createElement('span');
       hint.className = 'biome-pick-hint';
-      hint.textContent = unlocked
-        ? biome.description
-        : 'Derrote o Rei das Esporas na Floresta';
+      hint.textContent = unlocked ? biome.description : biome.lockHint;
 
       btn.append(title, hint);
       btn.addEventListener('click', () => {

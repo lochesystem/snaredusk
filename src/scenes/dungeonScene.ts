@@ -75,7 +75,7 @@ import { shouldEnemyAggro } from '../systems/enemyAi.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
 import { losePartyCompanion } from '../systems/party.ts';
-import { onBiomeBossDefeated } from '../systems/biomeProgress.ts';
+import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
@@ -672,12 +672,14 @@ export class DungeonScene {
       if (!options?.skipToast) {
         const species = getSpecies(enemy.speciesId);
         if (enemy.isBoss) {
-          const cristalWasLocked = !this.state.unlockedBiomes.includes('cristal');
+          const unlockedBefore = [...this.state.unlockedBiomes];
           onBiomeBossDefeated(this.state, this.layout.biomeId);
           this.callbacks.onStateChange();
           this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
-          if (cristalWasLocked && this.state.unlockedBiomes.includes('cristal')) {
-            this.callbacks.showToast('Chave de Esporo — Caverna de Cristal desbloqueada!');
+          for (const biomeId of this.state.unlockedBiomes) {
+            if (unlockedBefore.includes(biomeId)) continue;
+            const toast = getBiomeUnlockToast(biomeId);
+            if (toast) this.callbacks.showToast(toast);
           }
         } else {
           this.callbacks.showToast(`${species.name} derrotado — baú deixado`);

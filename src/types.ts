@@ -66,6 +66,8 @@ export interface GameState {
   biomeBossDefeated: Partial<Record<BiomeId, boolean>>;
   /** Chave dropada pelo Rei das Esporas (desbloqueia narrativa do Cristal). */
   hasSporeKey: boolean;
+  /** Chave dropada pela Matriarca Prismática (desbloqueia o Termal). */
+  hasPrismaticKey: boolean;
 }
 
 export interface Rect {
@@ -120,5 +122,6 @@ export function defaultGameState(): GameState {
     unlockedBiomes: ['floresta'],
     biomeBossDefeated: {},
     hasSporeKey: false,
+    hasPrismaticKey: false,
   };
 }

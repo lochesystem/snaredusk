@@ -30,6 +30,22 @@ describe('biomes', () => {
     expect(state.activeBiome).toBe('cristal');
   });
 
+  it('derrotar chefe do cristal desbloqueia termal', () => {
+    const state = defaultGameState();
+    onBiomeBossDefeated(state, 'floresta');
+    onBiomeBossDefeated(state, 'cristal');
+    expect(state.biomeBossDefeated.cristal).toBe(true);
+    expect(isBiomeUnlocked(state, 'termal')).toBe(true);
+    expect(state.hasPrismaticKey).toBe(true);
+    expect(selectBiome(state, 'termal')).toBe(true);
+    expect(state.activeBiome).toBe('termal');
+  });
+
+  it('termal começa bloqueado', () => {
+    const state = defaultGameState();
+    expect(isBiomeUnlocked(state, 'termal')).toBe(false);
+  });
+
   it('migra save antigo com dungeonCleared', () => {
     const state = defaultGameState();
     state.dungeonCleared = true;
@@ -55,5 +71,16 @@ describe('dungeonGenerator biomes', () => {
       expect(['prismarin', 'lumicascalho', 'eco_quartzo']).toContain(id);
     }
     expect(layout.decor.every((d) => d.kind === 'crystal')).toBe(true);
+  });
+
+  it('gera chefe e decor do bioma termal', () => {
+    const layout = generateDungeon(77, 'termal');
+    expect(layout.biomeId).toBe('termal');
+    expect(layout.enemySpawns.find((s) => s.isBoss)?.speciesId).toBe('salamandra_ancia');
+    const species = new Set(layout.enemySpawns.filter((s) => !s.isBoss).map((s) => s.speciesId));
+    for (const id of species) {
+      expect(['salamandra', 'vaporoso', 'caranguejo_termal']).toContain(id);
+    }
+    expect(layout.decor.every((d) => d.kind === 'thermal')).toBe(true);
   });
 });

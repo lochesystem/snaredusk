@@ -42,7 +42,7 @@ export interface DungeonInteractable {
 }
 
 export interface DungeonDecor {
-  kind: 'mushroom' | 'crystal';
+  kind: 'mushroom' | 'crystal' | 'thermal';
   x: number;
   y: number;
   size: number;

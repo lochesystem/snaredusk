@@ -19,6 +19,12 @@ export const LOOT_TABLE: Record<string, LootDef> = {
   poeira_prismatica: { id: 'poeira_prismatica', name: 'Poeira prismática', baseValue: 55, rarity: 'uncommon' },
   gema_rachada: { id: 'gema_rachada', name: 'Gema rachada', baseValue: 90, rarity: 'rare' },
   coroa_cristal: { id: 'coroa_cristal', name: 'Coroa de Cristal', baseValue: 130, rarity: 'epic' },
+  chave_prismatica: { id: 'chave_prismatica', name: 'Chave Prismática', baseValue: 0, rarity: 'epic' },
+  escama_termal: { id: 'escama_termal', name: 'Escama termal', baseValue: 40, rarity: 'common' },
+  concha_vapor: { id: 'concha_vapor', name: 'Concha de vapor', baseValue: 28, rarity: 'common' },
+  essencia_termal: { id: 'essencia_termal', name: 'Essência térmica', baseValue: 55, rarity: 'uncommon' },
+  nucleo_bruma: { id: 'nucleo_bruma', name: 'Núcleo de bruma', baseValue: 95, rarity: 'rare' },
+  coroa_termal: { id: 'coroa_termal', name: 'Coroa Termal', baseValue: 140, rarity: 'epic' },
 };
 
 export interface EnemyChestDrop {
@@ -36,6 +42,9 @@ export function getEnemyChestDrop(speciesId: string, _isBoss: boolean): EnemyChe
   if (speciesId === 'matriarca_prismatica') {
     return { lootId: 'coroa_cristal', quantity: 1, epic: true, goldBonus: 45 };
   }
+  if (speciesId === 'salamandra_ancia') {
+    return { lootId: 'coroa_termal', quantity: 1, epic: true, goldBonus: 55 };
+  }
   switch (speciesId) {
     case 'lumimorcego':
       return { lootId: 'esporo_brilhante', quantity: 1, epic: false, goldBonus: 0 };
@@ -49,6 +58,12 @@ export function getEnemyChestDrop(speciesId: string, _isBoss: boolean): EnemyChe
       return { lootId: 'quartzo_bruto', quantity: 2, epic: false, goldBonus: 0 };
     case 'eco_quartzo':
       return { lootId: 'gema_rachada', quantity: 1, epic: false, goldBonus: 10 };
+    case 'salamandra':
+      return { lootId: 'escama_termal', quantity: 2, epic: false, goldBonus: 0 };
+    case 'vaporoso':
+      return { lootId: 'concha_vapor', quantity: 1, epic: false, goldBonus: 0 };
+    case 'caranguejo_termal':
+      return { lootId: 'nucleo_bruma', quantity: 1, epic: false, goldBonus: 12 };
     default:
       return { lootId: 'cogumelo_comum', quantity: 1, epic: false, goldBonus: 0 };
   }

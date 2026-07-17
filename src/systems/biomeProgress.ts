@@ -42,14 +42,21 @@ export function onBiomeBossDefeated(state: GameState, biomeId: BiomeId): void {
   state.biomeBossDefeated[biomeId] = true;
   if (biomeId === 'floresta') {
     state.dungeonCleared = true;
-    grantSporeKey(state);
+    grantKey(state, 'chave_esporo', 'hasSporeKey');
+  }
+  if (biomeId === 'cristal') {
+    grantKey(state, 'chave_prismatica', 'hasPrismaticKey');
   }
   syncBiomeUnlocks(state);
 }
 
-function grantSporeKey(state: GameState): void {
-  if (state.hasSporeKey) return;
-  const def = LOOT_TABLE.chave_esporo;
+function grantKey(
+  state: GameState,
+  lootId: keyof typeof LOOT_TABLE,
+  flag: 'hasSporeKey' | 'hasPrismaticKey',
+): void {
+  if (state[flag]) return;
+  const def = LOOT_TABLE[lootId];
   if (!def) return;
   const key: LootItem = {
     kind: 'loot',
@@ -58,10 +65,18 @@ function grantSporeKey(state: GameState): void {
     baseValue: def.baseValue,
     quantity: 1,
   };
-  if (addToBag(state, key)) {
-    state.hasSporeKey = true;
-  } else {
-    state.hasSporeKey = true;
+  addToBag(state, key);
+  state[flag] = true;
+}
+
+export function getBiomeUnlockToast(unlockedBiomeId: BiomeId): string | null {
+  switch (unlockedBiomeId) {
+    case 'cristal':
+      return 'Chave de Esporo — Caverna de Cristal desbloqueada!';
+    case 'termal':
+      return 'Chave Prismática — Pântano Termal desbloqueado!';
+    default:
+      return null;
   }
 }
 
