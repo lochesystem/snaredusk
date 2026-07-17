@@ -31,6 +31,7 @@ import type { InputManager } from '../engine/input.ts';
 import { DungeonMinimap } from '../ui/dungeonMinimap.ts';
 import { YSortLayer } from '../engine/ySortLayer.ts';
 import { getSpecies } from '../data/creatures.ts';
+import { getBiomeDef } from '../data/biomes.ts';
 import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
 import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
@@ -74,6 +75,7 @@ import { shouldEnemyAggro } from '../systems/enemyAi.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
 import { losePartyCompanion } from '../systems/party.ts';
+import { onBiomeBossDefeated } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
@@ -240,7 +242,8 @@ export class DungeonScene {
     this.callbacks = callbacks;
     this.playerHp = state.playerHp;
     this.playerStamina = state.playerStamina;
-    this.layout = generateDungeon(dungeonSeed);
+    this.layout = generateDungeon(dungeonSeed, state.activeBiome);
+    const biome = getBiomeDef(this.layout.biomeId);
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
 
     const floorGfx = new Graphics();
@@ -253,6 +256,7 @@ export class DungeonScene {
       chests: [],
       width: this.layout.width,
       height: this.layout.height,
+      theme: biome.theme,
     });
     this.world.addChild(floorGfx);
     floorGfx.cacheAsTexture(true);
@@ -668,7 +672,13 @@ export class DungeonScene {
       if (!options?.skipToast) {
         const species = getSpecies(enemy.speciesId);
         if (enemy.isBoss) {
+          const cristalWasLocked = !this.state.unlockedBiomes.includes('cristal');
+          onBiomeBossDefeated(this.state, this.layout.biomeId);
+          this.callbacks.onStateChange();
           this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
+          if (cristalWasLocked && this.state.unlockedBiomes.includes('cristal')) {
+            this.callbacks.showToast('Chave de Esporo — Caverna de Cristal desbloqueada!');
+          }
         } else {
           this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
         }
@@ -1487,7 +1497,6 @@ export class DungeonScene {
     if (this.deathHandled || this.playerHp > 0) return;
     this.deathHandled = true;
     this.state.bag = this.state.bag.map(() => null);
-    losePartyCompanion(this.state);
     this.playerHp = PLAYER_MAX_HP;
     this.state.playerHp = PLAYER_MAX_HP;
     this.callbacks.showToast('Você desmaiou — perdeu a bolsa!');
@@ -1502,7 +1511,6 @@ export class DungeonScene {
   abandon(): void {
     if (!this.canAbandon()) return;
     this.state.bag = this.state.bag.map(() => null);
-    losePartyCompanion(this.state);
     this.active = false;
     this.callbacks.showToast('Desistiu — perdeu a bolsa!');
     this.callbacks.onReturnToBase('abandon');
@@ -1552,9 +1560,10 @@ export class DungeonScene {
       if (near.data.kind === 'event') return '[E] Investigar altar misterioso';
       if (near.data.kind === 'merchant') return '[E] Falar com mercador ambulante';
     }
-    const bossAlive = this.enemies.some((e) => !e.dead && !e.fled && e.speciesId === 'rei_esporas');
+    const bossSpeciesId = getBiomeDef(this.layout.biomeId).bossSpeciesId;
+    const bossAlive = this.enemies.some((e) => !e.dead && !e.fled && e.speciesId === bossSpeciesId);
     if (bossAlive) {
-      return 'Derrote o Rei das Esporas para ativar o portal';
+      return getBiomeDef(this.layout.biomeId).bossPortalHint;
     }
     if (this.companion && !this.companion.dead) {
       const map = this.minimap.isHidden() ? 'M mapa' : 'M ocultar mapa';

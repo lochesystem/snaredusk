@@ -1,3 +1,5 @@
+import type { BiomeId } from '../data/biomes.ts';
+import { getBiomeDef } from '../data/biomes.ts';
 import type { Rect } from '../types.ts';
 
 export const PLAYER_RADIUS = 10;
@@ -40,7 +42,7 @@ export interface DungeonInteractable {
 }
 
 export interface DungeonDecor {
-  kind: 'mushroom';
+  kind: 'mushroom' | 'crystal';
   x: number;
   y: number;
   size: number;
@@ -63,6 +65,7 @@ export interface DungeonChest {
 }
 
 export interface DungeonLayout {
+  biomeId: BiomeId;
   width: number;
   height: number;
   rooms: RoomLayout[];
@@ -93,9 +96,6 @@ interface GraphEdge {
   b: number;
   dir: DoorDir;
 }
-
-const ENEMY_SPECIES = ['esporo_dorminhoco', 'lumimorcego', 'carapaca_musgo'] as const;
-const CHEST_LOOT = ['cogumelo_comum', 'fibra_musgo', 'esporo_brilhante'] as const;
 
 const DIR_DELTA: Record<DoorDir, { dgx: number; dgy: number }> = {
   n: { dgx: 0, dgy: -1 },
@@ -210,16 +210,17 @@ function buildDoorMap(nodes: GraphNode[], edges: GraphEdge[]): Map<number, DoorD
   return doors;
 }
 
-export function generateDungeon(seed?: number): DungeonLayout {
+export function generateDungeon(seed?: number, biomeId: BiomeId = 'floresta'): DungeonLayout {
   const baseSeed = seed ?? Date.now();
   for (let attempt = 0; attempt < 24; attempt++) {
-    const layout = buildDungeon(baseSeed + attempt * 7919);
+    const layout = buildDungeon(baseSeed + attempt * 7919, biomeId);
     if (validateLayout(layout)) return layout;
   }
-  return buildDungeon(baseSeed);
+  return buildDungeon(baseSeed, biomeId);
 }
 
-function buildDungeon(seed: number): DungeonLayout {
+function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
+  const biome = getBiomeDef(biomeId);
   const rng = createRng(seed);
   const targetRooms = randInt(rng, 8, 11);
   const { nodes, edges } = generateGraph(rng, targetRooms);
@@ -301,14 +302,14 @@ function buildDungeon(seed: number): DungeonLayout {
   const chests: DungeonChest[] = [];
 
   for (const room of rooms) {
-    populateRoomDecor(room, rng, decor, reserved, safeZones);
+    populateRoomDecor(room, rng, decor, reserved, safeZones, biome.decorKind);
     if (room.type === 'combat') {
       populateRoomObstacles(room, rng, obstacles, reserved, safeZones);
     }
     if (room.type === 'treasure') {
-      populateTreasureRoom(room, rng, chests, reserved, safeZones);
+      populateTreasureRoom(room, rng, chests, reserved, safeZones, biome.chestLoot);
     } else if (room.type === 'combat' && room.index !== 0) {
-      maybeAddChest(room, rng, chests, reserved, safeZones);
+      maybeAddChest(room, rng, chests, reserved, safeZones, biome.chestLoot);
     }
   }
 
@@ -320,11 +321,12 @@ function buildDungeon(seed: number): DungeonLayout {
   }
 
   const interactables = buildInteractables(rooms, reserved, safeZones, rng);
-  const enemySpawns = pickEnemySpawns(rooms, rng, safeZones, floors, walls, obstacles);
+  const enemySpawns = pickEnemySpawns(rooms, rng, safeZones, floors, walls, obstacles, biome);
 
   const connections = edges.map((e) => ({ a: e.a, b: e.b }));
 
   return normalizeDungeonLayout({
+    biomeId,
     width: 0,
     height: 0,
     rooms,
@@ -409,6 +411,7 @@ function populateTreasureRoom(
   chests: DungeonChest[],
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
+  chestLoot: readonly string[],
 ): void {
   const count = randInt(rng, 1, 2);
   for (let i = 0; i < count; i++) {
@@ -419,7 +422,7 @@ function populateTreasureRoom(
       roomIndex: room.index,
       x: pt.x,
       y: pt.y,
-      lootId: CHEST_LOOT[randInt(rng, 0, CHEST_LOOT.length - 1)]!,
+      lootId: chestLoot[randInt(rng, 0, chestLoot.length - 1)]!,
     });
   }
 }
@@ -456,6 +459,7 @@ function pickEnemySpawns(
   floors: Rect[],
   walls: Rect[],
   obstacles: DungeonObstacle[],
+  biome: ReturnType<typeof getBiomeDef>,
 ): DungeonEnemySpawn[] {
   const spawns: DungeonEnemySpawn[] = [];
   const placed: { x: number; y: number }[] = [];
@@ -474,7 +478,7 @@ function pickEnemySpawns(
     if (room.type === 'combat' && room.index !== 0) {
       const count = randInt(rng, 1, 2);
       for (let i = 0; i < count; i++) {
-        const speciesId = ENEMY_SPECIES[randInt(rng, 0, ENEMY_SPECIES.length - 1)]!;
+        const speciesId = biome.enemySpecies[randInt(rng, 0, biome.enemySpecies.length - 1)]!;
         const pt = pickClearPoint(room, 36);
         if (!pt) continue;
         placed.push(pt);
@@ -492,7 +496,7 @@ function pickEnemySpawns(
       if (!pt) continue;
       placed.push(pt);
       spawns.push({
-        speciesId: 'rei_esporas',
+        speciesId: biome.bossSpeciesId,
         roomIndex: room.index,
         x: pt.x,
         y: pt.y,
@@ -570,6 +574,7 @@ function populateRoomDecor(
   decor: DungeonDecor[],
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
+  decorKind: DungeonDecor['kind'],
 ): void {
   const count = randInt(rng, 4, 8);
   for (let i = 0; i < count; i++) {
@@ -577,7 +582,7 @@ function populateRoomDecor(
     if (!pt) continue;
     reserved.push(pt);
     decor.push({
-      kind: 'mushroom',
+      kind: decorKind,
       x: pt.x,
       y: pt.y,
       size: 3 + randInt(rng, 0, 2),
@@ -632,6 +637,7 @@ function maybeAddChest(
   chests: DungeonChest[],
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
+  chestLoot: readonly string[],
 ): void {
   if (room.index === 0) return;
   if (chests.length >= 2) return;
@@ -644,7 +650,7 @@ function maybeAddChest(
     roomIndex: room.index,
     x: pt.x,
     y: pt.y,
-    lootId: CHEST_LOOT[randInt(rng, 0, CHEST_LOOT.length - 1)]!,
+    lootId: chestLoot[randInt(rng, 0, chestLoot.length - 1)]!,
   });
 }
 

@@ -1,4 +1,4 @@
-export type SceneId = 'title' | 'base' | 'dungeon' | 'shop';
+import type { BiomeId } from './data/biomes.ts';
 
 export type ItemKind = 'loot' | 'creature';
 
@@ -61,6 +61,11 @@ export interface GameState {
   partyCompanion: CreatureItem | null;
   bestiary: string[];
   dungeonCleared: boolean;
+  activeBiome: BiomeId;
+  unlockedBiomes: BiomeId[];
+  biomeBossDefeated: Partial<Record<BiomeId, boolean>>;
+  /** Chave dropada pelo Rei das Esporas (desbloqueia narrativa do Cristal). */
+  hasSporeKey: boolean;
 }
 
 export interface Rect {
@@ -111,5 +116,9 @@ export function defaultGameState(): GameState {
     partyCompanion: null,
     bestiary: [],
     dungeonCleared: false,
+    activeBiome: 'floresta',
+    unlockedBiomes: ['floresta'],
+    biomeBossDefeated: {},
+    hasSporeKey: false,
   };
 }

@@ -24,7 +24,7 @@ describe('dungeonGenerator', () => {
 
   it('places boss spawn and portal in the boss room', () => {
     for (let seed = 1; seed <= 50; seed++) {
-      const layout = generateDungeon(seed);
+      const layout = generateDungeon(seed, 'floresta');
       expect(layout.portalRoomIndex).toBe(layout.bossRoomIndex);
       const bossSpawn = layout.enemySpawns.find((s) => s.isBoss);
       expect(bossSpawn?.speciesId).toBe('rei_esporas');

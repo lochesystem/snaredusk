@@ -9,15 +9,17 @@ import {
 } from '../types.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
 import { defaultWeaponHotbar } from './weaponHotbar.ts';
+import { syncBiomeUnlocks } from './biomeProgress.ts';
+import type { BiomeId } from '../data/biomes.ts';
 
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 
-interface SavePayloadV3 {
+interface SavePayloadV4 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -25,10 +27,14 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   playerDef?: number;
   equippedWeaponId?: string;
   ownedWeapons?: string[];
+  activeBiome?: BiomeId;
+  unlockedBiomes?: BiomeId[];
+  biomeBossDefeated?: Partial<Record<BiomeId, boolean>>;
+  hasSporeKey?: boolean;
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV3 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV4 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -38,6 +44,7 @@ export function deserializeState(raw: string): GameState | null {
     if (!payload.state) return null;
     if (payload.version === 1) return normalizeState(migrateV1(payload.state));
     if (payload.version === 2) return normalizeState(migrateV2(payload.state));
+    if (payload.version === 3) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -85,7 +92,7 @@ function normalizeState(partial: LegacyGameState): GameState {
   const level = partial.shopLevel ?? base.shopLevel;
   const def = getShopLevelDef(level);
 
-  return {
+  const normalized: GameState = {
     ...base,
     ...partial,
     shopLevel: level,
@@ -101,7 +108,17 @@ function normalizeState(partial: LegacyGameState): GameState {
     partyCompanion: partial.partyCompanion ?? null,
     habitat: partial.habitat ?? [],
     bestiary: partial.bestiary ?? [],
+    dungeonCleared: partial.dungeonCleared ?? false,
+    activeBiome: partial.activeBiome ?? base.activeBiome,
+    unlockedBiomes: partial.unlockedBiomes?.length ? [...partial.unlockedBiomes] : [...base.unlockedBiomes],
+    biomeBossDefeated: { ...partial.biomeBossDefeated },
+    hasSporeKey: partial.hasSporeKey ?? false,
   };
+  if (normalized.dungeonCleared) {
+    normalized.biomeBossDefeated.floresta = true;
+  }
+  syncBiomeUnlocks(normalized);
+  return normalized;
 }
 
 function normalizeWeaponHotbar(

@@ -11,6 +11,7 @@ import {
   getPlayerAnimations,
   PLAYER_WALK_ANIM_SPEED,
 } from './playerAssets.ts';
+import type { BiomeTheme } from '../data/biomes.ts';
 import { createPixelText } from './pixelText.ts';
 import {
   drawEnergyOrb,
@@ -290,16 +291,26 @@ export function drawDungeonLayout(
     chests: { x: number; y: number; opened?: boolean }[];
     width: number;
     height: number;
+    theme?: BiomeTheme;
   },
 ): void {
   const { floors, walls, rooms, decor, obstacles, chests, width, height } = layout;
+  const theme = layout.theme ?? {
+    void: 0x120f1a,
+    floor: 0x2a4a2a,
+    wall: 0x1a2e1a,
+    wallStroke: 0x3d5c3a,
+    roomCeiling: 0x1a2e1a,
+    rock: 0x4a4a5a,
+    rockHighlight: 0x6a6a7a,
+  };
 
   g.rect(0, 0, width, height);
-  g.fill(0x120f1a);
+  g.fill(theme.void);
 
   for (const floor of floors) {
     g.rect(floor.x, floor.y, floor.width, floor.height);
-    g.fill(0x2a4a2a);
+    g.fill(theme.floor);
   }
 
   for (const room of rooms) {
@@ -321,33 +332,47 @@ export function drawDungeonLayout(
 
   for (const wall of walls) {
     g.rect(wall.x, wall.y, wall.width, wall.height);
-    g.fill(0x1a2e1a);
+    g.fill(theme.wall);
     g.rect(wall.x, wall.y, wall.width, wall.height);
-    g.stroke({ width: 2, color: 0x3d5c3a });
+    g.stroke({ width: 2, color: theme.wallStroke });
   }
 
   for (const obs of obstacles) {
     if (obs.kind !== 'rock') continue;
     g.roundRect(obs.x - obs.radius, obs.y - obs.radius * 0.8, obs.radius * 2, obs.radius * 1.6, 4);
-    g.fill(0x4a4a5a);
+    g.fill(theme.rock);
     g.roundRect(obs.x - obs.radius + 2, obs.y - obs.radius * 0.8 + 2, obs.radius * 1.4, obs.radius * 0.9, 3);
-    g.fill({ color: 0x6a6a7a, alpha: 0.7 });
+    g.fill({ color: theme.rockHighlight, alpha: 0.7 });
   }
 
   for (const room of rooms) {
     const r = room.rect;
     g.rect(r.x + 4, r.y + 4, r.width - 8, 22);
-    g.fill({ color: 0x1a2e1a, alpha: 0.35 });
+    g.fill({ color: theme.roomCeiling, alpha: 0.35 });
   }
 
   for (const d of decor) {
-    if (d.kind !== 'mushroom') continue;
-    const cap = d.variant === 0 ? 0x5dbb63 : d.variant === 1 ? 0x8fd894 : 0x6b9a6b;
-    const stem = 0x4a6a4a;
-    g.circle(d.x, d.y - 2, d.size);
-    g.fill(cap);
-    g.rect(d.x - 2, d.y, 4, d.size + 3);
-    g.fill(stem);
+    if (d.kind === 'mushroom') {
+      const cap = d.variant === 0 ? 0x5dbb63 : d.variant === 1 ? 0x8fd894 : 0x6b9a6b;
+      const stem = 0x4a6a4a;
+      g.circle(d.x, d.y - 2, d.size);
+      g.fill(cap);
+      g.rect(d.x - 2, d.y, 4, d.size + 3);
+      g.fill(stem);
+      continue;
+    }
+    if (d.kind === 'crystal') {
+      const colors = [0x7ab8e8, 0xa8e0ff, 0xc8a8ff];
+      const color = colors[d.variant % colors.length] ?? 0x7ab8e8;
+      const h = d.size * 2.2;
+      g.moveTo(d.x, d.y - h);
+      g.lineTo(d.x + d.size, d.y);
+      g.lineTo(d.x, d.y + h * 0.35);
+      g.lineTo(d.x - d.size, d.y);
+      g.closePath();
+      g.fill(color);
+      g.stroke({ width: 1, color: 0xe8f4ff, alpha: 0.5 });
+    }
   }
 
   for (const chest of chests) {

@@ -33,6 +33,8 @@ import {
 } from './ui/abandonUI.ts';
 import type { DungeonExitReason } from './scenes/dungeonScene.ts';
 import { assignPartyCompanion, stashPartyCompanion } from './systems/party.ts';
+import { getBiomeDef, listBiomes } from './data/biomes.ts';
+import { isBiomeUnlocked, selectBiome } from './systems/biomeProgress.ts';
 import { renderWeaponHotbar } from './ui/hotbarUI.ts';
 import { syncWeaponHotbar } from './systems/weaponHotbar.ts';
 
@@ -306,7 +308,48 @@ export class Game {
     this.renderBaseBagCreatures();
     this.renderWorkshop();
     this.renderArmory();
+    this.renderBiomePanel();
     this.updateMerchantButtons();
+  }
+
+  private renderBiomePanel(): void {
+    const container = document.getElementById('biome-picks');
+    const btnDungeon = document.getElementById('btn-dungeon');
+    if (!container) return;
+
+    container.innerHTML = '';
+    for (const biome of listBiomes()) {
+      const unlocked = isBiomeUnlocked(this.state, biome.id);
+      const selected = this.state.activeBiome === biome.id;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `biome-pick${selected ? ' selected' : ''}${unlocked ? '' : ' locked'}`;
+      btn.disabled = !unlocked;
+
+      const title = document.createElement('span');
+      title.className = 'biome-pick-title';
+      title.textContent = unlocked ? biome.name : `🔒 ${biome.name}`;
+
+      const hint = document.createElement('span');
+      hint.className = 'biome-pick-hint';
+      hint.textContent = unlocked
+        ? biome.description
+        : 'Derrote o Rei das Esporas na Floresta';
+
+      btn.append(title, hint);
+      btn.addEventListener('click', () => {
+        if (selectBiome(this.state, biome.id)) {
+          saveGame(this.state);
+          this.renderBiomePanel();
+        }
+      });
+      container.appendChild(btn);
+    }
+
+    if (btnDungeon) {
+      const active = getBiomeDef(this.state.activeBiome);
+      btnDungeon.textContent = `Entrar — ${active.shortName}`;
+    }
   }
 
   private renderInventoryPanel(): void {
@@ -606,6 +649,10 @@ export class Game {
   }
 
   private async enterDungeon(): Promise<void> {
+    if (!isBiomeUnlocked(this.state, this.state.activeBiome)) {
+      this.showToast('Bioma ainda bloqueado');
+      return;
+    }
     await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
     this.state.shopDayUsed = false;
     this.pendingDungeonExit = null;

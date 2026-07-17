@@ -57,6 +57,11 @@
         <p id="base-stats"></p>
       </header>
       <div class="base-scroll">
+        <div id="biome-panel">
+          <h3>Destino</h3>
+          <p class="panel-hint">Escolha o bioma. Cristal exige derrotar o Rei das Esporas.</p>
+          <div id="biome-picks" class="biome-picks"></div>
+        </div>
         <div class="base-actions">
           <button id="btn-dungeon">Entrar na Masmorra</button>
           <button id="btn-shop">Abrir Loja</button>
@@ -129,7 +134,7 @@
     <div id="abandon-modal" class="modal hidden">
       <div class="modal-content">
         <h3>Desistir da masmorra?</h3>
-        <p class="panel-hint">Você abandona a masmorra e perde todo o loot da bolsa e o companheiro.</p>
+        <p class="panel-hint">Você abandona a masmorra e perde todo o loot da bolsa.</p>
         <button id="abandon-confirm" type="button">Voltar à base</button>
         <button id="abandon-cancel" type="button">Continuar explorando</button>
       </div>
