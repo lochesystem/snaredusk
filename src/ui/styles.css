@@ -98,6 +98,33 @@ body {
   min-width: 148px;
 }
 
+.hud-pet {
+  padding-left: 28px;
+  padding-right: 28px;
+}
+
+.hud-pet-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(93, 187, 99, 0.2);
+  overflow: hidden;
+}
+
+.hud-pet-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7ed67a 0%, #4a9a48 55%, #2d6a2c 100%);
+  transition: width 0.12s ease-out;
+  opacity: 0.85;
+}
+
+.hud-pet-fill.low {
+  background: linear-gradient(180deg, #e8a060 0%, #c06030 55%, #8a4018 100%);
+  opacity: 1;
+}
+
 .hud-bar-wrap {
   display: grid;
   grid-template-columns: 28px 1fr 28px;
@@ -686,6 +713,8 @@ button:hover {
   padding: 12px;
   border: 1px solid #3d5c3a;
   border-radius: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 #inventory-panel h3,
@@ -697,9 +726,16 @@ button:hover {
 
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+
+#app.layout-base .inventory-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .inv-slot {
@@ -709,6 +745,7 @@ button:hover {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  min-width: 0;
   min-height: 72px;
   padding: 8px 6px 6px;
   border: 1px solid #3d5c3a;
@@ -716,6 +753,11 @@ button:hover {
   background: rgba(20, 32, 20, 0.75);
   font-size: 11px;
   text-align: center;
+}
+
+#app.layout-base .inv-slot {
+  min-height: 64px;
+  padding: 6px 4px 4px;
 }
 
 .inv-slot.empty {
@@ -836,6 +878,10 @@ button:hover {
 
 .inventory-modal-content {
   max-width: 360px;
+}
+
+.inventory-modal-content .inventory-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .bag-chip-wrap {

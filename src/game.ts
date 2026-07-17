@@ -678,7 +678,7 @@ export class Game {
       saveGame(this.state);
       this.showScreen('base');
       if (reason === 'portal') this.showToast('Retornou à base com a bolsa!');
-      else if (reason === 'abandon') this.showToast('Desistiu — voltou à base com a bolsa.');
+      else if (reason === 'abandon') { /* toast já exibido na masmorra */ }
     }
   }
 
@@ -706,6 +706,20 @@ export class Game {
       const pct = (staVal / PLAYER_MAX_STAMINA) * 100;
       staminaFill.style.width = `${pct}%`;
       staminaFill.classList.toggle('low', staVal < staLowThreshold);
+    }
+
+    const petWrap = document.getElementById('hud-pet');
+    const petFill = document.getElementById('hud-pet-fill');
+    const companion = this.dungeon?.getCompanionHud() ?? null;
+    if (petWrap && petFill) {
+      if (companion) {
+        petWrap.classList.remove('hidden');
+        const petPct = (companion.hp / companion.maxHp) * 100;
+        petFill.style.width = `${petPct}%`;
+        petFill.classList.toggle('low', petPct <= 25);
+      } else {
+        petWrap.classList.add('hidden');
+      }
     }
 
     syncWeaponHotbar(this.state);

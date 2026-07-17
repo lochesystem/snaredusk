@@ -28,6 +28,11 @@
               </div>
               <span id="hud-stamina" class="hud-bar-value">80</span>
             </div>
+            <div id="hud-pet" class="hud-pet hidden">
+              <div class="hud-pet-track">
+                <div id="hud-pet-fill" class="hud-pet-fill"></div>
+              </div>
+            </div>
           </div>
           <div class="hud-meta">
             <span id="hud-gold">Ouro: 0</span>
@@ -124,7 +129,7 @@
     <div id="abandon-modal" class="modal hidden">
       <div class="modal-content">
         <h3>Desistir da masmorra?</h3>
-        <p class="panel-hint">Você volta à base com a bolsa. O progresso desta run é perdido.</p>
+        <p class="panel-hint">Você abandona a masmorra e perde todo o loot da bolsa e o companheiro.</p>
         <button id="abandon-confirm" type="button">Voltar à base</button>
         <button id="abandon-cancel" type="button">Continuar explorando</button>
       </div>

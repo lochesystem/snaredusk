@@ -1501,8 +1501,19 @@ export class DungeonScene {
 
   abandon(): void {
     if (!this.canAbandon()) return;
+    this.state.bag = this.state.bag.map(() => null);
+    losePartyCompanion(this.state);
     this.active = false;
+    this.callbacks.showToast('Desistiu — perdeu a bolsa!');
     this.callbacks.onReturnToBase('abandon');
+  }
+
+  getCompanionHud(): { hp: number; maxHp: number } | null {
+    if (!this.companion || this.companion.dead) return null;
+    return {
+      hp: Math.max(0, Math.ceil(this.companion.hp)),
+      maxHp: this.companion.maxHp,
+    };
   }
 
   getHudHint(): string {
@@ -1546,9 +1557,8 @@ export class DungeonScene {
       return 'Derrote o Rei das Esporas para ativar o portal';
     }
     if (this.companion && !this.companion.dead) {
-      const c = this.companion;
       const map = this.minimap.isHidden() ? 'M mapa' : 'M ocultar mapa';
-      return `${c.creature.name} ${Math.ceil(c.hp)}/${c.maxHp} · WASD · Clique · Shift · 1/2 · Q · I · Esc · ${map}`;
+      return `WASD · Clique · Shift · 1/2 · Q · I · Esc · ${map}`;
     }
     const mapHint = this.minimap.isHidden() ? 'M mapa' : 'M ocultar mapa';
     return `WASD · Clique · Shift · 1/2 arma · Q · I bolsa · Esc desistir · ${mapHint}`;
