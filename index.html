@@ -13,12 +13,28 @@
       <canvas id="game-canvas"></canvas>
       <div id="hud" class="hidden">
         <div id="hud-top">
-          <span id="hud-hp">HP 100/100</span>
-          <span id="hud-gold">Ouro: 0</span>
-          <span id="hud-orbs">Orbes: 3</span>
-          <span id="hud-bag">Bolsa: 0/12</span>
-          <span id="hud-weapon">Arma: Faca</span>
-          <span id="hud-stamina">Stamina: 80</span>
+          <div class="hud-vitals">
+            <div class="hud-bar-wrap">
+              <span class="hud-bar-label">HP</span>
+              <div class="hud-bar-track">
+                <div id="hud-hp-fill" class="hud-bar-fill hp"></div>
+              </div>
+              <span id="hud-hp" class="hud-bar-value">100</span>
+            </div>
+            <div class="hud-bar-wrap">
+              <span class="hud-bar-label">STA</span>
+              <div class="hud-bar-track">
+                <div id="hud-stamina-fill" class="hud-bar-fill stamina"></div>
+              </div>
+              <span id="hud-stamina" class="hud-bar-value">80</span>
+            </div>
+          </div>
+          <div class="hud-meta">
+            <span id="hud-gold">Ouro: 0</span>
+            <span id="hud-orbs">Orbes: 3</span>
+            <span id="hud-bag">Bolsa: 0/12</span>
+            <span id="hud-weapon">Arma: Faca</span>
+          </div>
         </div>
         <div id="hud-hint"></div>
       </div>
@@ -95,7 +111,6 @@
           <span id="price-value">50</span>
           <button id="price-up">+</button>
         </div>
-        <p id="price-preview"></p>
         <button id="price-confirm">Confirmar</button>
         <button id="price-cancel">Cancelar</button>
       </div>

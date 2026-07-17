@@ -8,13 +8,15 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame, bagCount } from './systems/saveManager.ts';
 import { moveCreatureToBag, moveCreatureToHabitat } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
-import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE } from './engine/constants.ts';
+import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
 import { getEquippedWeapon, WEAPONS } from './data/weapons.ts';
 import { craftWeapon, equipWeapon, formatCraftMissing, getCraftStatus, listRecipes } from './systems/craft.ts';
 import { LOOT_TABLE } from './data/items.ts';
 import { createLootIcon, createWeaponIcon } from './world/placeholderArt.ts';
+import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
+import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -69,6 +71,8 @@ export class Game {
     window.addEventListener('resize', () => this.fitCanvas());
 
     this.input = new InputManager(canvas);
+
+    void Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
 
     if (hasSave()) {
       document.getElementById('btn-continue')?.classList.remove('hidden');
@@ -136,7 +140,7 @@ export class Game {
     });
 
     document.getElementById('btn-dungeon')?.addEventListener('click', () => {
-      this.enterDungeon();
+      void this.enterDungeon();
     });
 
     document.getElementById('btn-shop')?.addEventListener('click', () => {
@@ -447,7 +451,13 @@ export class Game {
     const stats = document.getElementById('base-stats');
     if (stats) {
       const inHabitat = this.state.habitat.length;
-      stats.textContent = `Ouro: ${this.state.gold} · Orbes: ${this.state.orbs} · HP: ${this.state.playerHp} · Bolsa: ${bagCount(this.state)}/12 · Habitat: ${inHabitat}/${HABITAT_CAPACITY} · Bestiário: ${this.state.bestiary.length}`;
+      const shopNote = this.state.shopDayUsed ? ' · Loja fechada hoje' : ' · Loja disponível';
+      stats.textContent = `Ouro: ${this.state.gold} · Orbes: ${this.state.orbs} · HP: ${this.state.playerHp} · Bolsa: ${bagCount(this.state)}/12 · Habitat: ${inHabitat}/${HABITAT_CAPACITY} · Bestiário: ${this.state.bestiary.length}${shopNote}`;
+    }
+
+    const shopBtn = document.getElementById('btn-shop') as HTMLButtonElement | null;
+    if (shopBtn) {
+      shopBtn.textContent = this.state.shopDayUsed ? 'Loja (fechada hoje)' : 'Abrir Loja';
     }
   }
 
@@ -484,7 +494,9 @@ export class Game {
     }
   }
 
-  private enterDungeon(): void {
+  private async enterDungeon(): Promise<void> {
+    await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
+    this.state.shopDayUsed = false;
     this.pendingDungeonExit = null;
     this.destroyHabitat();
     document.getElementById('app')?.classList.remove('layout-base');
@@ -544,24 +556,45 @@ export class Game {
 
   private updateHud(): void {
     const hp = document.getElementById('hud-hp');
+    const hpFill = document.getElementById('hud-hp-fill');
     const gold = document.getElementById('hud-gold');
     const orbs = document.getElementById('hud-orbs');
     const bag = document.getElementById('hud-bag');
     const weapon = document.getElementById('hud-weapon');
     const stamina = document.getElementById('hud-stamina');
+    const staminaFill = document.getElementById('hud-stamina-fill');
     const w = getEquippedWeapon(this.state.equippedWeaponId);
-    if (hp) hp.textContent = `HP ${this.state.playerHp}/100`;
+    const hpVal = Math.max(0, Math.min(100, this.state.playerHp));
+    const staVal = Math.max(0, Math.min(PLAYER_MAX_STAMINA, Math.round(this.state.playerStamina)));
+
+    if (hp) hp.textContent = String(hpVal);
+    if (hpFill) {
+      hpFill.style.width = `${hpVal}%`;
+      hpFill.classList.toggle('low', hpVal <= 25);
+    }
     if (gold) gold.textContent = `Ouro: ${this.state.gold}`;
     if (orbs) orbs.textContent = `Orbes: ${this.state.orbs}`;
     if (bag) bag.textContent = `Bolsa: ${bagCount(this.state)}/12`;
     if (weapon) weapon.textContent = `Arma: ${w.name} · ATK ${w.atk}`;
-    if (stamina) stamina.textContent = `Stamina: ${Math.round(this.state.playerStamina)}`;
+    if (stamina) stamina.textContent = String(staVal);
+    if (staminaFill) {
+      const pct = (staVal / PLAYER_MAX_STAMINA) * 100;
+      staminaFill.style.width = `${pct}%`;
+      staminaFill.classList.toggle('low', staVal < DODGE_STAMINA_COST);
+    }
   }
 
   private startShopDay(): void {
     if (!this.shopScene) return;
+    if (this.state.shopDayUsed) {
+      this.showToast('Loja já abriu hoje — explore a masmorra para um novo dia');
+      return;
+    }
     if (this.shopScene.startShopDay()) {
+      this.state.shopDayUsed = true;
+      saveGame(this.state);
       this.shopUI.setShopDayBusy(true);
+      this.shopUI.render();
     }
   }
 

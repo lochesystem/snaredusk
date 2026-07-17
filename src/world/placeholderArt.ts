@@ -1,7 +1,16 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, Sprite, Text } from 'pixi.js';
 import type { SpeciesDef } from '../types.ts';
 import { LOOT_TABLE } from '../data/items.ts';
 import type { FxRunner } from '../engine/fxRunner.ts';
+import {
+  CREATURE_ANIM_SPEED,
+  getCreatureSpriteLayout,
+  getCreatureVisual,
+} from './creatureAssets.ts';
+import {
+  getPlayerAnimations,
+  PLAYER_WALK_ANIM_SPEED,
+} from './playerAssets.ts';
 import { createPixelText } from './pixelText.ts';
 import {
   drawEnergyOrb,
@@ -21,43 +30,116 @@ export function drawShadow(parent: Container, width: number): Graphics {
   return shadow;
 }
 
-export function createPlayerSprite(): Container {
-  const root = new Container();
-  const shadow = drawShadow(root, 20);
-  shadow.y = 8;
+/** Sprites de IA vêm olhando para a esquerda em `scale.x = 1`. */
+function applySpriteFacing(
+  target: { scale: { x: number } },
+  moveX: number,
+  facing: { value: number },
+): void {
+  if (moveX < -0.01) facing.value = 1;
+  else if (moveX > 0.01) facing.value = -1;
+  target.scale.x = facing.value;
+}
 
-  const body = new Graphics();
-  body.roundRect(-8, -14, 16, 22, 3);
-  body.fill(0xe8a84a);
-  body.stroke({ width: 2, color: 0x8a5a20 });
-  root.addChild(body);
+export interface PlayerSprite extends Container {
+  zOffset: number;
+  setLocomotion(moving: boolean, moveX?: number): void;
+}
 
-  const head = new Graphics();
-  head.circle(0, -18, 7);
-  head.fill(0xf0d060);
-  head.stroke({ width: 1, color: 0x8a5a20 });
-  root.addChild(head);
+export function createPlayerSprite(): PlayerSprite {
+  const root = new Container() as PlayerSprite;
+  root.zOffset = 0.5;
 
-  (root as Container & { zOffset?: number }).zOffset = 0.5;
+  const playerAnims = getPlayerAnimations();
+  let anim: AnimatedSprite | null = null;
+  const facing = { value: 1 };
+
+  if (playerAnims) {
+    const shadow = drawShadow(root, 20);
+    shadow.y = playerAnims.layout.shadowY;
+
+    anim = new AnimatedSprite(playerAnims.idle);
+    anim.anchor.set(playerAnims.layout.anchorX, playerAnims.layout.anchorY);
+    anim.roundPixels = true;
+    anim.animationSpeed = CREATURE_ANIM_SPEED;
+    anim.play();
+    root.addChild(anim);
+  } else {
+    const shadow = drawShadow(root, 20);
+    shadow.y = 8;
+
+    const body = new Graphics();
+    body.roundRect(-8, -14, 16, 22, 3);
+    body.fill(0xe8a84a);
+    body.stroke({ width: 2, color: 0x8a5a20 });
+    root.addChild(body);
+
+    const head = new Graphics();
+    head.circle(0, -18, 7);
+    head.fill(0xf0d060);
+    head.stroke({ width: 1, color: 0x8a5a20 });
+    root.addChild(head);
+  }
+
+  root.setLocomotion = (moving: boolean, moveX = 0) => {
+    if (!anim || !playerAnims) return;
+
+    if (anim) applySpriteFacing(anim, moveX, facing);
+
+    const nextTextures = moving ? playerAnims.walk : playerAnims.idle;
+    if (anim.textures !== nextTextures) {
+      anim.textures = nextTextures;
+      anim.animationSpeed = moving ? PLAYER_WALK_ANIM_SPEED : CREATURE_ANIM_SPEED;
+      anim.gotoAndPlay(0);
+    }
+  };
+
   return root;
 }
 
-export function createCreatureSprite(species: SpeciesDef, capturableGlow = false): Container {
-  const root = new Container();
+export interface CreatureSprite extends Container {
+  zOffset: number;
+  setFacing(moveX: number): void;
+}
+
+export function createCreatureSprite(species: SpeciesDef, capturableGlow = false): CreatureSprite {
+  const root = new Container() as CreatureSprite;
+  const visual = getCreatureVisual(species.id);
+  const usesTexture = visual !== null;
+  const layout = usesTexture ? getCreatureSpriteLayout(species.id) : null;
+  let flipTarget: Sprite | AnimatedSprite | null = null;
+  const facing = { value: 1 };
+
   const shadow = drawShadow(root, 18);
-  shadow.y = 6;
+  shadow.y = layout?.shadowY ?? 6;
 
-  const body = new Graphics();
-  body.roundRect(-10, -10, 20, 16, 4);
-  body.fill(species.color);
-  body.stroke({ width: 2, color: 0x1a2e1a });
-  root.addChild(body);
+  if (visual?.kind === 'animated') {
+    const anim = new AnimatedSprite(visual.textures);
+    anim.anchor.set(layout!.anchorX, layout!.anchorY);
+    anim.roundPixels = true;
+    anim.animationSpeed = CREATURE_ANIM_SPEED;
+    anim.play();
+    root.addChild(anim);
+    flipTarget = anim;
+  } else if (visual?.kind === 'static') {
+    const sprite = new Sprite(visual.texture);
+    sprite.anchor.set(layout!.anchorX, layout!.anchorY);
+    sprite.roundPixels = true;
+    root.addChild(sprite);
+    flipTarget = sprite;
+  } else {
+    const body = new Graphics();
+    body.roundRect(-10, -10, 20, 16, 4);
+    body.fill(species.color);
+    body.stroke({ width: 2, color: 0x1a2e1a });
+    root.addChild(body);
 
-  const eyes = new Graphics();
-  eyes.circle(-4, -4, 2);
-  eyes.circle(4, -4, 2);
-  eyes.fill(species.accent);
-  root.addChild(eyes);
+    const eyes = new Graphics();
+    eyes.circle(-4, -4, 2);
+    eyes.circle(4, -4, 2);
+    eyes.fill(species.accent);
+    root.addChild(eyes);
+  }
 
   if (capturableGlow) {
     const glow = new Graphics();
@@ -66,7 +148,10 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
     root.addChildAt(glow, 0);
   }
 
-  (root as Container & { zOffset?: number }).zOffset = 0.5;
+  root.zOffset = 0.5;
+  root.setFacing = (moveX: number) => {
+    if (flipTarget) applySpriteFacing(flipTarget, moveX, facing);
+  };
   return root;
 }
 

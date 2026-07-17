@@ -10,7 +10,7 @@ import {
   randomPointInHabitat,
   type HabitatLayout,
 } from '../world/habitatLayout.ts';
-import { createCreatureSprite, drawHabitatLayout } from '../world/placeholderArt.ts';
+import { createCreatureSprite, drawHabitatLayout, type CreatureSprite } from '../world/placeholderArt.ts';
 
 const CREATURE_RADIUS = 9;
 const WANDER_SPEED_SCALE = 0.38;
@@ -29,7 +29,7 @@ interface Wanderer {
   wanderTimer: number;
   speed: number;
   idlePhase: number;
-  container: Container;
+  container: CreatureSprite;
 }
 
 export class HabitatScene {
@@ -177,6 +177,7 @@ export class HabitatScene {
           w.pauseTimer = 0.8 + this.rng() * 2.5;
         } else {
           const dir = normalize(w.targetX - w.x, w.targetY - w.y);
+          const prevX = w.x;
           const moved = moveWithCollision(
             w.x,
             w.y,
@@ -188,6 +189,7 @@ export class HabitatScene {
           );
           w.x = moved.x;
           w.y = moved.y;
+          w.container.setFacing(moved.x - prevX);
         }
       }
 

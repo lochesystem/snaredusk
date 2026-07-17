@@ -54,6 +54,7 @@ export interface GameState {
   shopLevel: number;
   shopShelves: (ShopListing | null)[];
   shopCages: (ShopListing | null)[];
+  shopDayUsed: boolean;
   bestiary: string[];
   dungeonCleared: boolean;
 }
@@ -100,6 +101,7 @@ export function defaultGameState(): GameState {
     shopLevel: 1,
     shopShelves: createShopShelves(6),
     shopCages: createShopCages(1),
+    shopDayUsed: false,
     bestiary: [],
     dungeonCleared: false,
   };

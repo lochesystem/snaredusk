@@ -69,6 +69,7 @@ import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
   createChestSprite,
   createCreatureSprite,
+  type CreatureSprite,
   createInteractableSprite,
   createPlayerSprite,
   createPortalSprite,
@@ -110,7 +111,7 @@ interface LiveEnemy {
   fled: boolean;
   dead: boolean;
   lootDropped: boolean;
-  container: Container;
+  container: CreatureSprite;
   shieldGfx: Graphics | null;
   statusBars: EnemyStatusBars | null;
   capturableGlow: boolean;
@@ -440,6 +441,7 @@ export class DungeonScene {
     this.playerY = next.y;
     this.playerSprite.x = next.x;
     this.playerSprite.y = next.y;
+    this.playerSprite.setLocomotion(move.x !== 0 || move.y !== 0, move.x);
 
     if (this.input.consumeClick() && this.attackCd <= 0) {
       this.performAttack();
@@ -691,6 +693,7 @@ export class DungeonScene {
       });
 
       if (enemy.aggroed || enemy.combatPhase !== 'idle') {
+        const prevX = enemy.x;
         const moved = moveWithCollision(
           enemy.x,
           enemy.y,
@@ -703,6 +706,7 @@ export class DungeonScene {
         );
         enemy.x = moved.x;
         enemy.y = moved.y;
+        enemy.container.setFacing(moved.x - prevX);
       }
 
       for (const shot of result.projectiles) {

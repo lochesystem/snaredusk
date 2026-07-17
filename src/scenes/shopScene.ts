@@ -212,6 +212,10 @@ export class ShopScene {
 
   startShopDay(): boolean {
     const state = this.cb.getState();
+    if (state.shopDayUsed) {
+      this.cb.showToast('Loja já abriu hoje — explore a masmorra para um novo dia');
+      return false;
+    }
     const hasStock = state.shopShelves.some(Boolean) || state.shopCages.some(Boolean);
     if (!hasStock) {
       this.cb.showToast('Coloque itens nas prateleiras primeiro!');
@@ -265,6 +269,7 @@ export class ShopScene {
 
     this.player.x = this.playerX;
     this.player.y = this.playerY;
+    this.player.setLocomotion(len > 0, move.x);
 
     if (this.carriedGfx) {
       this.carriedGfx.x = this.playerX;

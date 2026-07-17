@@ -95,6 +95,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     bag: padBag(partial.bag),
     shopShelves: padShelves(partial.shopShelves, def.shelfCount),
     shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
+    shopDayUsed: partial.shopDayUsed ?? false,
     habitat: partial.habitat ?? [],
     bestiary: partial.bestiary ?? [],
   };

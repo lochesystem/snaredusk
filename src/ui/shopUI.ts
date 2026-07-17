@@ -1,5 +1,4 @@
 import type { BagEntry, GameState } from '../types.ts';
-import { getPriceTier, getPriceTierLabel } from '../systems/pricing.ts';
 import { getNextShopLevel, getShopLevelDef } from '../systems/shopUpgrade.ts';
 
 export interface ShopUICallbacks {
@@ -55,7 +54,13 @@ export class ShopUI {
 
     const openBtn = document.getElementById('btn-shop-open') as HTMLButtonElement | null;
     if (openBtn) {
-      openBtn.textContent = 'Abrir loja ao público';
+      if (state.shopDayUsed) {
+        openBtn.disabled = true;
+        openBtn.textContent = 'Loja já abriu hoje';
+      } else {
+        openBtn.disabled = false;
+        openBtn.textContent = 'Abrir loja ao público';
+      }
     }
 
     this.renderBagStrip();
@@ -73,9 +78,8 @@ export class ShopUI {
     const hint = document.getElementById('price-modal-hint');
     const value = document.getElementById('price-value');
     if (title) title.textContent = `Preço: ${formatEntry(listing.entry)}`;
-    if (hint) hint.textContent = `Valor base: ~${listing.entry.baseValue} ouro`;
+    if (hint) hint.textContent = `Valor de referência: ~${listing.entry.baseValue} ouro`;
     if (value) value.textContent = String(this.draftPrice);
-    this.updatePricePreview();
     modal?.classList.remove('hidden');
   }
 
@@ -86,7 +90,15 @@ export class ShopUI {
 
   setShopDayBusy(busy: boolean): void {
     const openBtn = document.getElementById('btn-shop-open') as HTMLButtonElement | null;
-    if (openBtn) openBtn.disabled = busy;
+    if (!openBtn) return;
+    const state = this.cb.getState();
+    if (state.shopDayUsed) {
+      openBtn.disabled = true;
+      openBtn.textContent = 'Loja já abriu hoje';
+      return;
+    }
+    openBtn.disabled = busy;
+    openBtn.textContent = busy ? 'Clientes na loja…' : 'Abrir loja ao público';
   }
 
   private renderBagStrip(): void {
@@ -126,15 +138,6 @@ export class ShopUI {
     this.draftPrice = Math.max(1, this.draftPrice + delta);
     const value = document.getElementById('price-value');
     if (value) value.textContent = String(this.draftPrice);
-    this.updatePricePreview();
-  }
-
-  private updatePricePreview(): void {
-    if (!this.priceTarget) return;
-    const preview = document.getElementById('price-preview');
-    if (preview) {
-      preview.textContent = getPriceTierLabel(getPriceTier(this.draftPrice, this.priceTarget.entry.baseValue));
-    }
   }
 
   private confirmPrice(): void {
