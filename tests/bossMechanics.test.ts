@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOSS_GATE_INNER_CLEARANCE,
+  isEntityInBossArena,
   isPointInsideRoom,
   isPastBossGates,
   shouldStartBossIntro,
@@ -88,5 +89,12 @@ describe('boss arena entry', () => {
     const pastGateX = gateWalls[0]!.x + gateWalls[0]!.width + BOSS_GATE_INNER_CLEARANCE + 2;
     expect(isPointInsideRoom(pastGateX, 254, room.rect)).toBe(true);
     expect(isPastBossGates(pastGateX, 254, gateWalls, room.rect)).toBe(true);
+  });
+
+  it('isEntityInBossArena exige estar dentro quando portão fecha', () => {
+    const pastGateX = gateWalls[0]!.x + gateWalls[0]!.width + BOSS_GATE_INNER_CLEARANCE + 2;
+    expect(isEntityInBossArena(pastGateX, 254, room, gateWalls, true)).toBe(true);
+    expect(isEntityInBossArena(60, 240, room, gateWalls, true)).toBe(false);
+    expect(isEntityInBossArena(112, 254, room, gateWalls, true)).toBe(false);
   });
 });

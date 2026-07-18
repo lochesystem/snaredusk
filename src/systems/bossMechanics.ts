@@ -155,6 +155,19 @@ export function shouldStartBossIntro(input: {
   return true;
 }
 
+/** Entidade está dentro da arena do chefe (passou dos portões se estiverem fechados). */
+export function isEntityInBossArena(
+  x: number,
+  y: number,
+  room: BossArenaLayout,
+  gateWalls: { x: number; y: number; width: number; height: number }[],
+  gateClosed: boolean,
+): boolean {
+  if (!isPointInsideRoom(x, y, room.rect)) return false;
+  if (!gateClosed || gateWalls.length === 0) return true;
+  return isPastBossGates(x, y, gateWalls, room.rect);
+}
+
 export function tickBossMechanics(
   enemy: BossMechanicEnemy,
   ctx: BossMechanicContext,

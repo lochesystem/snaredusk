@@ -1,14 +1,21 @@
 import type { Rect } from '../types.ts';
+import type { DungeonObstacle } from '../world/dungeonGenerator.ts';
 import {
   PARTY_ATTACK_RANGE,
+  PARTY_FOLLOW_GAP,
   PARTY_LEASH_RANGE,
   PARTY_RANGED_OFFSET,
+  PARTY_RECALL_DELAY,
+  PARTY_RECALL_DELAY_BOSS,
+  PARTY_RECALL_DISTANCE,
+  PARTY_STUCK_RECALL_DELAY,
 } from '../engine/constants.ts';
 import type { EnemyBehaviorDef } from '../data/enemyBehaviors.ts';
 import { getEnemyBehavior, isRangedBossKind } from '../data/enemyBehaviors.ts';
 import { calcDamage, distance, normalize } from './combat.ts';
 import { createProjectileData } from './projectiles.ts';
 import { hasLineOfSight } from '../world/collision.ts';
+import { isWalkablePosition } from '../world/pathfinding.ts';
 
 export function isCompanionRanged(behaviorId: string): boolean {
   const behavior = getEnemyBehavior(behaviorId);
@@ -227,6 +234,66 @@ export function shouldMoveTowardGoal(
   minGap = 6,
 ): boolean {
   return distance(compX, compY, goalX, goalY) > minGap;
+}
+
+export interface CompanionRecallInput {
+  distToPlayer: number;
+  farTimer: number;
+  stuckTimer: number;
+  dt: number;
+  bossFightActive?: boolean;
+}
+
+export interface CompanionRecallResult {
+  farTimer: number;
+  shouldRecall: boolean;
+}
+
+export function tickCompanionRecall(input: CompanionRecallInput): CompanionRecallResult {
+  const recallDistance = PARTY_RECALL_DISTANCE;
+  const recallDelay = input.bossFightActive ? PARTY_RECALL_DELAY_BOSS : PARTY_RECALL_DELAY;
+  const isFar = input.distToPlayer > recallDistance;
+  const nextFarTimer = isFar ? input.farTimer + input.dt : 0;
+  const stuckAndFar =
+    input.stuckTimer >= PARTY_STUCK_RECALL_DELAY &&
+    input.distToPlayer > PARTY_FOLLOW_GAP * 1.15;
+
+  return {
+    farTimer: nextFarTimer,
+    shouldRecall: nextFarTimer >= recallDelay || stuckAndFar,
+  };
+}
+
+const SPAWN_OFFSETS = [
+  { x: 0, y: 0 },
+  { x: -18, y: 0 },
+  { x: 18, y: 0 },
+  { x: 0, y: -14 },
+  { x: 0, y: 14 },
+  { x: -24, y: 8 },
+  { x: 24, y: 8 },
+  { x: -12, y: -12 },
+  { x: 12, y: 12 },
+];
+
+/** Posição caminhável perto do jogador para recall/respawn. */
+export function findCompanionSpawnNearPlayer(
+  playerX: number,
+  playerY: number,
+  floors: Rect[],
+  walls: Rect[],
+  holes: DungeonObstacle[] = [],
+  radius = 8,
+): { x: number; y: number } {
+  const anchor = companionFollowAnchor(playerX, playerY);
+  for (const off of SPAWN_OFFSETS) {
+    const x = anchor.x + off.x;
+    const y = anchor.y + off.y;
+    if (isWalkablePosition(x, y, radius, floors, walls, holes)) {
+      return { x, y };
+    }
+  }
+  return anchor;
 }
 
 export { hasLineOfSight };

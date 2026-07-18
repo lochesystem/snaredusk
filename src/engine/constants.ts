@@ -40,6 +40,14 @@ export const PARTY_FOLLOW_SPEED = 112;
 export const PARTY_CHASE_SPEED = 105;
 export const PARTY_HP_SCALE = 0.85;
 export const PARTY_ATK_SCALE = 0.8;
+/** Distância além da qual o companheiro começa a contar tempo para recall. */
+export const PARTY_RECALL_DISTANCE = 96;
+/** Tempo longe do jogador antes de reaparecer ao lado dele. */
+export const PARTY_RECALL_DELAY = 1.35;
+/** Recall mais rápido durante luta de chefe (portão fechado). */
+export const PARTY_RECALL_DELAY_BOSS = 0.75;
+/** Preso no mesmo lugar + longe → recall imediato após este tempo. */
+export const PARTY_STUCK_RECALL_DELAY = 0.55;
 
 export const CAPTURE_RANGE = 120;
 /** @deprecated Use CAPTURE_ORB_FLY_SPEED from capture.ts */

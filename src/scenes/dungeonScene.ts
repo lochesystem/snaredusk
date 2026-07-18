@@ -84,7 +84,9 @@ import { losePartyCompanion } from '../systems/party.ts';
 import {
   buildCompanionRangedShot,
   computeCompanionIntent,
+  findCompanionSpawnNearPlayer,
   shouldMoveTowardGoal,
+  tickCompanionRecall,
 } from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
@@ -96,6 +98,7 @@ import {
 } from '../systems/biomeHazards.ts';
 import {
   initBossMechanicCd,
+  isEntityInBossArena,
   isNearBossGate,
   shouldStartBossIntro,
   tickBossMechanics,
@@ -257,6 +260,7 @@ export class DungeonScene {
   private companionPathGoal = { x: 0, y: 0 };
   private companionPathReplanTimer = 0;
   private companionStuckTimer = 0;
+  private companionFarTimer = 0;
   private companionLastX = 0;
   private companionLastY = 0;
   private active = false;
@@ -299,7 +303,7 @@ export class DungeonScene {
     const biome = getBiomeDef(this.layout.biomeId);
     this.pathfinder = new DungeonPathfinder(
       this.layout.floors,
-      this.getCollisionWalls(),
+      this.getCompanionCollisionWalls(),
       this.layout.obstacles,
     );
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
@@ -587,10 +591,62 @@ export class DungeonScene {
     return this.layout.walls;
   }
 
+  /** Companheiro atravessa o portão da arena do chefe. */
+  private getCompanionCollisionWalls() {
+    return this.layout.walls;
+  }
+
+  private getBossArenaLayout() {
+    const room = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
+    if (!room) return null;
+    return { rect: room.rect, doors: room.doors };
+  }
+
+  private isCompanionInBossArena(): boolean {
+    const comp = this.companion;
+    const room = this.getBossArenaLayout();
+    if (!comp || comp.dead || !room) return true;
+    return isEntityInBossArena(
+      comp.x,
+      comp.y,
+      room,
+      this.layout.bossGateWalls,
+      this.bossGateClosed,
+    );
+  }
+
+  private snapCompanionToPlayer(): void {
+    const comp = this.companion;
+    if (!comp || comp.dead) return;
+
+    const spawn = findCompanionSpawnNearPlayer(
+      this.playerX,
+      this.playerY,
+      this.layout.floors,
+      this.getCompanionCollisionWalls(),
+      this.layout.obstacles,
+    );
+    comp.x = spawn.x;
+    comp.y = spawn.y;
+    comp.container.x = comp.x;
+    comp.container.y = comp.y;
+    this.companionPath = [];
+    this.companionPathIndex = 0;
+    this.companionStuckTimer = 0;
+    this.companionFarTimer = 0;
+    this.companionLastX = comp.x;
+    this.companionLastY = comp.y;
+  }
+
+  private ensureCompanionInBossArena(): void {
+    if (!this.bossGateClosed || this.isCompanionInBossArena()) return;
+    this.snapCompanionToPlayer();
+  }
+
   private rebuildPathfinder(): void {
     this.pathfinder.rebuild(
       this.layout.floors,
-      this.getCollisionWalls(),
+      this.getCompanionCollisionWalls(),
       this.layout.obstacles,
     );
     this.companionPath = [];
@@ -728,6 +784,8 @@ export class DungeonScene {
       this.bossIntroTimer = 2.8;
       this.bossGateClosed = true;
       this.refreshBossGateGfx();
+      this.rebuildPathfinder();
+      this.ensureCompanionInBossArena();
       showBossIntro(bossName, biome.name);
       return;
     }
@@ -1772,6 +1830,8 @@ export class DungeonScene {
     this.companionLastY = startY;
     this.companionPath = [];
     this.companionPathIndex = 0;
+    this.companionFarTimer = 0;
+    this.companionStuckTimer = 0;
   }
 
   private findCompanionTarget(): LiveEnemy | null {
@@ -1792,6 +1852,36 @@ export class DungeonScene {
   private updateCompanion(dt: number): void {
     const comp = this.companion;
     if (!comp || comp.dead) return;
+
+    const distToPlayer = distance(comp.x, comp.y, this.playerX, this.playerY);
+    const movedDist = Math.hypot(comp.x - this.companionLastX, comp.y - this.companionLastY);
+    if (movedDist < 1.5) {
+      this.companionStuckTimer += dt;
+    } else {
+      this.companionStuckTimer = 0;
+    }
+
+    const bossFightActive = this.bossGateClosed && this.bossFightPhase !== 'locked';
+    const recall = tickCompanionRecall({
+      distToPlayer,
+      farTimer: this.companionFarTimer,
+      stuckTimer: this.companionStuckTimer,
+      dt,
+      bossFightActive,
+    });
+    this.companionFarTimer = recall.farTimer;
+
+    if (bossFightActive) {
+      this.ensureCompanionInBossArena();
+    }
+
+    if (recall.shouldRecall) {
+      this.snapCompanionToPlayer();
+      comp.container.setFacing(this.playerX - comp.x);
+      comp.container.setLocomotion(false, this.playerX - comp.x);
+      comp.container.alpha = comp.hp / comp.maxHp < 0.35 ? 0.65 : 1;
+      return;
+    }
 
     if (comp.attackCd > 0) comp.attackCd -= dt;
 
@@ -1838,14 +1928,6 @@ export class DungeonScene {
       const prevY = comp.y;
 
       this.companionPathReplanTimer -= dt;
-      const movedDist = Math.hypot(comp.x - this.companionLastX, comp.y - this.companionLastY);
-      if (movedDist < 1.5) {
-        this.companionStuckTimer += dt;
-      } else {
-        this.companionStuckTimer = 0;
-      }
-      this.companionLastX = comp.x;
-      this.companionLastY = comp.y;
 
       if (
         shouldReplanPath(
@@ -1866,7 +1948,6 @@ export class DungeonScene {
         this.companionPathGoal = { x: intent.goalX, y: intent.goalY };
         this.companionPathIndex = 0;
         this.companionPathReplanTimer = 0.4;
-        this.companionStuckTimer = 0;
       }
 
       let nextX = comp.x;
@@ -1880,7 +1961,7 @@ export class DungeonScene {
           moveSpeed,
           dt,
           8,
-          this.getCollisionWalls(),
+          this.getCompanionCollisionWalls(),
           this.layout.floors,
           this.layout.obstacles,
         );
@@ -1897,11 +1978,12 @@ export class DungeonScene {
     } else {
       this.companionPath = [];
       this.companionPathIndex = 0;
-      this.companionStuckTimer = 0;
       comp.container.setFacing(intent.faceX);
       comp.container.setLocomotion(false, intent.faceX);
     }
 
+    this.companionLastX = comp.x;
+    this.companionLastY = comp.y;
     comp.container.x = comp.x;
     comp.container.y = comp.y;
     comp.container.alpha = comp.hp / comp.maxHp < 0.35 ? 0.65 : 1;
