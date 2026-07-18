@@ -17,10 +17,9 @@ import {
   CAPTURE_RANGE,
   PARTY_AGGRO_RANGE,
   PARTY_ATTACK_COOLDOWN,
-  PARTY_ATTACK_RANGE,
   PARTY_ATK_SCALE,
-  PARTY_FOLLOW_GAP,
   PARTY_CHASE_SPEED,
+  PARTY_FOLLOW_GAP,
   PARTY_FOLLOW_SPEED,
   PARTY_HP_SCALE,
   ORB_BUNDLE_PRICE,
@@ -35,6 +34,12 @@ import { getBiomeDef } from '../data/biomes.ts';
 import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
 import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
+import {
+  DungeonPathfinder,
+  moveAlongPath,
+  shouldReplanPath,
+  type WorldPoint,
+} from '../world/pathfinding.ts';
 import {
   createWeaponAttackFx,
   tickWeaponAttackFx,
@@ -76,6 +81,11 @@ import { shouldEnemyAggro } from '../systems/enemyAi.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
 import { losePartyCompanion } from '../systems/party.ts';
+import {
+  buildCompanionRangedShot,
+  computeCompanionIntent,
+  shouldMoveTowardGoal,
+} from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import {
@@ -182,6 +192,7 @@ interface ActiveCaptureOrb {
 interface LiveCompanion {
   creature: CreatureItem;
   speciesId: string;
+  behaviorId: string;
   hp: number;
   maxHp: number;
   atk: number;
@@ -240,6 +251,14 @@ export class DungeonScene {
   private projectiles: Projectile[] = [];
   private enemies: LiveEnemy[] = [];
   private companion: LiveCompanion | null = null;
+  private pathfinder: DungeonPathfinder;
+  private companionPath: WorldPoint[] = [];
+  private companionPathIndex = 0;
+  private companionPathGoal = { x: 0, y: 0 };
+  private companionPathReplanTimer = 0;
+  private companionStuckTimer = 0;
+  private companionLastX = 0;
+  private companionLastY = 0;
   private active = false;
   private portalActive = false;
   private bossGateClosed = true;
@@ -278,6 +297,11 @@ export class DungeonScene {
     this.playerStamina = state.playerStamina;
     this.layout = generateDungeon(dungeonSeed, state.activeBiome);
     const biome = getBiomeDef(this.layout.biomeId);
+    this.pathfinder = new DungeonPathfinder(
+      this.layout.floors,
+      this.getCollisionWalls(),
+      this.layout.obstacles,
+    );
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
 
     const floorGfx = new Graphics();
@@ -563,6 +587,17 @@ export class DungeonScene {
     return this.layout.walls;
   }
 
+  private rebuildPathfinder(): void {
+    this.pathfinder.rebuild(
+      this.layout.floors,
+      this.getCollisionWalls(),
+      this.layout.obstacles,
+    );
+    this.companionPath = [];
+    this.companionPathIndex = 0;
+    this.companionPathReplanTimer = 0;
+  }
+
   private movePlayer(dt: number): void {
     if (this.dodgeTimer > 0) return;
     if (this.bossFightPhase === 'intro') return;
@@ -661,6 +696,7 @@ export class DungeonScene {
       this.bossGateClosed = false;
       this.bossGateOpened = true;
       this.refreshBossGateGfx();
+      this.rebuildPathfinder();
     }
   }
 
@@ -801,10 +837,10 @@ export class DungeonScene {
 
   private spawnProjectile(
     data: Omit<Projectile, 'container' | 'hitIds'>,
-    owner: 'player' | 'enemy',
+    owner: 'player' | 'enemy' | 'companion',
     style: 'orb' | 'spear' | 'spore' = 'orb',
   ): void {
-    const color = owner === 'player' ? 0xc4f082 : 0x8fd894;
+    const color = owner === 'enemy' ? 0x8fd894 : 0xc4f082;
     const container = createProjectileSprite(style, color);
     container.x = data.x;
     container.y = data.y;
@@ -846,7 +882,7 @@ export class DungeonScene {
         continue;
       }
 
-      if (p.owner === 'player') {
+      if (p.owner === 'player' || p.owner === 'companion') {
         for (const enemy of this.enemies) {
           if (enemy.dead || enemy.fled) continue;
           if (!projectileHitEnemy(p, enemy.id, enemy.x, enemy.y)) continue;
@@ -950,6 +986,7 @@ export class DungeonScene {
       this.bossFightPhase = 'done';
       this.bossGateClosed = false;
       this.refreshBossGateGfx();
+      this.rebuildPathfinder();
       this.callbacks.onStateChange();
       if (!options?.skipToast) {
         const species = getSpecies(enemy.speciesId);
@@ -1629,6 +1666,7 @@ export class DungeonScene {
       this.bossGateClosed = false;
       this.bossGateOpened = true;
       this.refreshBossGateGfx();
+      this.rebuildPathfinder();
       this.callbacks.showToast('Portão aberto — entre na arena do chefe!');
       return;
     }
@@ -1719,6 +1757,7 @@ export class DungeonScene {
     this.companion = {
       creature,
       speciesId: species.id,
+      behaviorId: species.behaviorId,
       hp: Math.round(species.maxHp * PARTY_HP_SCALE),
       maxHp: Math.round(species.maxHp * PARTY_HP_SCALE),
       atk: Math.max(3, Math.round(species.atk * PARTY_ATK_SCALE)),
@@ -1729,6 +1768,10 @@ export class DungeonScene {
       container,
       dead: false,
     };
+    this.companionLastX = startX;
+    this.companionLastY = startY;
+    this.companionPath = [];
+    this.companionPathIndex = 0;
   }
 
   private findCompanionTarget(): LiveEnemy | null {
@@ -1737,7 +1780,7 @@ export class DungeonScene {
     let bestDist = PARTY_AGGRO_RANGE;
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
-      const d = distance(this.companion.x, this.companion.y, enemy.x, enemy.y);
+      const d = distance(this.playerX, this.playerY, enemy.x, enemy.y);
       if (d < bestDist) {
         bestDist = d;
         best = enemy;
@@ -1752,53 +1795,111 @@ export class DungeonScene {
 
     if (comp.attackCd > 0) comp.attackCd -= dt;
 
-    const target = this.findCompanionTarget();
-    let moveDx = 0;
-    let moveDy = 0;
-    const moveSpeed = target ? PARTY_CHASE_SPEED : PARTY_FOLLOW_SPEED;
+    const targetEnemy = this.findCompanionTarget();
+    const target = targetEnemy
+      ? { x: targetEnemy.x, y: targetEnemy.y, def: targetEnemy.def }
+      : null;
 
-    if (target) {
-      const dx = target.x - comp.x;
-      const dy = target.y - comp.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist <= PARTY_ATTACK_RANGE && comp.attackCd <= 0) {
-        const dmg = calcDamage(comp.atk, target.def);
-        this.damageEnemy(target, dmg);
-        drawDamageNumber(this.fxLayer, dmg, target.x, target.y - 16, this.fxRunner);
-        comp.attackCd = PARTY_ATTACK_COOLDOWN;
-      } else if (dist > PARTY_ATTACK_RANGE * 0.6) {
-        const dir = normalize(dx, dy);
-        moveDx = dir.x * moveSpeed * dt;
-        moveDy = dir.y * moveSpeed * dt;
-      }
-    } else {
-      const tx = this.playerX - 20;
-      const ty = this.playerY + 2;
-      const dx = tx - comp.x;
-      const dy = ty - comp.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist > PARTY_FOLLOW_GAP) {
-        const dir = normalize(dx, dy);
-        moveDx = dir.x * moveSpeed * dt;
-        moveDy = dir.y * moveSpeed * dt;
-      }
-    }
+    const intent = computeCompanionIntent({
+      behaviorId: comp.behaviorId,
+      compX: comp.x,
+      compY: comp.y,
+      playerX: this.playerX,
+      playerY: this.playerY,
+      attackCd: comp.attackCd,
+      atk: comp.atk,
+      walls: this.getCollisionWalls(),
+      target,
+    });
 
-    if (moveDx !== 0 || moveDy !== 0) {
-      const prevX = comp.x;
-      const moved = moveWithCollision(
+    if (intent.shouldShoot && targetEnemy) {
+      const shot = buildCompanionRangedShot(
+        comp.behaviorId,
         comp.x,
         comp.y,
-        moveDx,
-        moveDy,
-        8,
-        this.layout.walls,
-        this.layout.floors,
-        this.layout.obstacles,
+        targetEnemy.x,
+        targetEnemy.y,
+        comp.atk,
+        targetEnemy.def,
       );
-      comp.x = moved.x;
-      comp.y = moved.y;
-      comp.container.setFacing(moved.x - prevX);
+      this.spawnProjectile(shot.data, 'companion', shot.visualStyle);
+      comp.attackCd = shot.attackCooldown;
+    } else if (intent.shouldMelee && targetEnemy) {
+      const dmg = calcDamage(comp.atk, targetEnemy.def);
+      this.damageEnemy(targetEnemy, dmg);
+      drawDamageNumber(this.fxLayer, dmg, targetEnemy.x, targetEnemy.y - 16, this.fxRunner);
+      comp.attackCd = PARTY_ATTACK_COOLDOWN;
+    }
+
+    const moveSpeed = target ? PARTY_CHASE_SPEED : PARTY_FOLLOW_SPEED;
+    const followGap = target ? 10 : PARTY_FOLLOW_GAP;
+    if (shouldMoveTowardGoal(comp.x, comp.y, intent.goalX, intent.goalY, followGap)) {
+      const prevX = comp.x;
+      const prevY = comp.y;
+
+      this.companionPathReplanTimer -= dt;
+      const movedDist = Math.hypot(comp.x - this.companionLastX, comp.y - this.companionLastY);
+      if (movedDist < 1.5) {
+        this.companionStuckTimer += dt;
+      } else {
+        this.companionStuckTimer = 0;
+      }
+      this.companionLastX = comp.x;
+      this.companionLastY = comp.y;
+
+      if (
+        shouldReplanPath(
+          intent.goalX,
+          intent.goalY,
+          this.companionPathGoal.x,
+          this.companionPathGoal.y,
+          this.companionPath,
+          this.companionPathIndex,
+          this.companionStuckTimer,
+          this.companionPathReplanTimer,
+        )
+      ) {
+        this.companionPath = this.pathfinder.findPath(comp.x, comp.y, intent.goalX, intent.goalY);
+        if (this.companionPath.length === 0) {
+          this.companionPath = this.pathfinder.findPath(comp.x, comp.y, this.playerX, this.playerY);
+        }
+        this.companionPathGoal = { x: intent.goalX, y: intent.goalY };
+        this.companionPathIndex = 0;
+        this.companionPathReplanTimer = 0.4;
+        this.companionStuckTimer = 0;
+      }
+
+      let nextX = comp.x;
+      let nextY = comp.y;
+      if (this.companionPath.length > 0) {
+        const step = moveAlongPath(
+          comp.x,
+          comp.y,
+          this.companionPath,
+          this.companionPathIndex,
+          moveSpeed,
+          dt,
+          8,
+          this.getCollisionWalls(),
+          this.layout.floors,
+          this.layout.obstacles,
+        );
+        nextX = step.x;
+        nextY = step.y;
+        this.companionPathIndex = step.pathIndex;
+      }
+
+      comp.x = nextX;
+      comp.y = nextY;
+      const movedDx = comp.x - prevX;
+      comp.container.setFacing(movedDx !== 0 ? movedDx : intent.faceX);
+      comp.container.setLocomotion(Math.abs(movedDx) > 0.01 || Math.abs(comp.y - prevY) > 0.01, movedDx);
+    } else {
+      this.companionPath = [];
+      this.companionPathIndex = 0;
+      this.companionStuckTimer = 0;
+      comp.container.setFacing(intent.faceX);
+      comp.container.setLocomotion(false, intent.faceX);
     }
 
     comp.container.x = comp.x;

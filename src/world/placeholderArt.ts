@@ -195,6 +195,29 @@ export function createPortalSprite(): Container {
   return root;
 }
 
+export function createStaircaseSprite(): Container {
+  const root = new Container();
+  const steps = new Graphics();
+  for (let i = 0; i < 4; i++) {
+    const w = 28 - i * 4;
+    steps.rect(-w / 2, -4 + i * 6, w, 5);
+    steps.fill({ color: 0x6a5038, alpha: 0.95 });
+    steps.stroke({ width: 1, color: 0x9a7048, alpha: 0.8 });
+  }
+  root.addChild(steps);
+
+  const arrow = createPixelText('↑', 14, 0xe8d4a8);
+  arrow.anchor.set(0.5);
+  arrow.y = -22;
+  root.addChild(arrow);
+
+  const label = createPixelText('Loja', 9, 0xd8c8a8);
+  label.anchor.set(0.5);
+  label.y = 30;
+  root.addChild(label);
+  return root;
+}
+
 function roomTypeTint(type?: string): number {
   switch (type) {
     case 'treasure':

@@ -29,6 +29,10 @@ export const BASE_STAMINA_REGEN = 25;
 export const PARTY_AGGRO_RANGE = 130;
 export const PARTY_ATTACK_RANGE = 36;
 export const PARTY_FOLLOW_GAP = 28;
+/** Distância máxima do jogador durante combate (companheiro não se afasta mais que isso). */
+export const PARTY_LEASH_RANGE = 72;
+/** Posição de combate ranged: offset a partir do jogador em direção ao alvo. */
+export const PARTY_RANGED_OFFSET = 44;
 export const PARTY_ATTACK_COOLDOWN = 0.85;
 /** Velocidade ao seguir o jogador (~93% do player). */
 export const PARTY_FOLLOW_SPEED = 112;

@@ -7,7 +7,7 @@ import { ShopScene } from './scenes/shopScene.ts';
 import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
-import { moveCreatureToBag, moveCreatureToHabitat, getHabitatCapacity } from './systems/habitat.ts';
+import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
@@ -39,13 +39,13 @@ import {
   renderBaseHeader,
   setBaseHint,
   showBaseHub,
-  updateBaseShopButton,
 } from './ui/baseBarUI.ts';
 import {
   bindBuildModeModal,
-  closeBuildModeUI,
-  getSelectedBuildStation,
-  openBuildModeUI,
+  bindBuildHotbarKeys,
+  clearBuildTool,
+  renderBaseBuildHotbar,
+  type BuildTool,
 } from './ui/buildModeUI.ts';
 import {
   bindChestModal,
@@ -69,6 +69,13 @@ import {
   openOrbsModal,
   openPartyModal,
 } from './ui/baseModals.ts';
+import {
+  bindHabitatPenModal,
+  closeHabitatPenModal,
+  isHabitatPenModalOpen,
+  openHabitatPenModal,
+  renderHabitatPenModal,
+} from './ui/habitatPenUI.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -137,19 +144,15 @@ export class Game {
 
   private bindBaseUI(): void {
     const modalCb = this.baseModalCallbacks();
+    const buildHotbarCb = {
+      onSelect: (tool: BuildTool | null) => this.onBuildHotbarSelect(tool),
+    };
     bindBaseBar({
       getState: () => this.state,
-      onBuild: () => this.toggleBuildMode(),
-      onBag: () => this.toggleBaseBagModal(),
       onParty: () => openPartyModal(modalCb),
-      onDungeon: () => openDungeonModal(modalCb),
-      onShop: () => this.showScreen('shop'),
       onOrbs: () => openOrbsModal(modalCb),
     });
-    bindBuildModeModal({
-      onSelect: (id) => this.baseScene?.setBuildStation(id),
-      onClose: () => this.toggleBuildMode(false),
-    });
+    bindBuildModeModal(buildHotbarCb);
     bindChestModal({
       getState: () => this.state,
       onChange: () => {
@@ -168,9 +171,23 @@ export class Game {
     });
     bindWorkshopModal(this.workshopCallbacks());
     bindBaseModals(modalCb);
+    bindHabitatPenModal(this.habitatPenCallbacks());
     document.getElementById('base-bag-close')?.addEventListener('click', () => this.closeBaseBagModal());
     document.getElementById('btn-buy-orb-1')?.addEventListener('click', () => this.tryBuyOrbs('single'));
     document.getElementById('btn-buy-orb-3')?.addEventListener('click', () => this.tryBuyOrbs('bundle'));
+  }
+
+  private habitatPenCallbacks() {
+    return {
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+        this.baseScene?.syncCreatures(this.state.habitat);
+        if (isHabitatPenModalOpen()) renderHabitatPenModal(this.habitatPenCallbacks());
+      },
+      showToast: (m: string) => this.showToast(m),
+    };
   }
 
   private inventoryCallbacks(): InventoryUICallbacks {
@@ -273,18 +290,16 @@ export class Game {
     });
   }
 
-  private toggleBuildMode(force?: boolean): void {
-    const next = force !== undefined ? force : !this.baseScene?.isBuildMode();
-    if (next) {
-      openBuildModeUI({
-        onSelect: (id) => this.baseScene?.setBuildStation(id),
-        onClose: () => this.toggleBuildMode(false),
-      });
-      this.baseScene?.setBuildMode(true, getSelectedBuildStation());
-    } else {
-      closeBuildModeUI();
-      this.baseScene?.setBuildMode(false);
+  private onBuildHotbarSelect(tool: BuildTool | null): void {
+    this.baseScene?.setBuildTool(tool);
+  }
+
+  private tryOpenShop(): void {
+    if (this.state.shopDayUsed) {
+      this.showToast('A loja já fechou hoje — volte amanhã');
+      return;
     }
+    this.showScreen('shop');
   }
 
   private toggleBaseBagModal(): void {
@@ -312,27 +327,35 @@ export class Game {
     const habitatRow = document.getElementById('base-bag-habitat-row');
     if (!habitatRow) return;
     habitatRow.innerHTML = '';
-    const cap = getHabitatCapacity(this.state);
+    const pens = listHabitatPens(this.state);
+    if (pens.length === 0) {
+      const note = document.createElement('p');
+      note.className = 'panel-hint';
+      note.textContent = 'Construa um cercado (tecla 3) para colocar criaturas.';
+      habitatRow.appendChild(note);
+      return;
+    }
     this.state.bag.forEach((entry, index) => {
       if (!entry || entry.kind !== 'creature') return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'party-pick';
-      btn.textContent = `Habitat: ${entry.name}`;
-      btn.addEventListener('click', () => {
-        if (this.state.habitat.length >= cap) {
-          this.showToast(`Habitat cheio (${cap}/${cap})`);
-          return;
-        }
-        const moved = moveCreatureToHabitat(this.state, index);
-        if (moved) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.renderBaseBagModal();
-          this.showToast(`${moved.name} foi para o habitat!`);
-        }
+      pens.forEach((pen, penIndex) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'party-pick';
+        const label = pens.length > 1 ? `Cercado ${penIndex + 1}: ${entry.name}` : `Cercado: ${entry.name}`;
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+          const moved = moveCreatureToHabitat(this.state, index, pen.id);
+          if (moved) {
+            saveGame(this.state);
+            this.refreshBaseUI();
+            this.renderBaseBagModal();
+            this.showToast(`${moved.name} entrou no cercado!`);
+          } else {
+            this.showToast('Cercado cheio');
+          }
+        });
+        habitatRow.appendChild(btn);
       });
-      habitatRow.appendChild(btn);
     });
   }
 
@@ -386,14 +409,18 @@ export class Game {
   }
 
   private closeBaseModals(): void {
-    closeBuildModeUI();
+    clearBuildTool();
     closeChestModal();
     closeWorkshopModal();
     closePartyModal();
     closeDungeonModal();
     closeOrbsModal();
+    closeHabitatPenModal();
     this.closeBaseBagModal();
-    this.baseScene?.setBuildMode(false);
+    this.baseScene?.clearBuildTool();
+    renderBaseBuildHotbar(this.state, {
+      onSelect: (tool) => this.onBuildHotbarSelect(tool),
+    });
   }
 
   private showShopView(): void {
@@ -461,6 +488,9 @@ export class Game {
         });
       },
       onOpenWorkbench: (cellX, cellY) => openWorkshopModal(cellX, cellY, this.workshopCallbacks()),
+      onOpenDungeon: () => openDungeonModal(this.baseModalCallbacks()),
+      onOpenShop: () => this.tryOpenShop(),
+      onOpenHabitatPen: (penId) => openHabitatPenModal(penId, this.habitatPenCallbacks()),
       onCreatureClick: (index) => {
         const moved = moveCreatureToBag(this.state, index);
         if (!moved) {
@@ -488,8 +518,10 @@ export class Game {
 
   private refreshBaseUI(): void {
     renderBaseHeader(this.state);
-    updateBaseShopButton(this.state);
     this.updateMerchantButtons();
+    renderBaseBuildHotbar(this.state, {
+      onSelect: (tool) => this.onBuildHotbarSelect(tool),
+    });
     this.baseScene?.syncCreatures(this.state.habitat);
     if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
   }
@@ -576,12 +608,28 @@ export class Game {
 
   private update(dt: number): void {
     if (this.screen === 'base' && this.baseScene) {
+      if (this.input.consumeKey('i')) {
+        if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
+        else this.toggleBaseBagModal();
+      }
+      bindBuildHotbarKeys(
+        (key) => this.input.consumeKey(key),
+        this.state,
+        { onSelect: (tool) => this.onBuildHotbarSelect(tool) },
+      );
       if (this.input.consumeKey('escape')) {
         if (isWorkshopModalOpen()) closeWorkshopModal();
         else if (isChestModalOpen()) closeChestModal();
+        else if (isHabitatPenModalOpen()) closeHabitatPenModal();
         else if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
-        else if (this.baseScene.isBuildMode()) this.toggleBuildMode(false);
-        else this.closeBaseModals();
+        else if (this.baseScene.getBuildTool()) {
+          clearBuildTool();
+          this.baseScene.cancelBuildAction();
+          this.baseScene.clearBuildTool();
+          renderBaseBuildHotbar(this.state, {
+            onSelect: (tool) => this.onBuildHotbarSelect(tool),
+          });
+        } else this.closeBaseModals();
       }
       this.baseScene.update(dt);
     }

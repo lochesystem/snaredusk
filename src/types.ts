@@ -16,6 +16,8 @@ export interface CreatureItem {
   name: string;
   baseValue: number;
   nickname?: string;
+  /** 'default' = habitat principal; id do cercado = zona extra. */
+  penId?: string;
 }
 
 export type BagEntry = LootItem | CreatureItem;
@@ -42,6 +44,8 @@ export interface BasePlacement {
   cellX: number;
   cellY: number;
   rotation: 0 | 1 | 2 | 3;
+  /** Área arrastada do cercado (células do grid). */
+  habitatZone?: BaseHabitatZone;
 }
 
 export interface BaseHabitatZone {
@@ -59,8 +63,8 @@ export interface BaseGridState {
   chests: BaseChestState[];
   freeBuildsUsed: number;
   nextPlacementId: number;
-  /** Área fixa onde criaturas do habitat vagam (não segue o jogador). */
-  habitatZone: BaseHabitatZone;
+  /** @deprecated — zonas só existem via cercados colocados */
+  habitatZone?: BaseHabitatZone;
 }
 
 export interface ShopListing {

@@ -1,56 +1,117 @@
 import { BUILDABLE_STATIONS, getStation, type StationId } from '../data/baseStations.ts';
+import type { GameState } from '../types.ts';
 
-export interface BuildModeCallbacks {
-  onSelect: (stationId: StationId) => void;
-  onClose: () => void;
+export type BuildTool = StationId | 'move';
+
+export const BUILD_HOTBAR_SLOTS: BuildTool[] = [...BUILDABLE_STATIONS, 'move'];
+
+export interface BuildHotbarCallbacks {
+  onSelect: (tool: BuildTool | null) => void;
 }
 
-let selected: StationId = 'workbench';
+let selected: BuildTool | null = null;
 
-export function getSelectedBuildStation(): StationId {
+export function getSelectedBuildTool(): BuildTool | null {
   return selected;
 }
 
-export function openBuildModeUI(callbacks: BuildModeCallbacks): void {
-  const modal = document.getElementById('build-mode-modal');
-  if (!modal) return;
-  modal.classList.remove('hidden');
-  renderBuildPalette(callbacks);
+export function selectBuildTool(tool: BuildTool | null): void {
+  selected = tool;
 }
 
-export function closeBuildModeUI(): void {
-  document.getElementById('build-mode-modal')?.classList.add('hidden');
+export function toggleBuildTool(tool: BuildTool): BuildTool | null {
+  selected = selected === tool ? null : tool;
+  return selected;
 }
 
-export function isBuildModeUIOpen(): boolean {
-  return !document.getElementById('build-mode-modal')?.classList.contains('hidden');
+export function clearBuildTool(): void {
+  selected = null;
 }
 
-export function renderBuildPalette(callbacks: BuildModeCallbacks): void {
-  const container = document.getElementById('build-station-picks');
+export function renderBaseBuildHotbar(state: GameState, callbacks: BuildHotbarCallbacks): void {
+  const container = document.getElementById('base-build-hotbar');
   if (!container) return;
   container.innerHTML = '';
 
-  for (const id of BUILDABLE_STATIONS) {
-    const def = getStation(id);
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `build-pick${selected === id ? ' selected' : ''}`;
-    btn.textContent = def.name;
-    btn.addEventListener('click', () => {
-      selected = id;
-      callbacks.onSelect(id);
-      renderBuildPalette(callbacks);
+  BUILD_HOTBAR_SLOTS.forEach((tool, index) => {
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'hotbar-slot';
+    if (selected === tool) slot.classList.add('selected');
+
+    const key = document.createElement('span');
+    key.className = 'hotbar-key';
+    key.textContent = String(index + 1);
+    slot.appendChild(key);
+
+    if (tool === 'move') {
+      const icon = document.createElement('span');
+      icon.className = 'hotbar-icon-text';
+      icon.textContent = '✋';
+      slot.appendChild(icon);
+
+      const label = document.createElement('span');
+      label.className = 'hotbar-label';
+      label.textContent = 'Mover';
+      label.title = 'Clique numa estação para levantar e reposicionar';
+      slot.appendChild(label);
+    } else {
+      const def = getStation(tool);
+      const icon = document.createElement('span');
+      icon.className = 'hotbar-icon-text';
+      icon.style.background = `#${def.color.toString(16).padStart(6, '0')}`;
+      icon.style.borderColor = `#${def.accent.toString(16).padStart(6, '0')}`;
+      icon.textContent = def.name.charAt(0);
+      slot.appendChild(icon);
+
+      const label = document.createElement('span');
+      label.className = 'hotbar-label';
+      label.textContent = def.name.split(' ')[0] ?? def.name;
+      label.title = `${def.name} — arraste para definir área · [E] para gerenciar criaturas`;
+      slot.appendChild(label);
+    }
+
+    slot.addEventListener('click', () => {
+      const next = toggleBuildTool(tool);
+      callbacks.onSelect(next);
+      renderBaseBuildHotbar(state, callbacks);
     });
-    container.appendChild(btn);
-  }
 
-  const closeBtn = document.getElementById('build-mode-close');
-  if (closeBtn) {
-    closeBtn.onclick = () => callbacks.onClose();
+    container.appendChild(slot);
+  });
+}
+
+export function bindBuildHotbarKeys(
+  consumeKey: (key: string) => boolean,
+  state: GameState,
+  callbacks: BuildHotbarCallbacks,
+): void {
+  for (let i = 0; i < BUILD_HOTBAR_SLOTS.length; i++) {
+    if (consumeKey(String(i + 1))) {
+      const tool = BUILD_HOTBAR_SLOTS[i]!;
+      const next = toggleBuildTool(tool);
+      callbacks.onSelect(next);
+      renderBaseBuildHotbar(state, callbacks);
+      return;
+    }
   }
 }
 
-export function bindBuildModeModal(callbacks: BuildModeCallbacks): void {
-  document.getElementById('build-mode-close')?.addEventListener('click', () => callbacks.onClose());
+/** @deprecated use renderBaseBuildHotbar */
+export function openBuildModeUI(_callbacks: BuildHotbarCallbacks): void {}
+
+/** @deprecated use clearBuildTool */
+export function closeBuildModeUI(): void {
+  clearBuildTool();
 }
+
+export function isBuildModeUIOpen(): boolean {
+  return selected !== null;
+}
+
+/** @deprecated use getSelectedBuildTool */
+export function getSelectedBuildStation(): StationId {
+  return selected && selected !== 'move' ? selected : 'workbench';
+}
+
+export function bindBuildModeModal(_callbacks: BuildHotbarCallbacks): void {}

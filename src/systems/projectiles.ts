@@ -4,7 +4,7 @@ import type { DungeonObstacle } from '../world/dungeonGenerator.ts';
 import { collidesCircle } from '../world/collision.ts';
 import { circlesOverlap, distance, normalize } from './combat.ts';
 
-export type ProjectileOwner = 'player' | 'enemy';
+export type ProjectileOwner = 'player' | 'enemy' | 'companion';
 
 export interface Projectile {
   id: string;

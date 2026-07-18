@@ -35,9 +35,9 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
   },
   habitat_pen: {
     id: 'habitat_pen',
-    name: 'Cercado habitat',
-    width: 2,
-    height: 2,
+    name: 'Cercado',
+    width: 1,
+    height: 1,
     goldCost: 40,
     color: 0x3d5c3a,
     accent: 0x5dbb63,

@@ -12,6 +12,7 @@ import { getShopLevelDef } from './shopUpgrade.ts';
 import { defaultWeaponHotbar } from './weaponHotbar.ts';
 import { syncBiomeUnlocks } from './biomeProgress.ts';
 import type { BiomeId } from '../data/biomes.ts';
+import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
 
 const SAVE_VERSION = 5;
@@ -126,6 +127,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     normalized.biomeBossDefeated.floresta = true;
   }
   syncBiomeUnlocks(normalized);
+  migrateLegacyHabitatCreatures(normalized);
   return normalized;
 }
 

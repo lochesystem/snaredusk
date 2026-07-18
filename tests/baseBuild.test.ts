@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGameState } from '../src/types.ts';
-import { canPlaceStation, placeStation, removePlacement } from '../src/systems/baseBuild.ts';
+import { canPlaceStation, placeStation, removePlacement, relocatePlacement } from '../src/systems/baseBuild.ts';
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 
 describe('baseBuild', () => {
@@ -22,6 +22,28 @@ describe('baseBuild', () => {
     expect(result.ok).toBe(true);
     expect(state.base.placements.length).toBe(before + 1);
     expect(state.base.chests.length).toBeGreaterThan(1);
+  });
+
+  it('reloca bancada para outra célula', () => {
+    const state = defaultGameState();
+    const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
+    let spot = { x: -1, y: -1 };
+    outer: for (let y = 0; y < state.base.height; y++) {
+      for (let x = 0; x < state.base.width; x++) {
+        if (getCell(state.base, x, y) !== BaseCellKind.Floor) continue;
+        if (canPlaceStation(state, 'workbench', x, y, bench.id).ok) {
+          if (x !== bench.cellX || y !== bench.cellY) {
+            spot = { x, y };
+            break outer;
+          }
+        }
+      }
+    }
+    expect(spot.x).toBeGreaterThanOrEqual(0);
+    const result = relocatePlacement(state, bench.id, spot.x, spot.y);
+    expect(result.ok).toBe(true);
+    expect(bench.cellX).toBe(spot.x);
+    expect(bench.cellY).toBe(spot.y);
   });
 
   it('não remove baú com itens', () => {

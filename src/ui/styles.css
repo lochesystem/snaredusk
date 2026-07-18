@@ -367,12 +367,15 @@ button:hover {
 
 .base-hub-bar {
   pointer-events: auto;
+  position: absolute;
+  top: 10px;
+  right: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  padding: 10px 12px 14px;
-  background: linear-gradient(0deg, rgba(15, 20, 28, 0.95) 0%, rgba(15, 20, 28, 0.7) 70%, transparent 100%);
+  gap: 6px;
+  justify-content: flex-end;
+  padding: 0;
+  background: transparent;
 }
 
 .base-hub-bar button {
@@ -388,6 +391,53 @@ button:hover {
 .base-hub-bar button:hover {
   background: #2a4028;
   border-color: #5dbb63;
+}
+
+.base-build-hotbar {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 20, 28, 0.88);
+  border: 1px solid #3d5c3a;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.base-build-hotbar .hotbar-slot {
+  cursor: pointer;
+  border: 1px solid #3d5c3a;
+  background: #1a2e1a;
+  font-family: inherit;
+  color: inherit;
+  min-width: 64px;
+}
+
+.base-build-hotbar .hotbar-slot:hover {
+  border-color: #5dbb63;
+  background: #2a4028;
+}
+
+.hotbar-icon-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid #5a4a38;
+  font-size: 14px;
+  font-weight: bold;
+  color: #f0e6d3;
+}
+
+.habitat-hint {
+  margin-top: 10px;
+  margin-bottom: 6px;
 }
 
 .build-station-picks {

@@ -4,11 +4,7 @@ import { getHabitatCapacity } from '../systems/habitat.ts';
 
 export interface BaseBarCallbacks {
   getState: () => GameState;
-  onBuild: () => void;
-  onBag: () => void;
   onParty: () => void;
-  onDungeon: () => void;
-  onShop: () => void;
   onOrbs: () => void;
 }
 
@@ -23,19 +19,8 @@ export function renderBaseHeader(state: GameState): void {
 }
 
 export function bindBaseBar(callbacks: BaseBarCallbacks): void {
-  document.getElementById('btn-base-build')?.addEventListener('click', () => callbacks.onBuild());
-  document.getElementById('btn-base-bag')?.addEventListener('click', () => callbacks.onBag());
   document.getElementById('btn-base-party')?.addEventListener('click', () => callbacks.onParty());
-  document.getElementById('btn-base-dungeon')?.addEventListener('click', () => callbacks.onDungeon());
-  document.getElementById('btn-base-shop')?.addEventListener('click', () => callbacks.onShop());
   document.getElementById('btn-base-orbs')?.addEventListener('click', () => callbacks.onOrbs());
-}
-
-export function updateBaseShopButton(state: GameState): void {
-  const shopBtn = document.getElementById('btn-base-shop') as HTMLButtonElement | null;
-  if (shopBtn) {
-    shopBtn.textContent = state.shopDayUsed ? 'Loja (fechada)' : 'Loja';
-  }
 }
 
 export function setBaseHint(text: string): void {

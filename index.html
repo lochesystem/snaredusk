@@ -49,13 +49,10 @@
           <p id="base-hub-hint" class="base-hub-hint"></p>
         </header>
         <nav id="base-hub-bar" class="base-hub-bar">
-          <button id="btn-base-build" type="button">Construir</button>
-          <button id="btn-base-bag" type="button">Bolsa</button>
           <button id="btn-base-party" type="button">Companheiro</button>
-          <button id="btn-base-dungeon" type="button">Masmorra</button>
-          <button id="btn-base-shop" type="button">Loja</button>
           <button id="btn-base-orbs" type="button">Orbes</button>
         </nav>
+        <div id="base-build-hotbar" class="base-build-hotbar"></div>
       </div>
     </div>
 
@@ -66,14 +63,7 @@
       <button id="btn-new-game">Novo Jogo</button>
     </div>
 
-    <div id="build-mode-modal" class="modal hidden">
-      <div class="modal-content build-mode-content">
-        <h3>Modo Construção</h3>
-        <p class="panel-hint">Clique para colocar · [E] no cursor para remover · [R] rotacionar · Esc sair</p>
-        <div id="build-station-picks" class="build-station-picks"></div>
-        <button id="build-mode-close" type="button">Sair</button>
-      </div>
-    </div>
+    <div id="build-mode-modal" class="modal hidden" aria-hidden="true"></div>
 
     <div id="chest-modal" class="modal hidden">
       <div class="modal-content chest-modal-content">
@@ -134,6 +124,18 @@
       </div>
     </div>
 
+    <div id="habitat-pen-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="habitat-pen-title">Habitat</h3>
+        <p id="habitat-pen-summary" class="panel-hint"></p>
+        <h4 class="subheading">Nesta área</h4>
+        <div id="habitat-pen-in" class="party-picks"></div>
+        <h4 class="subheading">Adicionar</h4>
+        <div id="habitat-pen-available" class="party-picks"></div>
+        <button id="habitat-pen-close" type="button">Fechar</button>
+      </div>
+    </div>
+
     <div id="base-bag-modal" class="modal hidden">
       <div class="modal-content inventory-modal-content">
         <h3>Bolsa</h3>
@@ -143,6 +145,7 @@
         </div>
         <div id="base-bag-grid" class="inventory-grid" data-inventory-panel="loot"></div>
         <div id="base-bag-special" class="inventory-grid hidden" data-inventory-panel="special"></div>
+        <p class="panel-hint habitat-hint">Criaturas na bolsa — envie para um cercado (construa com tecla 3 se ainda não tiver).</p>
         <div id="base-bag-habitat-row" class="party-picks"></div>
         <button id="base-bag-close" type="button">Fechar</button>
       </div>
@@ -152,7 +155,7 @@
 
     <div id="shop-screen" class="screen hidden">
       <header class="shop-header">
-        <h2>Loja subterrânea</h2>
+        <h2>Loja na superfície</h2>
         <p id="shop-gold"></p>
         <p id="shop-level" class="panel-hint"></p>
         <p id="shop-hint" class="panel-hint">WASD para andar pela loja</p>

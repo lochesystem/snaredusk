@@ -74,4 +74,69 @@ export function moveWithCollision(
   return { x, y };
 }
 
+/** Verifica visão livre entre dois pontos (amostragem contra paredes). */
+export function hasLineOfSight(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  walls: Rect[],
+  checkRadius = 6,
+  steps = 10,
+): boolean {
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const px = ax + (bx - ax) * t;
+    const py = ay + (by - ay) * t;
+    if (collidesCircle(px, py, checkRadius, walls)) return false;
+  }
+  return true;
+}
+
+/** Tenta mover em direção ao alvo contornando paredes (várias direções). */
+export function steerToward(
+  x: number,
+  y: number,
+  goalX: number,
+  goalY: number,
+  speed: number,
+  dt: number,
+  radius: number,
+  walls: Rect[],
+  floors: Rect[],
+  holes: DungeonObstacle[] = [],
+): { x: number; y: number } {
+  const dx = goalX - x;
+  const dy = goalY - y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 2) return { x, y };
+
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const step = speed * dt;
+  const candidates = [
+    { x: ux, y: uy },
+    { x: ux, y: 0 },
+    { x: 0, y: uy },
+    { x: uy, y: -ux },
+    { x: -uy, y: ux },
+    { x: -ux, y: 0 },
+    { x: 0, y: -uy },
+    { x: -ux, y: -uy },
+  ];
+
+  for (const dir of candidates) {
+    const len = Math.hypot(dir.x, dir.y);
+    if (len < 0.001) continue;
+    const ndx = (dir.x / len) * step;
+    const ndy = (dir.y / len) * step;
+    const moved = moveWithCollision(x, y, ndx, ndy, radius, walls, floors, holes);
+    if (Math.abs(moved.x - x) > 0.01 || Math.abs(moved.y - y) > 0.01) {
+      return moved;
+    }
+  }
+
+  return { x, y };
+}
+
 export { PLAYER_RADIUS };
