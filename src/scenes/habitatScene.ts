@@ -189,7 +189,7 @@ export class HabitatScene {
           );
           w.x = moved.x;
           w.y = moved.y;
-          w.container.setFacing(moved.x - prevX);
+          w.container.setLocomotion(true, moved.x - prevX);
         }
       }
 

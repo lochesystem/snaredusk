@@ -1,8 +1,14 @@
 import { HABITAT_CAPACITY } from '../engine/constants.ts';
 import type { CreatureItem, GameState } from '../types.ts';
+import { getHabitatCapacityFromBase } from './baseBuild.ts';
+
+export function getHabitatCapacity(state: GameState): number {
+  if (!state.base) return HABITAT_CAPACITY;
+  return getHabitatCapacityFromBase(state);
+}
 
 export function habitatHasSpace(state: GameState): boolean {
-  return state.habitat.length < HABITAT_CAPACITY;
+  return state.habitat.length < getHabitatCapacity(state);
 }
 
 export function moveCreatureToHabitat(state: GameState, bagIndex: number): CreatureItem | null {

@@ -18,6 +18,13 @@ export const PLAYER_ATTACK_RANGE = 36;
 
 export const BAG_SLOTS = 12;
 export const HABITAT_CAPACITY = 4;
+export const HABITAT_CAPACITY_MAX = 6;
+
+export const BASE_MAP_WIDTH = 32;
+export const BASE_MAP_HEIGHT = 32;
+export const BASE_CELL_SIZE = 32;
+export const BASE_DIG_STAMINA_COST = 5;
+export const BASE_STAMINA_REGEN = 25;
 
 export const PARTY_AGGRO_RANGE = 130;
 export const PARTY_ATTACK_RANGE = 36;

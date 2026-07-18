@@ -31,15 +31,21 @@ npm run build
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
 | 1.1 | Clicar **Novo Jogo** | ☐ | |
-| 1.2 | Ver base **Brumavale** com ouro, orbes e painéis | ☐ | |
+| 1.2 | Ver hub **Brumavale** (canvas + barra inferior: ouro, orbes, stamina) | ☐ | |
 | 1.3 | **F5** na página → **Continuar** restaura o save | ☐ | |
 
-### 2. Base e preparação (1 min)
+### 2. Base escavável (2 min)
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 2.1 | Ler painel do **Mercador de Orbes**; comprar ×1 se fizer sentido | ☐ | |
-| 2.2 | Confirmar que orbes e ouro atualizam no HUD/base | ☐ | |
+| 2.1 | **WASD** para andar pela base; câmera segue | ☐ | |
+| 2.2 | **[E]** em rocha adjacente escava (gasta stamina) | ☐ | |
+| 2.3 | **Construir** → colocar baú e bancada lado a lado | ☐ | |
+| 2.4 | Depositar loot no **baú** ([E] no baú) | ☐ | |
+| 2.5 | **[E]** na **bancada** → craft com materiais do baú adjacente | ☐ | |
+| 2.6 | **Orbes** na barra → comprar orbes | ☐ | |
+| 2.7 | **Bolsa** → colocar criatura no habitat | ☐ | |
+| 2.8 | Clicar criatura no mapa → volta à bolsa | ☐ | |
 
 ### 3. Masmorra — exploração (4 min)
 
@@ -53,13 +59,11 @@ npm run build
 | 3.6 | Capturar com **Q** pelo menos 1 criatura | ☐ | |
 | 3.7 | Portal só ativa após limpar inimigos; sair com **E** | ☐ | |
 
-### 4. Habitat (1 min)
+### 4. Habitat (30 s)
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 4.1 | Colocar criatura da bolsa no **habitat** (botão) | ☐ | |
-| 4.2 | Criatura **vaga** na cena à esquerda | ☐ | |
-| 4.3 | Clicar na criatura para devolver à bolsa | ☐ | |
+| 4.1 | Criaturas no **cercado** (se colocado) ou perto do spawn vagam | ☐ | |
 
 ### 5. Loja (2 min)
 
@@ -75,8 +79,8 @@ npm run build
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 5b.1 | Craftar arma na **Oficina** (se tiver materiais) | ☐ | |
-| 5b.2 | Equipar no **Arsenal** | ☐ | |
+| 5b.1 | Craftar arma na **bancada** (materiais no baú adjacente) | ☐ | |
+| 5b.2 | Equipar no modal da **bancada** | ☐ | |
 | 5b.3 | **Esquiva** com R; barra **STA** no HUD desce e regenera | ☐ | |
 
 ### 6. Loop completo (1 min)

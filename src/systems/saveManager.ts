@@ -12,15 +12,16 @@ import { getShopLevelDef } from './shopUpgrade.ts';
 import { defaultWeaponHotbar } from './weaponHotbar.ts';
 import { syncBiomeUnlocks } from './biomeProgress.ts';
 import type { BiomeId } from '../data/biomes.ts';
+import { normalizeBaseGrid } from '../world/baseGrid.ts';
 
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 
-interface SavePayloadV4 {
+interface SavePayloadV5 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -33,10 +34,11 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   biomeBossDefeated?: Partial<Record<BiomeId, boolean>>;
   hasSporeKey?: boolean;
   hasPrismaticKey?: boolean;
+  base?: GameState['base'];
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV4 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV5 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -47,6 +49,7 @@ export function deserializeState(raw: string): GameState | null {
     if (payload.version === 1) return normalizeState(migrateV1(payload.state));
     if (payload.version === 2) return normalizeState(migrateV2(payload.state));
     if (payload.version === 3) return normalizeState(payload.state);
+    if (payload.version === 4) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -117,6 +120,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     biomeBossDefeated: { ...partial.biomeBossDefeated },
     hasSporeKey: partial.hasSporeKey ?? false,
     hasPrismaticKey: partial.hasPrismaticKey ?? false,
+    base: normalizeBaseGrid(partial.base),
   };
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;

@@ -7,7 +7,7 @@ export const CREATURE_ANIM_SPEED = CREATURE_ANIM_FPS / 60;
 
 export type CreatureVisual =
   | { kind: 'static'; texture: Texture }
-  | { kind: 'animated'; textures: Texture[] };
+  | { kind: 'animated'; idle: Texture[]; walk?: Texture[] };
 
 /** Ponto dos pés e sombra — pode vir do `meta.snaredusk` do atlas. */
 export interface CreatureSpriteLayout {
@@ -58,8 +58,13 @@ async function loadCreatureVisual(id: string): Promise<void> {
   try {
     const sheet = await Assets.load({ alias: sheetAlias, src: creatureSheetUrl(id) });
     const idle = sheet.animations?.idle as Texture[] | undefined;
+    const walk = sheet.animations?.walk as Texture[] | undefined;
     if (idle && idle.length > 0) {
-      creatureVisuals.set(id, { kind: 'animated', textures: idle });
+      creatureVisuals.set(id, {
+        kind: 'animated',
+        idle,
+        walk: walk?.length ? walk : undefined,
+      });
       creatureLayouts.set(id, parseSpriteLayout(sheet));
       return;
     }
@@ -101,7 +106,7 @@ export function getCreatureTexture(speciesId: string): Texture | null {
   const visual = creatureVisuals.get(speciesId);
   if (!visual) return null;
   if (visual.kind === 'static') return visual.texture;
-  return visual.textures[0] ?? null;
+  return visual.idle[0] ?? null;
 }
 
 export function hasCreatureSprite(speciesId: string): boolean {

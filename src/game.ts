@@ -2,20 +2,17 @@ import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import { GAME_HEIGHT, GAME_WIDTH } from './engine/constants.ts';
 import { InputManager } from './engine/input.ts';
 import { DungeonScene } from './scenes/dungeonScene.ts';
-import { HabitatScene } from './scenes/habitatScene.ts';
+import { BaseScene } from './scenes/baseScene.ts';
 import { ShopScene } from './scenes/shopScene.ts';
 import { defaultGameState, type GameState } from './types.ts';
-import { hasSave, loadGame, saveGame, bagCount } from './systems/saveManager.ts';
+import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
-import { moveCreatureToBag, moveCreatureToHabitat } from './systems/habitat.ts';
+import { moveCreatureToBag, moveCreatureToHabitat, getHabitatCapacity } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
-import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
+import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
-import { getEquippedWeapon, WEAPONS } from './data/weapons.ts';
-import { craftWeapon, equipWeapon, formatCraftMissing, getCraftStatus, listRecipes } from './systems/craft.ts';
-import { LOOT_TABLE } from './data/items.ts';
-import { createLootIcon, createWeaponIcon } from './world/placeholderArt.ts';
+import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import {
@@ -33,11 +30,45 @@ import {
   openAbandonModal,
 } from './ui/abandonUI.ts';
 import type { DungeonExitReason } from './scenes/dungeonScene.ts';
-import { assignPartyCompanion, stashPartyCompanion } from './systems/party.ts';
-import { getBiomeDef, listBiomes } from './data/biomes.ts';
-import { isBiomeUnlocked, selectBiome } from './systems/biomeProgress.ts';
+import { isBiomeUnlocked } from './systems/biomeProgress.ts';
 import { renderWeaponHotbar } from './ui/hotbarUI.ts';
 import { syncWeaponHotbar } from './systems/weaponHotbar.ts';
+import { createWeaponIcon } from './world/placeholderArt.ts';
+import {
+  bindBaseBar,
+  renderBaseHeader,
+  setBaseHint,
+  showBaseHub,
+  updateBaseShopButton,
+} from './ui/baseBarUI.ts';
+import {
+  bindBuildModeModal,
+  closeBuildModeUI,
+  getSelectedBuildStation,
+  openBuildModeUI,
+} from './ui/buildModeUI.ts';
+import {
+  bindChestModal,
+  closeChestModal,
+  isChestModalOpen,
+  openChestModal,
+  renderChestModal,
+} from './ui/chestUI.ts';
+import {
+  bindWorkshopModal,
+  closeWorkshopModal,
+  isWorkshopModalOpen,
+  openWorkshopModal,
+} from './ui/workshopModalUI.ts';
+import {
+  bindBaseModals,
+  closeDungeonModal,
+  closeOrbsModal,
+  closePartyModal,
+  openDungeonModal,
+  openOrbsModal,
+  openPartyModal,
+} from './ui/baseModals.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -47,7 +78,7 @@ export class Game {
   private state: GameState = defaultGameState();
   private screen: Screen = 'title';
   private dungeon: DungeonScene | null = null;
-  private habitatScene: HabitatScene | null = null;
+  private baseScene: BaseScene | null = null;
   private shopScene: ShopScene | null = null;
   private pendingDungeonExit: DungeonExitReason | null = null;
   private shopUI: ShopUI;
@@ -75,6 +106,71 @@ export class Game {
     this.bindDom();
     bindInventoryModal();
     bindAbandonModal();
+    this.bindBaseUI();
+  }
+
+  private baseModalCallbacks() {
+    return {
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+      },
+      showToast: (m: string) => this.showToast(m),
+      onEnterDungeon: () => void this.enterDungeon(),
+    };
+  }
+
+  private workshopCallbacks() {
+    return {
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+      },
+      showToast: (m: string) => this.showToast(m),
+      setPixiIcon: (img: HTMLImageElement, createIcon: () => Container, key: string) => {
+        void this.setPixiIcon(img, createIcon, key);
+      },
+    };
+  }
+
+  private bindBaseUI(): void {
+    const modalCb = this.baseModalCallbacks();
+    bindBaseBar({
+      getState: () => this.state,
+      onBuild: () => this.toggleBuildMode(),
+      onBag: () => this.toggleBaseBagModal(),
+      onParty: () => openPartyModal(modalCb),
+      onDungeon: () => openDungeonModal(modalCb),
+      onShop: () => this.showScreen('shop'),
+      onOrbs: () => openOrbsModal(modalCb),
+    });
+    bindBuildModeModal({
+      onSelect: (id) => this.baseScene?.setBuildStation(id),
+      onClose: () => this.toggleBuildMode(false),
+    });
+    bindChestModal({
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+        renderChestModal({
+          getState: () => this.state,
+          onChange: () => {
+            saveGame(this.state);
+            this.refreshBaseUI();
+          },
+          showToast: (m) => this.showToast(m),
+        });
+      },
+      showToast: (m) => this.showToast(m),
+    });
+    bindWorkshopModal(this.workshopCallbacks());
+    bindBaseModals(modalCb);
+    document.getElementById('base-bag-close')?.addEventListener('click', () => this.closeBaseBagModal());
+    document.getElementById('btn-buy-orb-1')?.addEventListener('click', () => this.tryBuyOrbs('single'));
+    document.getElementById('btn-buy-orb-3')?.addEventListener('click', () => this.tryBuyOrbs('bundle'));
   }
 
   private inventoryCallbacks(): InventoryUICallbacks {
@@ -82,11 +178,10 @@ export class Game {
       getState: () => this.state,
       onChange: () => {
         saveGame(this.state);
-        this.renderInventoryPanel();
-        this.renderPartyPanel();
+        this.refreshBaseUI();
         this.shopUI.render();
         this.updateHud();
-        this.habitatScene?.syncCreatures(this.state.habitat);
+        if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
       },
       showToast: (m) => this.showToast(m),
     };
@@ -176,21 +271,68 @@ export class Game {
         this.startGame();
       }
     });
+  }
 
-    document.getElementById('btn-dungeon')?.addEventListener('click', () => {
-      void this.enterDungeon();
-    });
+  private toggleBuildMode(force?: boolean): void {
+    const next = force !== undefined ? force : !this.baseScene?.isBuildMode();
+    if (next) {
+      openBuildModeUI({
+        onSelect: (id) => this.baseScene?.setBuildStation(id),
+        onClose: () => this.toggleBuildMode(false),
+      });
+      this.baseScene?.setBuildMode(true, getSelectedBuildStation());
+    } else {
+      closeBuildModeUI();
+      this.baseScene?.setBuildMode(false);
+    }
+  }
 
-    document.getElementById('btn-shop')?.addEventListener('click', () => {
-      this.showScreen('shop');
-    });
+  private toggleBaseBagModal(): void {
+    const modal = document.getElementById('base-bag-modal');
+    if (!modal) return;
+    const open = modal.classList.contains('hidden');
+    if (open) {
+      modal.classList.remove('hidden');
+      this.renderBaseBagModal();
+    } else {
+      this.closeBaseBagModal();
+    }
+  }
 
-    document.getElementById('btn-buy-orb-1')?.addEventListener('click', () => {
-      this.tryBuyOrbs('single');
-    });
+  private closeBaseBagModal(): void {
+    document.getElementById('base-bag-modal')?.classList.add('hidden');
+  }
 
-    document.getElementById('btn-buy-orb-3')?.addEventListener('click', () => {
-      this.tryBuyOrbs('bundle');
+  private isBaseBagModalOpen(): boolean {
+    return !document.getElementById('base-bag-modal')?.classList.contains('hidden');
+  }
+
+  private renderBaseBagModal(): void {
+    renderInventoryPanel('base-bag-modal', 'base-bag-grid', 'base-bag-special', this.inventoryCallbacks());
+    const habitatRow = document.getElementById('base-bag-habitat-row');
+    if (!habitatRow) return;
+    habitatRow.innerHTML = '';
+    const cap = getHabitatCapacity(this.state);
+    this.state.bag.forEach((entry, index) => {
+      if (!entry || entry.kind !== 'creature') return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'party-pick';
+      btn.textContent = `Habitat: ${entry.name}`;
+      btn.addEventListener('click', () => {
+        if (this.state.habitat.length >= cap) {
+          this.showToast(`Habitat cheio (${cap}/${cap})`);
+          return;
+        }
+        const moved = moveCreatureToHabitat(this.state, index);
+        if (moved) {
+          saveGame(this.state);
+          this.refreshBaseUI();
+          this.renderBaseBagModal();
+          this.showToast(`${moved.name} foi para o habitat!`);
+        }
+      });
+      habitatRow.appendChild(btn);
     });
   }
 
@@ -222,25 +364,40 @@ export class Game {
     document.getElementById('app')?.classList.toggle('layout-shop', screen === 'shop');
 
     if (screen === 'base') {
-      document.getElementById('base-screen')?.classList.remove('hidden');
-      this.showHabitatView();
-      this.refreshBaseUI();
-      requestAnimationFrame(() => this.fitCanvas());
+      showBaseHub(true);
+      this.closeBaseModals();
+      void this.showBaseView().then(() => {
+        this.refreshBaseUI();
+        requestAnimationFrame(() => this.fitCanvas());
+      });
     } else if (screen === 'shop') {
+      showBaseHub(false);
       document.getElementById('shop-screen')?.classList.remove('hidden');
       this.showShopView();
       this.shopUI.render();
       requestAnimationFrame(() => this.fitCanvas());
     } else {
-      this.destroyHabitat();
+      showBaseHub(false);
+      this.destroyBase();
       this.destroyShop();
       this.app.stage.removeChildren();
       requestAnimationFrame(() => this.fitCanvas());
     }
   }
 
+  private closeBaseModals(): void {
+    closeBuildModeUI();
+    closeChestModal();
+    closeWorkshopModal();
+    closePartyModal();
+    closeDungeonModal();
+    closeOrbsModal();
+    this.closeBaseBagModal();
+    this.baseScene?.setBuildMode(false);
+  }
+
   private showShopView(): void {
-    this.destroyHabitat();
+    this.destroyBase();
     this.destroyShop();
 
     this.shopScene = new ShopScene(this.input, {
@@ -274,9 +431,36 @@ export class Game {
     this.shopScene = null;
   }
 
-  private showHabitatView(): void {
-    this.destroyHabitat();
-    this.habitatScene = new HabitatScene(this.input, {
+  private async showBaseView(): Promise<void> {
+    await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
+    this.destroyBase();
+    this.baseScene = new BaseScene(this.input, {
+      getState: () => this.state,
+      onStateChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+      },
+      showToast: (m) => this.showToast(m),
+      setHint: (text) => setBaseHint(text),
+      onOpenChest: (chestId) => {
+        openChestModal(chestId, {
+          getState: () => this.state,
+          onChange: () => {
+            saveGame(this.state);
+            this.refreshBaseUI();
+            renderChestModal({
+              getState: () => this.state,
+              onChange: () => {
+                saveGame(this.state);
+                this.refreshBaseUI();
+              },
+              showToast: (m) => this.showToast(m),
+            });
+          },
+          showToast: (m) => this.showToast(m),
+        });
+      },
+      onOpenWorkbench: (cellX, cellY) => openWorkshopModal(cellX, cellY, this.workshopCallbacks()),
       onCreatureClick: (index) => {
         const moved = moveCreatureToBag(this.state, index);
         if (!moved) {
@@ -284,239 +468,30 @@ export class Game {
           return;
         }
         saveGame(this.state);
-        this.habitatScene?.syncCreatures(this.state.habitat);
+        this.baseScene?.syncCreatures(this.state.habitat);
         this.refreshBaseUI();
         this.showToast(`${moved.name} voltou para a bolsa`);
       },
     });
     this.app.stage.removeChildren();
-    this.app.stage.addChild(this.habitatScene.root);
-    this.habitatScene.enter();
-    this.habitatScene.syncCreatures(this.state.habitat);
+    this.app.stage.addChild(this.baseScene.root);
+    this.baseScene.enter();
+    this.baseScene.syncCreatures(this.state.habitat);
+    this.refreshBaseUI();
   }
 
-  private destroyHabitat(): void {
-    if (!this.habitatScene) return;
-    this.habitatScene.exit();
-    this.habitatScene = null;
+  private destroyBase(): void {
+    if (!this.baseScene) return;
+    this.baseScene.exit();
+    this.baseScene = null;
   }
 
   private refreshBaseUI(): void {
-    this.updateBaseStats();
-    this.renderInventoryPanel();
-    this.renderPartyPanel();
-    this.habitatScene?.syncCreatures(this.state.habitat);
-    this.renderBaseBagCreatures();
-    this.renderWorkshop();
-    this.renderArmory();
-    this.renderBiomePanel();
+    renderBaseHeader(this.state);
+    updateBaseShopButton(this.state);
     this.updateMerchantButtons();
-  }
-
-  private renderBiomePanel(): void {
-    const container = document.getElementById('biome-picks');
-    const btnDungeon = document.getElementById('btn-dungeon');
-    if (!container) return;
-
-    container.innerHTML = '';
-    for (const biome of listBiomes()) {
-      const unlocked = isBiomeUnlocked(this.state, biome.id);
-      const selected = this.state.activeBiome === biome.id;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `biome-pick${selected ? ' selected' : ''}${unlocked ? '' : ' locked'}`;
-      btn.disabled = !unlocked;
-
-      const title = document.createElement('span');
-      title.className = 'biome-pick-title';
-      title.textContent = unlocked ? biome.name : `🔒 ${biome.name}`;
-
-      const hint = document.createElement('span');
-      hint.className = 'biome-pick-hint';
-      hint.textContent = unlocked ? biome.description : biome.lockHint;
-
-      btn.append(title, hint);
-      btn.addEventListener('click', () => {
-        if (selectBiome(this.state, biome.id)) {
-          saveGame(this.state);
-          this.renderBiomePanel();
-        }
-      });
-      container.appendChild(btn);
-    }
-
-    if (btnDungeon) {
-      const active = getBiomeDef(this.state.activeBiome);
-      btnDungeon.textContent = `Entrar — ${active.shortName}`;
-    }
-  }
-
-  private renderInventoryPanel(): void {
-    renderInventoryPanel('inventory-panel', 'inventory-grid', 'inventory-special-grid', this.inventoryCallbacks());
-  }
-
-  private renderPartyPanel(): void {
-    const current = document.getElementById('party-current');
-    const picks = document.getElementById('party-picks');
-    if (!current || !picks) return;
-
-    current.textContent = this.state.partyCompanion
-      ? `Na party: ${this.state.partyCompanion.name}`
-      : 'Nenhum companheiro';
-
-    picks.innerHTML = '';
-
-    if (this.state.partyCompanion) {
-      const clearBtn = document.createElement('button');
-      clearBtn.type = 'button';
-      clearBtn.className = 'party-pick selected';
-      clearBtn.textContent = `Retirar ${this.state.partyCompanion.name}`;
-      clearBtn.addEventListener('click', () => {
-        if (stashPartyCompanion(this.state)) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.showToast('Companheiro guardado');
-        } else {
-          this.showToast('Bolsa e habitat cheios — libere espaço');
-        }
-      });
-      picks.appendChild(clearBtn);
-    }
-
-    this.state.bag.forEach((entry, index) => {
-      if (!entry || entry.kind !== 'creature') return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'party-pick';
-      btn.textContent = entry.name;
-      btn.addEventListener('click', () => {
-        const c = assignPartyCompanion(this.state, { kind: 'bag', index });
-        if (c) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.showToast(`${c.name} vai com você!`);
-        } else {
-          this.showToast('Libere o companheiro atual primeiro');
-        }
-      });
-      picks.appendChild(btn);
-    });
-
-    this.state.habitat.forEach((creature, index) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'party-pick';
-      btn.textContent = `${creature.name} (habitat)`;
-      btn.addEventListener('click', () => {
-        const c = assignPartyCompanion(this.state, { kind: 'habitat', index });
-        if (c) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.showToast(`${c.name} vai com você!`);
-        } else {
-          this.showToast('Libere o companheiro atual primeiro');
-        }
-      });
-      picks.appendChild(btn);
-    });
-
-    if (!picks.children.length) {
-      picks.innerHTML = '<span class="empty">Capture criaturas na masmorra</span>';
-    }
-  }
-
-  private renderWorkshop(): void {
-    const container = document.getElementById('workshop-recipes');
-    if (!container) return;
-    container.innerHTML = '';
-
-    for (const recipe of listRecipes()) {
-      const weapon = WEAPONS[recipe.weaponId];
-      if (!weapon) continue;
-      const status = getCraftStatus(this.state, recipe.id);
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'depot-item craft-recipe-btn';
-      btn.disabled = status.owned;
-
-      const iconWrap = document.createElement('span');
-      iconWrap.className = 'craft-icon-wrap';
-      const iconImg = document.createElement('img');
-      iconImg.className = 'craft-icon';
-      iconImg.alt = weapon.name;
-      iconWrap.appendChild(iconImg);
-      void this.setPixiIcon(iconImg, () => createWeaponIcon(recipe.weaponId), `weapon-${recipe.weaponId}`);
-
-      const body = document.createElement('span');
-      body.className = 'craft-recipe-body';
-
-      const title = document.createElement('span');
-      title.className = 'craft-recipe-title';
-      title.textContent = status.owned ? `${weapon.name} — possui` : `Craft: ${weapon.name}`;
-
-      const ingIcons = document.createElement('span');
-      ingIcons.className = 'craft-ing-icons';
-      for (const ing of recipe.ingredients) {
-        const ingImg = document.createElement('img');
-        ingImg.className = 'craft-ing-icon';
-        ingImg.alt = LOOT_TABLE[ing.lootId]?.name ?? ing.lootId;
-        ingImg.title = `${ing.quantity}× ${ingImg.alt}`;
-        ingIcons.appendChild(ingImg);
-        void this.setPixiIcon(ingImg, () => createLootIcon(ing.lootId), `loot-${ing.lootId}`);
-      }
-
-      const reqs = document.createElement('span');
-      reqs.className = 'craft-recipe-reqs';
-      const ingText = recipe.ingredients
-        .map((i) => {
-          const name = LOOT_TABLE[i.lootId]?.name ?? i.lootId;
-          const have = this.countLootInBag(i.lootId);
-          const ok = have >= i.quantity;
-          return `${i.quantity}× ${name} (${have}/${i.quantity})${ok ? '' : ' ✗'}`;
-        })
-        .join(' · ');
-      const goldText =
-        recipe.goldCost > 0 ? ` · ${recipe.goldCost} ouro (${this.state.gold}/${recipe.goldCost})` : '';
-      reqs.textContent = ingText + goldText;
-
-      const missing = document.createElement('span');
-      missing.className = 'craft-recipe-missing';
-      if (!status.owned && status.missing.length > 0) {
-        missing.textContent = formatCraftMissing(status.missing);
-      }
-
-      body.appendChild(title);
-      body.appendChild(ingIcons);
-      body.appendChild(reqs);
-      body.appendChild(missing);
-      btn.appendChild(iconWrap);
-      btn.appendChild(body);
-
-      btn.addEventListener('click', () => {
-        if (status.owned) return;
-        const fresh = getCraftStatus(this.state, recipe.id);
-        if (!fresh.canCraft) {
-          this.showToast(formatCraftMissing(fresh.missing));
-          return;
-        }
-        if (craftWeapon(this.state, recipe.id)) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.showToast(`${weapon.name} craftada!`);
-        }
-      });
-      container.appendChild(btn);
-    }
-  }
-
-  private countLootInBag(lootId: string): number {
-    let total = 0;
-    for (const entry of this.state.bag) {
-      if (!entry || entry.kind !== 'loot') continue;
-      if (entry.id === lootId) total += entry.quantity;
-    }
-    return total;
+    this.baseScene?.syncCreatures(this.state.habitat);
+    if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
   }
 
   private async setPixiIcon(
@@ -542,51 +517,6 @@ export class Game {
     img.src = base64;
   }
 
-  private renderArmory(): void {
-    const container = document.getElementById('armory-weapons');
-    if (!container) return;
-    container.innerHTML = '';
-
-    for (const weaponId of this.state.ownedWeapons) {
-      const weapon = WEAPONS[weaponId];
-      if (!weapon) continue;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'depot-item craft-recipe-btn';
-      const equipped = this.state.equippedWeaponId === weaponId;
-      if (equipped) btn.disabled = true;
-
-      const iconWrap = document.createElement('span');
-      iconWrap.className = 'craft-icon-wrap';
-      const iconImg = document.createElement('img');
-      iconImg.className = 'craft-icon';
-      iconImg.alt = weapon.name;
-      iconWrap.appendChild(iconImg);
-      void this.setPixiIcon(iconImg, () => createWeaponIcon(weaponId), `weapon-${weaponId}`);
-
-      const body = document.createElement('span');
-      body.className = 'craft-recipe-body';
-      const title = document.createElement('span');
-      title.className = 'craft-recipe-title';
-      title.textContent = equipped
-        ? `✓ ${weapon.name} (ATK ${weapon.atk})`
-        : `Equipar ${weapon.name} (ATK ${weapon.atk})`;
-      body.appendChild(title);
-
-      btn.appendChild(iconWrap);
-      btn.appendChild(body);
-
-      btn.addEventListener('click', () => {
-        if (equipWeapon(this.state, weaponId)) {
-          saveGame(this.state);
-          this.refreshBaseUI();
-          this.showToast(`Equipou ${weapon.name}`);
-        }
-      });
-      container.appendChild(btn);
-    }
-  }
-
   private updateMerchantButtons(): void {
     const single = document.getElementById('btn-buy-orb-1') as HTMLButtonElement | null;
     const bundle = document.getElementById('btn-buy-orb-3') as HTMLButtonElement | null;
@@ -600,53 +530,6 @@ export class Game {
     }
   }
 
-  private updateBaseStats(): void {
-    const stats = document.getElementById('base-stats');
-    if (stats) {
-      const inHabitat = this.state.habitat.length;
-      const shopNote = this.state.shopDayUsed ? ' · Loja fechada hoje' : ' · Loja disponível';
-      stats.textContent = `Ouro: ${this.state.gold} · Orbes: ${this.state.orbs} · HP: ${this.state.playerHp} · Bolsa: ${bagCount(this.state)}/12 · Habitat: ${inHabitat}/${HABITAT_CAPACITY} · Bestiário: ${this.state.bestiary.length}${shopNote}`;
-    }
-
-    const shopBtn = document.getElementById('btn-shop') as HTMLButtonElement | null;
-    if (shopBtn) {
-      shopBtn.textContent = this.state.shopDayUsed ? 'Loja (fechada hoje)' : 'Abrir Loja';
-    }
-  }
-
-  private renderBaseBagCreatures(): void {
-    const container = document.getElementById('base-bag-creatures');
-    if (!container) return;
-    container.innerHTML = '';
-
-    let hasCreature = false;
-    this.state.bag.forEach((entry, index) => {
-      if (!entry || entry.kind !== 'creature') return;
-      hasCreature = true;
-
-      const btn = document.createElement('button');
-      btn.className = 'depot-item';
-      btn.textContent = entry.name;
-      btn.title = 'Colocar no habitat';
-      btn.addEventListener('click', () => {
-        if (this.state.habitat.length >= HABITAT_CAPACITY) {
-          this.showToast(`Habitat cheio (${HABITAT_CAPACITY}/${HABITAT_CAPACITY})`);
-          return;
-        }
-        const moved = moveCreatureToHabitat(this.state, index);
-        if (!moved) return;
-        saveGame(this.state);
-        this.refreshBaseUI();
-        this.showToast(`${moved.name} foi para o habitat!`);
-      });
-      container.appendChild(btn);
-    });
-
-    if (!hasCreature) {
-      container.innerHTML = '<p class="empty">Nenhuma criatura na bolsa — capture na masmorra com Q.</p>';
-    }
-  }
-
   private async enterDungeon(): Promise<void> {
     if (!isBiomeUnlocked(this.state, this.state.activeBiome)) {
       this.showToast('Bioma ainda bloqueado');
@@ -655,7 +538,9 @@ export class Game {
     await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
     this.state.shopDayUsed = false;
     this.pendingDungeonExit = null;
-    this.destroyHabitat();
+    this.destroyBase();
+    showBaseHub(false);
+    this.closeBaseModals();
     document.getElementById('app')?.classList.remove('layout-base');
     this.destroyDungeon();
     this.state.playerHp = PLAYER_MAX_HP;
@@ -690,8 +575,15 @@ export class Game {
   }
 
   private update(dt: number): void {
-    if (this.screen === 'base' && this.habitatScene) {
-      this.habitatScene.update(dt);
+    if (this.screen === 'base' && this.baseScene) {
+      if (this.input.consumeKey('escape')) {
+        if (isWorkshopModalOpen()) closeWorkshopModal();
+        else if (isChestModalOpen()) closeChestModal();
+        else if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
+        else if (this.baseScene.isBuildMode()) this.toggleBuildMode(false);
+        else this.closeBaseModals();
+      }
+      this.baseScene.update(dt);
     }
 
     if (this.screen === 'shop' && this.shopScene) {

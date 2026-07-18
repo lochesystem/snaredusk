@@ -29,6 +29,40 @@ export interface SpecialItem {
 
 export const SPECIAL_BAG_SIZE = 4;
 
+export interface BaseChestState {
+  id: string;
+  cellX: number;
+  cellY: number;
+  slots: (LootItem | null)[];
+}
+
+export interface BasePlacement {
+  id: string;
+  stationId: 'workbench' | 'chest_wood' | 'habitat_pen';
+  cellX: number;
+  cellY: number;
+  rotation: 0 | 1 | 2 | 3;
+}
+
+export interface BaseHabitatZone {
+  cellX: number;
+  cellY: number;
+  width: number;
+  height: number;
+}
+
+export interface BaseGridState {
+  width: number;
+  height: number;
+  cells: number[];
+  placements: BasePlacement[];
+  chests: BaseChestState[];
+  freeBuildsUsed: number;
+  nextPlacementId: number;
+  /** Área fixa onde criaturas do habitat vagam (não segue o jogador). */
+  habitatZone: BaseHabitatZone;
+}
+
 export interface ShopListing {
   entry: BagEntry;
   price: number;
@@ -79,6 +113,8 @@ export interface GameState {
   hasSporeKey: boolean;
   /** Chave dropada pela Matriarca Prismática (desbloqueia o Termal). */
   hasPrismaticKey: boolean;
+  /** Grid escavável da base subterrânea. */
+  base: BaseGridState;
 }
 
 export interface Rect {
@@ -113,6 +149,7 @@ export function createShopCages(count: number): (ShopListing | null)[] {
 
 import { STARTING_WEAPON_ID } from './data/weapons.ts';
 import { defaultWeaponHotbar } from './systems/weaponHotbar.ts';
+import { createDefaultBaseGrid } from './world/baseGrid.ts';
 
 export function defaultGameState(): GameState {
   return {
@@ -139,5 +176,6 @@ export function defaultGameState(): GameState {
     biomeBossDefeated: {},
     hasSporeKey: false,
     hasPrismaticKey: false,
+    base: createDefaultBaseGrid(),
   };
 }

@@ -102,7 +102,6 @@ export function isPastBossGates(
   if (gateWalls.length === 0) return true;
 
   const hallPad = 10;
-  let inGateHallway = false;
 
   for (const gate of gateWalls) {
     const inHall =
@@ -112,7 +111,6 @@ export function isPastBossGates(
       y <= gate.y + gate.height + hallPad;
     if (!inHall) continue;
 
-    inGateHallway = true;
     const isVerticalSlab = gate.width < gate.height;
     if (isVerticalSlab) {
       const isWestGate = gate.x <= roomRect.x + 24;

@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { SpeciesDef } from '../types.ts';
 import { LOOT_TABLE } from '../data/items.ts';
 import type { FxRunner } from '../engine/fxRunner.ts';
@@ -101,6 +101,7 @@ export function createPlayerSprite(): PlayerSprite {
 export interface CreatureSprite extends Container {
   zOffset: number;
   setFacing(moveX: number): void;
+  setLocomotion(moving: boolean, moveX?: number): void;
 }
 
 export function createCreatureSprite(species: SpeciesDef, capturableGlow = false): CreatureSprite {
@@ -109,19 +110,25 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   const usesTexture = visual !== null;
   const layout = usesTexture ? getCreatureSpriteLayout(species.id) : null;
   let flipTarget: Sprite | AnimatedSprite | null = null;
+  let animSprite: AnimatedSprite | null = null;
+  let idleTextures: Texture[] | null = null;
+  let walkTextures: Texture[] | null = null;
   const facing = { value: 1 };
 
   const shadow = drawShadow(root, 18);
   shadow.y = layout?.shadowY ?? 6;
 
   if (visual?.kind === 'animated') {
-    const anim = new AnimatedSprite(visual.textures);
+    idleTextures = visual.idle;
+    walkTextures = visual.walk ?? null;
+    const anim = new AnimatedSprite(idleTextures);
     anim.anchor.set(layout!.anchorX, layout!.anchorY);
     anim.roundPixels = true;
     anim.animationSpeed = CREATURE_ANIM_SPEED;
     anim.play();
     root.addChild(anim);
     flipTarget = anim;
+    animSprite = anim;
   } else if (visual?.kind === 'static') {
     const sprite = new Sprite(visual.texture);
     sprite.anchor.set(layout!.anchorX, layout!.anchorY);
@@ -150,8 +157,25 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   }
 
   root.zOffset = 0.5;
-  root.setFacing = (moveX: number) => {
+  root.setLocomotion = (moving: boolean, moveX = 0) => {
     if (flipTarget) applySpriteFacing(flipTarget, moveX, facing);
+
+    if (!animSprite || !idleTextures) return;
+
+    const walk = walkTextures && walkTextures.length > 0 ? walkTextures : idleTextures;
+    const nextTextures = moving ? walk : idleTextures;
+    if (animSprite.textures !== nextTextures) {
+      animSprite.textures = nextTextures;
+      animSprite.animationSpeed = moving ? PLAYER_WALK_ANIM_SPEED : CREATURE_ANIM_SPEED;
+      animSprite.gotoAndPlay(0);
+    } else if (moving && !walkTextures) {
+      animSprite.animationSpeed = PLAYER_WALK_ANIM_SPEED;
+    } else if (!moving) {
+      animSprite.animationSpeed = CREATURE_ANIM_SPEED;
+    }
+  };
+  root.setFacing = (moveX: number) => {
+    root.setLocomotion(Math.abs(moveX) > 0.001, moveX);
   };
   return root;
 }
