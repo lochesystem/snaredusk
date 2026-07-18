@@ -55,7 +55,6 @@ import type { CreatureItem, GameState } from '../types.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
 import {
 
-  BaseCellKind,
   getBaseWorldSize,
   getDungeonPortalWorld,
   getFloorsForCollision,
@@ -81,11 +80,9 @@ import {
   type PlayerSprite,
 
 } from '../world/placeholderArt.ts';
-
-
+import { buildBaseTileLayer } from '../world/tileRenderer.ts';
 
 const INTERACT_RANGE = 44;
-
 const LANDMARK_RANGE = 36;
 
 const CREATURE_RADIUS = 9;
@@ -368,52 +365,7 @@ export class BaseScene {
 
 
 
-    const tileGfx = new Graphics();
-
-    for (let y = 0; y < state.base.height; y++) {
-
-      for (let x = 0; x < state.base.width; x++) {
-
-        const kind = state.base.cells[y * state.base.width + x] as BaseCellKind;
-
-        const px = x * BASE_CELL_SIZE;
-
-        const py = y * BASE_CELL_SIZE;
-
-        if (kind === BaseCellKind.Void) continue;
-
-        if (kind === BaseCellKind.Floor) {
-
-          tileGfx.rect(px, py, BASE_CELL_SIZE, BASE_CELL_SIZE);
-
-          tileGfx.fill({ color: 0x2a3d2a, alpha: 0.95 });
-
-          tileGfx.rect(px + 1, py + 1, BASE_CELL_SIZE - 2, BASE_CELL_SIZE - 2);
-
-          tileGfx.fill({ color: 0x3d5c3a, alpha: 0.9 });
-
-        } else if (kind === BaseCellKind.Rock) {
-
-          tileGfx.rect(px, py, BASE_CELL_SIZE, BASE_CELL_SIZE);
-
-          tileGfx.fill({ color: 0x1a1520, alpha: 1 });
-
-          tileGfx.rect(px + 4, py + 4, BASE_CELL_SIZE - 8, BASE_CELL_SIZE - 8);
-
-          tileGfx.fill({ color: 0x3a3048, alpha: 1 });
-
-        } else if (kind === BaseCellKind.Wall) {
-
-          tileGfx.rect(px, py, BASE_CELL_SIZE, BASE_CELL_SIZE);
-
-          tileGfx.fill({ color: 0x4a3a30, alpha: 1 });
-
-        }
-
-      }
-
-    }
-
+    const tileGfx = buildBaseTileLayer(state.base.width, state.base.height, state.base.cells);
     this.tileLayer.addChild(tileGfx);
 
     for (const placement of state.base.placements) {

@@ -276,4 +276,230 @@ white background, jpeg artifacts, text, logo, watermark, multiple characters
 
 ---
 
+## Cenário — tiles 32×32 (MVP)
+
+Tiles quadrados alinhados ao grid do jogo (masmorra e base). Substitua os placeholders gerados por `npm run sprites:environment`.
+
+Referência: [Pixel art tiles that don't look terrible (Sprite-AI, 2026)](https://www.sprite-ai.art/blog/seamless-pixel-art-tiles) — regras de tile seamless aplicadas abaixo.
+
+### Pastas
+
+| Contexto | Caminho |
+|----------|---------|
+| Masmorra bioma 1 | `public/assets/biomes/floresta/tileset.png` + `tileset.json` |
+| Props bioma 1 | `public/assets/biomes/floresta/props.png` + `props.json` |
+| Base subterrânea | `public/assets/base/tileset.png` + `tileset.json` |
+
+Biomas `cristal` e `termal` usam a mesma estrutura em `public/assets/biomes/{id}/`.
+
+### Frames obrigatórios — tileset de masmorra
+
+| Frame | Descrição | Área visível no jogo |
+|-------|-----------|----------------------|
+| `floor` | Chão caminhável com musgo/cristal/vapor conforme bioma | **32×32** (tileado) |
+| `wall_h` | Faixa horizontal N/S | **32×14** no topo do frame 32×32; highlight no **topo**; repete na largura |
+| `wall_v` | Faixa vertical L/O | **14×32** na **esquerda** do frame 32×32; highlight na **esquerda**; repete na altura |
+| `void` | Fundo escuro fora das salas | **32×32** (tileado) |
+| `hole` | Buraco no chão (opcional; fallback vector) | **32×32** |
+| `ceiling_band` | Sombra no topo da sala | **32×22** — desenhe nos **22 px superiores**; repete na largura da sala (tileado) |
+| `wall_corner` | Quina externa 14×14 | Bloco no **canto superior-esquerdo** do frame 32×32; highlight no topo e esquerda; engine espelha para as outras quinas |
+
+### Frames obrigatórios — props de masmorra
+
+| Frame | Uso |
+|-------|-----|
+| `mushroom_a` / `mushroom_b` | Decoração Floresta |
+| `crystal_a` / `crystal_b` | Decoração Cristal |
+| `thermal_a` / `thermal_b` | Decoração Termal |
+| `rock` | Obstáculo |
+| `chest` / `chest_epic` / `chest_open` | Baús |
+
+### Frames — tileset da base
+
+| Frame | Célula |
+|-------|--------|
+| `floor` | Chão escavado |
+| `rock` | Rocha |
+| `wall` | Parede de sala |
+| `corridor` | Corredor (opcional) |
+
+---
+
+### Regras de prompt para tiles (leia antes de gerar)
+
+Baseado no guia de tiles seamless — o que **funciona** vs o que **não funciona** em IA:
+
+| Faça | Evite |
+|------|-------|
+| Descreva a **superfície/textura**, não uma cena | "cave floor in a dungeon room with torches" |
+| Inclua `seamless`, `tileable`, `top-down view` | Pedir só "grass tile" sem contexto de repetição |
+| Iluminação plana: `flat even lighting`, `uniform color distribution` | Cenas com luz central ou gradiente escuro nas bordas (vignette) |
+| Detalhe distribuído: `small scattered moss spots`, `tiny pebbles evenly spread` | Foco visual só no centro do tile |
+| Props = sprite separado com fundo transparente | Objetos desenhados dentro do tile de chão |
+| Tamanho **32×32 no export** (Aseprite/ferramenta), não no prompt de IA | Escrever "32x32" no prompt — modelos interpretam como conceito, não pixels |
+
+**Negativos úteis** (cole no final do prompt ou campo "negative"):
+
+```
+vignette, dark corners, dark border, brightness falloff from center to edge,
+visible grid lines, checkerboard pattern, scene composition, characters, objects,
+landscape, perspective horizon, anti-aliasing, blur, watermark, text
+```
+
+**Validação antes de importar:**
+
+1. Monte um grid **3×3** com o tile — costura visível = refazer.
+2. Desloque meio tile (offset 50%) — expõe emendas escondidas.
+3. Se a IA gerou vignette nas bordas: recorte no Aseprite ou use modo tile/offset (Filter → Other → Offset) e pinte a costura no centro.
+
+**Tamanho no jogo:** `floor` e `void` usam **32×32** com `TilingSprite`. Paredes usam **`wall_h`** (32×14, horizontal) e **`wall_v`** (14×32, vertical) com espessura de colisão **14 px**. Cantos usam **`wall_corner`** (14×14). `ceiling_band` repete a cada 32 px com **22 px** de altura.
+
+---
+
+### Sufixo padrão — tiles de chão/void (cole em todo prompt de superfície)
+
+```
+seamless tileable game texture, top-down view, flat even lighting,
+uniform color distribution, no gradients from center to edge,
+pixel art, limited palette max 8 colors, crisp pixels, no anti-aliasing,
+cozy underground fantasy, Stardew Valley style,
+surface texture only, no characters, no objects, no scene
+```
+
+### Sufixo padrão — props (não são tiles)
+
+```
+pixel art game prop sprite, side view, transparent background,
+1px dark outline, limited palette max 8 colors, crisp pixels,
+no anti-aliasing, cozy underground fantasy, single object centered
+```
+
+---
+
+### Prompt — `floor` (Floresta Fúngica)
+
+Descreva só a superfície musgosa — não a masmorra inteira.
+
+```
+seamless tileable mossy underground cave floor texture,
+dark green stone with small scattered bioluminescent moss spots
+and tiny pebbles evenly distributed across the whole surface,
+flat even lighting, uniform color distribution,
+top-down view, pixel art game tile,
+limited palette: #1a2e1a #3d5c3a #5dbb63 #8fd894,
+surface texture only, no characters, no objects, no vignette, no dark borders
+```
+
++ sufixo padrão de tiles, se a ferramenta aceitar blocos separados.
+
+### Prompt — `floor` (Caverna de Cristal)
+
+```
+seamless tileable crystal cave floor texture,
+blue-gray stone with small scattered prism light flecks
+evenly distributed, flat even lighting, uniform color distribution,
+top-down view, pixel art game tile,
+limited palette: #1c2848 #3a5282 #7ab8e8 #c8e8ff,
+surface texture only, no vignette, no dark corners
+```
+
+### Prompt — `floor` (Pântano Termal)
+
+```
+seamless tileable thermal swamp cave floor texture,
+warm brown mud with small scattered orange heat cracks
+and tiny bubbles evenly distributed, flat even lighting,
+top-down view, pixel art game tile,
+limited palette: #3a2818 #744830 #c06030 #ffc080,
+surface texture only, no vignette
+```
+
+### Prompt — `void` (fundo fora das salas)
+
+```
+seamless tileable dark void cave texture,
+very dark purple-black stone noise, minimal detail,
+flat even lighting, uniform color, top-down view,
+pixel art game tile, almost no highlights,
+surface texture only, no vignette, no gradient to black at edges
+```
+
+### Prompt — `wall_h` (Floresta)
+
+Faixa **horizontal 32×14** no topo do frame 32×32. Highlight no **topo** (lado externo em paredes norte). Resto transparente.
+
+```
+pixel art underground cave wall horizontal strip, 32x14 pixels in top of tile,
+dark green-brown rock with moss highlight along top outer edge,
+flat even lighting, tileable left-right repeat,
+limited palette max 8 colors, transparent padding below
+```
+
+### Prompt — `wall_v` (Floresta)
+
+Faixa **vertical 14×32** na esquerda do frame 32×32. Highlight na **esquerda** (lado externo em paredes oeste). Resto transparente.
+
+```
+pixel art underground cave wall vertical strip, 14x32 pixels on left of tile,
+dark green-brown rock with moss highlight along left outer edge,
+flat even lighting, tileable top-bottom repeat,
+limited palette max 8 colors, transparent padding on right
+```
+
+### Prompt — `rock` (prop — obstáculo)
+
+```
+pixel art game prop sprite, medium mossy boulder on ground,
+side view, wider than tall, transparent background,
+limited palette max 8 colors, 1px dark outline,
+single object, cozy underground fantasy
+```
+
+### Prompt — `mushroom_a` (prop — decor)
+
+```
+pixel art game prop sprite, small bioluminescent mushroom,
+green glowing cap, short stem, side view on ground,
+transparent background, max 8 colors, crisp pixels,
+single object centered, evenly lit, no vignette
+```
+
+### Prompt — `chest` (prop)
+
+```
+pixel art game prop sprite, small wooden treasure chest closed,
+golden trim, side view, transparent background,
+max 8 colors, 1px outline, single object, no scene
+```
+
+### Prompt — `floor` (Base subterrânea)
+
+```
+seamless tileable dug underground base floor texture,
+packed earth with small scattered tool marks and pebbles
+evenly distributed, warm brown-green tones,
+flat even lighting, top-down view, pixel art game tile,
+surface texture only, no vignette, no dark borders
+```
+
+---
+
+### Export
+
+1. Gere ou desenhe em **32×32** no Aseprite (props: 32×48 ou 32×32).
+2. **Teste 3×3** antes de exportar — costura visível = offset + pintar centro (modo Tile no Aseprite).
+3. Exporte atlas PNG + JSON (TexturePacker ou export nativo).
+4. Nomes de frame **exatamente** como na tabela acima.
+5. `meta.snaredusk.tileSize: 32` no JSON.
+6. Coloque em `public/assets/...` e recarregue o jogo (Ctrl+F5).
+
+### Ordem sugerida de produção
+
+1. `floor` + `wall` + `void` → muda ~80% da sensação visual
+2. `mushroom_a/b` (ou crystal/thermal conforme bioma)
+3. `rock` + `chest` / `chest_epic` / `chest_open`
+4. Repetir tileset para `base/`
+
+---
+
 *Atualizar quando novas espécies, biomas ou armas forem adicionados.*

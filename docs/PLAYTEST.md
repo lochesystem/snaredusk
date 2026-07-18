@@ -38,7 +38,7 @@ npm run build
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 2.1 | **WASD** para andar pela base; câmera segue | ☐ | |
+| 2.0 | **WASD** na base: chão/rocha/parede usam **tiles 32×32** (se `public/assets/base/tileset.json` existir) | ☐ | |
 | 2.2 | **[E]** em rocha adjacente escava (gasta stamina) | ☐ | |
 | 2.3 | **Construir** → colocar baú e bancada lado a lado | ☐ | |
 | 2.4 | Depositar loot no **baú** ([E] no baú) | ☐ | |
@@ -51,6 +51,7 @@ npm run build
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
+| 3.0 | Masmorra usa **tileset do bioma** (chão/parede repetidos; props como sprites) | ☐ | |
 | 3.1 | **Entrar na Masmorra**; layout diferente a cada run? | ☐ | |
 | 3.2 | **Minimapa** atualiza ao entrar em salas novas | ☐ | |
 | 3.3 | Câmera segue o jogador; sem andar no void | ☐ | |

@@ -15,6 +15,14 @@ export const CORRIDOR_V_LEN = 48;
 
 export type DoorDir = 'n' | 's' | 'e' | 'w';
 
+/** Direção para o vazio (lado externo da parede — onde fica o highlight). */
+export type WallFacing = DoorDir;
+
+export interface DungeonWall extends Rect {
+  axis: 'h' | 'v';
+  facing: WallFacing;
+}
+
 export type RoomType = 'combat' | 'treasure' | 'event' | 'rest' | 'merchant' | 'boss';
 
 export interface RoomLayout {
@@ -80,7 +88,7 @@ export interface DungeonLayout {
   height: number;
   rooms: RoomLayout[];
   floors: Rect[];
-  walls: Rect[];
+  walls: DungeonWall[];
   bossGateWalls: Rect[];
   hazards: DungeonHazard[];
   decor: DungeonDecor[];
@@ -252,7 +260,7 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
   expandBossRoom(rooms, bossRoomIndex);
 
   const floors: Rect[] = [];
-  const walls: Rect[] = [];
+  const walls: DungeonWall[] = [];
 
   for (const room of rooms) {
     floors.push({ ...room.rect });
@@ -329,7 +337,7 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
   for (const obs of obstacles) {
     if (obs.kind === 'rock') {
       const s = obs.radius;
-      walls.push({ x: obs.x - s, y: obs.y - s, width: s * 2, height: s * 2 });
+      walls.push(wallSegment({ x: obs.x - s, y: obs.y - s, width: s * 2, height: s * 2 }, 'h', 'n'));
     }
   }
 
@@ -846,14 +854,18 @@ function isFarFromAll(x: number, y: number, points: { x: number; y: number }[], 
   return true;
 }
 
-function addRoomWalls(room: RoomLayout, walls: Rect[]): void {
+function wallSegment(rect: Rect, axis: 'h' | 'v', facing: WallFacing): DungeonWall {
+  return { ...rect, axis, facing };
+}
+
+function addRoomWalls(room: RoomLayout, walls: DungeonWall[]): void {
   const { rect, doors } = room;
   const t = WALL_THICKNESS;
   const half = CORRIDOR_WIDTH / 2;
   const cx = rect.x + rect.width / 2;
   const cy = rect.y + rect.height / 2;
 
-  addHorizontalWall(walls, rect.x, rect.y, rect.width, t, doors.includes('n'), cx, half);
+  addHorizontalWall(walls, rect.x, rect.y, rect.width, t, doors.includes('n'), cx, half, 'n');
   addHorizontalWall(
     walls,
     rect.x,
@@ -863,8 +875,9 @@ function addRoomWalls(room: RoomLayout, walls: Rect[]): void {
     doors.includes('s'),
     cx,
     half,
+    's',
   );
-  addVerticalWall(walls, rect.x, rect.y, rect.height, t, doors.includes('w'), cy, half);
+  addVerticalWall(walls, rect.x, rect.y, rect.height, t, doors.includes('w'), cy, half, 'w');
   addVerticalWall(
     walls,
     rect.x + rect.width - t,
@@ -874,11 +887,12 @@ function addRoomWalls(room: RoomLayout, walls: Rect[]): void {
     doors.includes('e'),
     cy,
     half,
+    'e',
   );
 }
 
 function addHorizontalWall(
-  walls: Rect[],
+  walls: DungeonWall[],
   x: number,
   y: number,
   width: number,
@@ -886,21 +900,22 @@ function addHorizontalWall(
   hasGap: boolean,
   gapCenterX: number,
   halfGap: number,
+  facing: 'n' | 's',
 ): void {
   if (!hasGap) {
-    walls.push({ x, y, width, height: thickness });
+    walls.push(wallSegment({ x, y, width, height: thickness }, 'h', facing));
     return;
   }
   const gapLeft = gapCenterX - halfGap;
   const gapRight = gapCenterX + halfGap;
   const leftW = Math.max(0, gapLeft - x);
   const rightW = Math.max(0, x + width - gapRight);
-  if (leftW > 0) walls.push({ x, y, width: leftW, height: thickness });
-  if (rightW > 0) walls.push({ x: gapRight, y, width: rightW, height: thickness });
+  if (leftW > 0) walls.push(wallSegment({ x, y, width: leftW, height: thickness }, 'h', facing));
+  if (rightW > 0) walls.push(wallSegment({ x: gapRight, y, width: rightW, height: thickness }, 'h', facing));
 }
 
 function addVerticalWall(
-  walls: Rect[],
+  walls: DungeonWall[],
   x: number,
   y: number,
   height: number,
@@ -908,39 +923,46 @@ function addVerticalWall(
   hasGap: boolean,
   gapCenterY: number,
   halfGap: number,
+  facing: 'w' | 'e',
 ): void {
   if (!hasGap) {
-    walls.push({ x, y, width: thickness, height });
+    walls.push(wallSegment({ x, y, width: thickness, height }, 'v', facing));
     return;
   }
   const gapTop = gapCenterY - halfGap;
   const gapBot = gapCenterY + halfGap;
   const topH = Math.max(0, gapTop - y);
   const botH = Math.max(0, y + height - gapBot);
-  if (topH > 0) walls.push({ x, y, width: thickness, height: topH });
-  if (botH > 0) walls.push({ x, y: gapBot, width: thickness, height: botH });
+  if (topH > 0) walls.push(wallSegment({ x, y, width: thickness, height: topH }, 'v', facing));
+  if (botH > 0) walls.push(wallSegment({ x, y: gapBot, width: thickness, height: botH }, 'v', facing));
 }
 
-function addCorridorCaps(walls: Rect[], corridor: Rect): void {
+function addCorridorCaps(walls: DungeonWall[], corridor: Rect): void {
   const t = WALL_THICKNESS;
-  walls.push({ x: corridor.x, y: corridor.y - t, width: corridor.width, height: t });
-  walls.push({
-    x: corridor.x,
-    y: corridor.y + corridor.height,
-    width: corridor.width,
-    height: t,
-  });
+  walls.push(
+    wallSegment({ x: corridor.x, y: corridor.y - t, width: corridor.width, height: t }, 'h', 'n'),
+  );
+  walls.push(
+    wallSegment(
+      { x: corridor.x, y: corridor.y + corridor.height, width: corridor.width, height: t },
+      'h',
+      's',
+    ),
+  );
 }
 
-function addSideCorridorCaps(walls: Rect[], corridor: Rect): void {
+function addSideCorridorCaps(walls: DungeonWall[], corridor: Rect): void {
   const t = WALL_THICKNESS;
-  walls.push({ x: corridor.x - t, y: corridor.y, width: t, height: corridor.height });
-  walls.push({
-    x: corridor.x + corridor.width,
-    y: corridor.y,
-    width: t,
-    height: corridor.height,
-  });
+  walls.push(
+    wallSegment({ x: corridor.x - t, y: corridor.y, width: t, height: corridor.height }, 'v', 'w'),
+  );
+  walls.push(
+    wallSegment(
+      { x: corridor.x + corridor.width, y: corridor.y, width: t, height: corridor.height },
+      'v',
+      'e',
+    ),
+  );
 }
 
 const WORLD_PADDING = 48;

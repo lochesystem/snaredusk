@@ -125,10 +125,13 @@ import {
   createCaptureSuccessBanner,
   drawCaptureBurst,
   drawDamageNumber,
-  drawDungeonLayout,
   createProjectileSprite,
   createShieldGraphic,
 } from '../world/placeholderArt.ts';
+import {
+  buildDungeonFloorLayer,
+  spawnDungeonPropSprites,
+} from '../world/tileRenderer.ts';
 
 export type DungeonExitReason = 'portal' | 'death' | 'abandon';
 
@@ -308,21 +311,25 @@ export class DungeonScene {
     );
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
 
-    const floorGfx = new Graphics();
-    drawDungeonLayout(floorGfx, {
-      floors: this.layout.floors,
-      walls: this.layout.walls,
-      rooms: this.layout.rooms,
-      decor: this.layout.decor,
-      obstacles: this.layout.obstacles,
-      hazards: this.layout.hazards,
-      chests: [],
-      width: this.layout.width,
-      height: this.layout.height,
-      theme: biome.theme,
-    });
-    this.world.addChild(floorGfx);
-    floorGfx.cacheAsTexture(true);
+    const floorLayer = buildDungeonFloorLayer(
+      {
+        floors: this.layout.floors,
+        walls: this.layout.walls,
+        rooms: this.layout.rooms,
+        decor: this.layout.decor,
+        obstacles: this.layout.obstacles,
+        hazards: this.layout.hazards,
+        width: this.layout.width,
+        height: this.layout.height,
+        theme: biome.theme,
+      },
+      this.layout.biomeId,
+    );
+    this.world.addChild(floorLayer);
+
+    for (const prop of spawnDungeonPropSprites(this.layout, this.layout.biomeId)) {
+      this.entityLayer.addChild(prop);
+    }
 
     this.bossGateGfx = new Graphics();
     this.world.addChild(this.bossGateGfx);
@@ -490,7 +497,7 @@ export class DungeonScene {
 
   private spawnChests(): void {
     for (const chest of this.layout.chests) {
-      const container = createChestSprite(false);
+      const container = createChestSprite(false, false, this.layout.biomeId);
       container.x = chest.x;
       container.y = chest.y;
       this.entityLayer.addChild(container);
@@ -1106,7 +1113,7 @@ export class DungeonScene {
 
   private spawnEnemyChest(enemy: LiveEnemy): void {
     const drop = getEnemyChestDrop(enemy.speciesId, enemy.isBoss);
-    const container = createChestSprite(false, drop.epic);
+    const container = createChestSprite(false, drop.epic, this.layout.biomeId);
     container.x = enemy.x;
     container.y = enemy.y;
     this.entityLayer.addChild(container);
@@ -1767,7 +1774,7 @@ export class DungeonScene {
       const parent = chest.container.parent;
       parent?.removeChild(chest.container);
       chest.container.destroy({ children: true });
-      chest.container = createChestSprite(true, chest.epic);
+      chest.container = createChestSprite(true, chest.epic, this.layout.biomeId);
       chest.container.x = chest.x;
       chest.container.y = chest.y;
       parent?.addChild(chest.container);

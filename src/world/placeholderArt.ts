@@ -11,8 +11,12 @@ import {
   getPlayerAnimations,
   PLAYER_WALK_ANIM_SPEED,
 } from './playerAssets.ts';
-import type { BiomeTheme } from '../data/biomes.ts';
+import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
 import { createPixelText } from './pixelText.ts';
+import {
+  chestPropFrameName,
+  getBiomePropTexture,
+} from './environmentAssets.ts';
 import {
   drawEnergyOrb,
   drawKnifeBlade,
@@ -327,7 +331,7 @@ export function createSpeechBubble(lines: string[], accent = 0x5dbb63): Containe
   return root;
 }
 
-export function drawDungeonLayout(
+export function drawDungeonLayoutVector(
   g: Graphics,
   layout: {
     floors: { x: number; y: number; width: number; height: number }[];
@@ -340,9 +344,11 @@ export function drawDungeonLayout(
     width: number;
     height: number;
     theme?: BiomeTheme;
+    skipBaseLayers?: boolean;
   },
 ): void {
   const { floors, walls, rooms, decor, obstacles, hazards = [], chests, width, height } = layout;
+  const skipBase = layout.skipBaseLayers ?? false;
   const theme = layout.theme ?? {
     void: 0x120f1a,
     floor: 0x2a4a2a,
@@ -353,19 +359,21 @@ export function drawDungeonLayout(
     rockHighlight: 0x6a6a7a,
   };
 
-  g.rect(0, 0, width, height);
-  g.fill(theme.void);
+  if (!skipBase) {
+    g.rect(0, 0, width, height);
+    g.fill(theme.void);
 
-  for (const floor of floors) {
-    g.rect(floor.x, floor.y, floor.width, floor.height);
-    g.fill(theme.floor);
-  }
+    for (const floor of floors) {
+      g.rect(floor.x, floor.y, floor.width, floor.height);
+      g.fill(theme.floor);
+    }
 
-  for (const room of rooms) {
-    const r = room.rect;
-    const tint = roomTypeTint(room.type);
-    g.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
-    g.fill({ color: tint, alpha: 0.22 });
+    for (const room of rooms) {
+      const r = room.rect;
+      const tint = roomTypeTint(room.type);
+      g.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
+      g.fill({ color: tint, alpha: 0.22 });
+    }
   }
 
   for (const obs of obstacles) {
@@ -401,66 +409,76 @@ export function drawDungeonLayout(
     }
   }
 
-  for (const wall of walls) {
-    g.rect(wall.x, wall.y, wall.width, wall.height);
-    g.fill(theme.wall);
-    g.rect(wall.x, wall.y, wall.width, wall.height);
-    g.stroke({ width: 2, color: theme.wallStroke });
-  }
-
-  for (const obs of obstacles) {
-    if (obs.kind !== 'rock') continue;
-    g.roundRect(obs.x - obs.radius, obs.y - obs.radius * 0.8, obs.radius * 2, obs.radius * 1.6, 4);
-    g.fill(theme.rock);
-    g.roundRect(obs.x - obs.radius + 2, obs.y - obs.radius * 0.8 + 2, obs.radius * 1.4, obs.radius * 0.9, 3);
-    g.fill({ color: theme.rockHighlight, alpha: 0.7 });
-  }
-
-  for (const room of rooms) {
-    const r = room.rect;
-    g.rect(r.x + 4, r.y + 4, r.width - 8, 22);
-    g.fill({ color: theme.roomCeiling, alpha: 0.35 });
-  }
-
-  for (const d of decor) {
-    if (d.kind === 'mushroom') {
-      const cap = d.variant === 0 ? 0x5dbb63 : d.variant === 1 ? 0x8fd894 : 0x6b9a6b;
-      const stem = 0x4a6a4a;
-      g.circle(d.x, d.y - 2, d.size);
-      g.fill(cap);
-      g.rect(d.x - 2, d.y, 4, d.size + 3);
-      g.fill(stem);
-      continue;
+  if (!skipBase) {
+    for (const wall of walls) {
+      g.rect(wall.x, wall.y, wall.width, wall.height);
+      g.fill(theme.wall);
+      g.rect(wall.x, wall.y, wall.width, wall.height);
+      g.stroke({ width: 2, color: theme.wallStroke });
     }
-    if (d.kind === 'crystal') {
-      const colors = [0x7ab8e8, 0xa8e0ff, 0xc8a8ff];
-      const color = colors[d.variant % colors.length] ?? 0x7ab8e8;
-      const h = d.size * 2.2;
-      g.moveTo(d.x, d.y - h);
-      g.lineTo(d.x + d.size, d.y);
-      g.lineTo(d.x, d.y + h * 0.35);
-      g.lineTo(d.x - d.size, d.y);
-      g.closePath();
-      g.fill(color);
-      g.stroke({ width: 1, color: 0xe8f4ff, alpha: 0.5 });
-      continue;
+
+    for (const obs of obstacles) {
+      if (obs.kind !== 'rock') continue;
+      g.roundRect(obs.x - obs.radius, obs.y - obs.radius * 0.8, obs.radius * 2, obs.radius * 1.6, 4);
+      g.fill(theme.rock);
+      g.roundRect(obs.x - obs.radius + 2, obs.y - obs.radius * 0.8 + 2, obs.radius * 1.4, obs.radius * 0.9, 3);
+      g.fill({ color: theme.rockHighlight, alpha: 0.7 });
     }
-    if (d.kind === 'thermal') {
-      const pool = d.variant === 0 ? 0xc06030 : d.variant === 1 ? 0xe87840 : 0xa04828;
-      g.ellipse(d.x, d.y + 2, d.size * 1.4, d.size * 0.7);
-      g.fill({ color: pool, alpha: 0.85 });
-      g.ellipse(d.x, d.y + 1, d.size * 0.9, d.size * 0.45);
-      g.fill({ color: 0xffc080, alpha: 0.35 });
-      g.moveTo(d.x - 2, d.y - d.size);
-      g.quadraticCurveTo(d.x - 4, d.y - d.size * 2, d.x, d.y - d.size * 2.4);
-      g.quadraticCurveTo(d.x + 4, d.y - d.size * 2, d.x + 2, d.y - d.size);
-      g.stroke({ width: 1.5, color: 0xe8e8e8, alpha: 0.45 });
+
+    for (const room of rooms) {
+      const r = room.rect;
+      g.rect(r.x + 4, r.y + 4, r.width - 8, 22);
+      g.fill({ color: theme.roomCeiling, alpha: 0.35 });
+    }
+
+    for (const d of decor) {
+      if (d.kind === 'mushroom') {
+        const cap = d.variant === 0 ? 0x5dbb63 : d.variant === 1 ? 0x8fd894 : 0x6b9a6b;
+        const stem = 0x4a6a4a;
+        g.circle(d.x, d.y - 2, d.size);
+        g.fill(cap);
+        g.rect(d.x - 2, d.y, 4, d.size + 3);
+        g.fill(stem);
+        continue;
+      }
+      if (d.kind === 'crystal') {
+        const colors = [0x7ab8e8, 0xa8e0ff, 0xc8a8ff];
+        const color = colors[d.variant % colors.length] ?? 0x7ab8e8;
+        const h = d.size * 2.2;
+        g.moveTo(d.x, d.y - h);
+        g.lineTo(d.x + d.size, d.y);
+        g.lineTo(d.x, d.y + h * 0.35);
+        g.lineTo(d.x - d.size, d.y);
+        g.closePath();
+        g.fill(color);
+        g.stroke({ width: 1, color: 0xe8f4ff, alpha: 0.5 });
+        continue;
+      }
+      if (d.kind === 'thermal') {
+        const pool = d.variant === 0 ? 0xc06030 : d.variant === 1 ? 0xe87840 : 0xa04828;
+        g.ellipse(d.x, d.y + 2, d.size * 1.4, d.size * 0.7);
+        g.fill({ color: pool, alpha: 0.85 });
+        g.ellipse(d.x, d.y + 1, d.size * 0.9, d.size * 0.45);
+        g.fill({ color: 0xffc080, alpha: 0.35 });
+        g.moveTo(d.x - 2, d.y - d.size);
+        g.quadraticCurveTo(d.x - 4, d.y - d.size * 2, d.x, d.y - d.size * 2.4);
+        g.quadraticCurveTo(d.x + 4, d.y - d.size * 2, d.x + 2, d.y - d.size);
+        g.stroke({ width: 1.5, color: 0xe8e8e8, alpha: 0.45 });
+      }
     }
   }
 
   for (const chest of chests) {
     drawChestGraphic(g, chest.x, chest.y, chest.opened ?? false);
   }
+}
+
+/** @deprecated use drawDungeonLayoutVector */
+export function drawDungeonLayout(
+  g: Graphics,
+  layout: Parameters<typeof drawDungeonLayoutVector>[1],
+): void {
+  drawDungeonLayoutVector(g, layout);
 }
 
 export function drawChestGraphic(g: Graphics, x: number, y: number, opened: boolean, epic = false): void {
@@ -484,7 +502,21 @@ export function drawChestGraphic(g: Graphics, x: number, y: number, opened: bool
   }
 }
 
-export function createChestSprite(opened = false, epic = false): Container {
+export function createChestSprite(opened = false, epic = false, biomeId?: BiomeId): Container {
+  if (biomeId) {
+    const frame = chestPropFrameName(opened, epic);
+    const texture = getBiomePropTexture(biomeId, frame);
+    if (texture) {
+      const root = new Container();
+      const sprite = new Sprite(texture);
+      sprite.anchor.set(0.5, 0.85);
+      sprite.roundPixels = true;
+      root.addChild(sprite);
+      (root as Container & { zOffset?: number }).zOffset = 0.5;
+      return root;
+    }
+  }
+
   const root = new Container();
   const gfx = new Graphics();
   drawChestGraphic(gfx, 0, 0, opened, epic);

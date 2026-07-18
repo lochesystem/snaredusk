@@ -16,6 +16,10 @@ import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import {
+  ensureBaseTilesetPreloaded,
+  ensureEnvironmentPreloaded,
+} from './world/environmentAssets.ts';
+import {
   bindInventoryModal,
   closeInventoryModal,
   isInventoryModalOpen,
@@ -222,7 +226,11 @@ export class Game {
 
     this.input = new InputManager(canvas);
 
-    void Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
+    void Promise.all([
+      ensureCreatureSpritesPreloaded(),
+      ensurePlayerSpritesPreloaded(),
+      ensureBaseTilesetPreloaded(),
+    ]);
 
     if (hasSave()) {
       document.getElementById('btn-continue')?.classList.remove('hidden');
@@ -459,7 +467,11 @@ export class Game {
   }
 
   private async showBaseView(): Promise<void> {
-    await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
+    await Promise.all([
+      ensureCreatureSpritesPreloaded(),
+      ensurePlayerSpritesPreloaded(),
+      ensureBaseTilesetPreloaded(),
+    ]);
     this.destroyBase();
     this.baseScene = new BaseScene(this.input, {
       getState: () => this.state,
@@ -567,8 +579,11 @@ export class Game {
       this.showToast('Bioma ainda bloqueado');
       return;
     }
-    await Promise.all([ensureCreatureSpritesPreloaded(), ensurePlayerSpritesPreloaded()]);
-    this.state.shopDayUsed = false;
+    await Promise.all([
+      ensureCreatureSpritesPreloaded(),
+      ensurePlayerSpritesPreloaded(),
+      ensureEnvironmentPreloaded(this.state.activeBiome),
+    ]);
     this.pendingDungeonExit = null;
     this.destroyBase();
     showBaseHub(false);

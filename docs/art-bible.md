@@ -38,6 +38,7 @@ Não é isométrico verdadeiro (120° entre eixos). É a mesma família de Moonl
 |-----------|-------|-------|
 | Inclinação da câmera | ~26–30° | Dimetric; ângulo `arctan(0.5) ≈ 26.565°` |
 | Tile de chão | 64×32 px (W×H visual) | Losango oblíquo |
+| Tile de chão **MVP (implementado)** | **32×32 px quadrado** | Encaixa no grid atual; migrar para oblíquo depois |
 | Altura de tile (lógica) | 16 px | Para Y-sort |
 | Personagens | Side-view 32×32 ou 48×48 | 4–8 frames por animação |
 | Resolução lógica | 480×270 | Scale 2×/3×/4× integer |
