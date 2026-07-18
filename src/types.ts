@@ -20,6 +20,15 @@ export interface CreatureItem {
 
 export type BagEntry = LootItem | CreatureItem;
 
+export interface SpecialItem {
+  kind: 'special';
+  id: string;
+  name: string;
+  description: string;
+}
+
+export const SPECIAL_BAG_SIZE = 4;
+
 export interface ShopListing {
   entry: BagEntry;
   price: number;
@@ -52,6 +61,8 @@ export interface GameState {
   /** Slots 1–2 na hotbar (armas possuídas). */
   weaponHotbar: [string | null, string | null];
   bag: (BagEntry | null)[];
+  /** Itens especiais da expedição — não ocupam slots da bolsa; somem ao voltar à base. */
+  dungeonSpecial: (SpecialItem | null)[];
   habitat: CreatureItem[];
   shopLevel: number;
   shopShelves: (ShopListing | null)[];
@@ -88,6 +99,10 @@ export function createEmptyBag(): (BagEntry | null)[] {
   return Array.from({ length: 12 }, () => null);
 }
 
+export function createEmptySpecialBag(): (SpecialItem | null)[] {
+  return Array.from({ length: SPECIAL_BAG_SIZE }, () => null);
+}
+
 export function createShopShelves(count: number): (ShopListing | null)[] {
   return Array.from({ length: count }, () => null);
 }
@@ -110,6 +125,7 @@ export function defaultGameState(): GameState {
     ownedWeapons: [STARTING_WEAPON_ID],
     weaponHotbar: defaultWeaponHotbar(),
     bag: createEmptyBag(),
+    dungeonSpecial: createEmptySpecialBag(),
     habitat: [],
     shopLevel: 1,
     shopShelves: createShopShelves(6),

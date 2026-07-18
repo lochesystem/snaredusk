@@ -50,7 +50,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x6b4a8a,
     accent: 0xc4f082,
     capturable: true,
-    behaviorId: 'boss_burst',
+    behaviorId: 'boss_spore',
     def: 6,
   },
   prismarin: {
@@ -102,7 +102,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0x7a4ab8,
     accent: 0xe8c8ff,
     capturable: true,
-    behaviorId: 'boss_burst',
+    behaviorId: 'boss_prism',
     def: 8,
   },
   salamandra: {
@@ -154,7 +154,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     color: 0xb04020,
     accent: 0xffc080,
     capturable: true,
-    behaviorId: 'boss_burst',
+    behaviorId: 'boss_thermal',
     def: 10,
   },
 };

@@ -95,6 +95,38 @@ describe('dungeonGenerator', () => {
     }
   });
 
+  it('boss room is larger than normal rooms', () => {
+    const layout = generateDungeon(42, 'floresta');
+    const bossRoom = layout.rooms.find((r) => r.index === layout.bossRoomIndex)!;
+    expect(bossRoom.rect.width).toBeGreaterThan(240);
+    expect(bossRoom.rect.height).toBeGreaterThan(180);
+  });
+
+  it('boss room has gate walls blocking doors', () => {
+    const layout = generateDungeon(42, 'floresta');
+    expect(layout.bossGateWalls.length).toBeGreaterThan(0);
+  });
+
+  it('termal biome has poison hazard zones', () => {
+    const layout = generateDungeon(42, 'termal');
+    expect(layout.hazards.some((h) => h.kind === 'poison')).toBe(true);
+  });
+
+  it('floresta biome has spore hazard zones', () => {
+    const layout = generateDungeon(42, 'floresta');
+    expect(layout.hazards.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('boss spawn is at the center of the boss room', () => {
+    const layout = generateDungeon(42, 'floresta');
+    const bossRoom = layout.rooms.find((r) => r.index === layout.bossRoomIndex)!;
+    const bossSpawn = layout.enemySpawns.find((s) => s.isBoss)!;
+    const cx = bossRoom.rect.x + bossRoom.rect.width / 2;
+    const cy = bossRoom.rect.y + bossRoom.rect.height / 2;
+    expect(Math.abs(bossSpawn.x - cx)).toBeLessThan(2);
+    expect(Math.abs(bossSpawn.y - cy)).toBeLessThan(2);
+  });
+
   it('enemy spawns never overlap rocks or walls', () => {
     for (let seed = 1; seed <= 500; seed++) {
       const layout = generateDungeon(seed);

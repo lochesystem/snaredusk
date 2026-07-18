@@ -86,8 +86,13 @@
         </div>
         <div id="inventory-panel">
           <h3>Bolsa</h3>
-          <p class="panel-hint">Organize itens — descarte o que não quiser levar. Na masmorra, pressione <strong>I</strong>.</p>
-          <div id="inventory-grid" class="inventory-grid"></div>
+          <div class="inventory-tabs">
+            <button type="button" class="inventory-tab active" data-tab="loot">Loot</button>
+            <button type="button" class="inventory-tab" data-tab="special">Especiais</button>
+          </div>
+          <p class="panel-hint inventory-tab-hint">Loot e criaturas — ocupam os 12 slots.</p>
+          <div id="inventory-grid" class="inventory-grid" data-inventory-panel="loot"></div>
+          <div id="inventory-special-grid" class="inventory-grid hidden" data-inventory-panel="special"></div>
         </div>
         <div id="party-panel">
           <h3>Companheiro</h3>
@@ -123,10 +128,15 @@
     </div>
 
     <div id="inventory-modal" class="modal hidden">
-      <div class="modal-content inventory-modal-content">
+      <div id="inventory-modal-root" class="modal-content inventory-modal-content">
         <h3>Bolsa</h3>
-        <p class="panel-hint">Descarte itens para liberar espaço. [I] ou Esc para fechar.</p>
-        <div id="inventory-modal-grid" class="inventory-grid"></div>
+        <div class="inventory-tabs">
+          <button type="button" class="inventory-tab active" data-tab="loot">Loot</button>
+          <button type="button" class="inventory-tab" data-tab="special">Especiais</button>
+        </div>
+        <p class="panel-hint inventory-tab-hint">Descarte itens para liberar espaço. [I] ou Esc para fechar.</p>
+        <div id="inventory-modal-grid" class="inventory-grid" data-inventory-panel="loot"></div>
+        <div id="inventory-modal-special" class="inventory-grid hidden" data-inventory-panel="special"></div>
         <button id="inventory-modal-close" type="button">Fechar</button>
       </div>
     </div>

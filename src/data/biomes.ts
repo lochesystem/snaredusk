@@ -2,6 +2,9 @@ export type BiomeId = 'floresta' | 'cristal' | 'termal';
 
 export type DecorKind = 'mushroom' | 'crystal' | 'thermal';
 
+/** Mecânica ambiental do bioma na masmorra. */
+export type BiomeHazardKind = 'spores' | 'slippery' | 'poison';
+
 export interface BiomeTheme {
   void: number;
   floor: number;
@@ -22,6 +25,7 @@ export interface BiomeDef {
   enemySpecies: readonly string[];
   chestLoot: readonly string[];
   decorKind: DecorKind;
+  hazardKind: BiomeHazardKind;
   theme: BiomeTheme;
   /** Bioma que precisa ter o chefe derrotado para desbloquear. */
   unlockAfterBossIn: BiomeId | null;
@@ -36,10 +40,11 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     shortName: 'Floresta',
     description: 'Cogumelos bioluminescentes e esporos adormecidos.',
     bossSpeciesId: 'rei_esporas',
-    bossPortalHint: 'Derrote o Rei das Esporas para ativar o portal',
+    bossPortalHint: 'Abra o baú épico do Rei das Esporas para ativar o portal',
     enemySpecies: ['esporo_dorminhoco', 'lumimorcego', 'carapaca_musgo'],
     chestLoot: ['cogumelo_comum', 'fibra_musgo', 'esporo_brilhante'],
     decorKind: 'mushroom',
+    hazardKind: 'spores',
     theme: {
       void: 0x120f1a,
       floor: 0x2a4a2a,
@@ -58,10 +63,11 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     shortName: 'Cristal',
     description: 'Reflexos prismáticos e criaturas de luz.',
     bossSpeciesId: 'matriarca_prismatica',
-    bossPortalHint: 'Derrote a Matriarca Prismática para ativar o portal',
+    bossPortalHint: 'Abra o baú épico da Matriarca para ativar o portal',
     enemySpecies: ['prismarin', 'lumicascalho', 'eco_quartzo'],
     chestLoot: ['fragmento_cristal', 'quartzo_bruto', 'poeira_prismatica'],
     decorKind: 'crystal',
+    hazardKind: 'slippery',
     theme: {
       void: 0x0a0c18,
       floor: 0x1e2a4a,
@@ -80,10 +86,11 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
     shortName: 'Termal',
     description: 'Vapor quente, poças fumegantes e criaturas de fogo.',
     bossSpeciesId: 'salamandra_ancia',
-    bossPortalHint: 'Derrote a Salamandra Anciã para ativar o portal',
+    bossPortalHint: 'Abra o baú épico da Salamandra para ativar o portal',
     enemySpecies: ['salamandra', 'vaporoso', 'caranguejo_termal'],
     chestLoot: ['escama_termal', 'concha_vapor', 'essencia_termal'],
     decorKind: 'thermal',
+    hazardKind: 'poison',
     theme: {
       void: 0x140c0a,
       floor: 0x3a2a1a,

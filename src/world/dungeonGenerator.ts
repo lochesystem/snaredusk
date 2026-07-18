@@ -8,6 +8,8 @@ export const WALL_THICKNESS = 14;
 export const CORRIDOR_WIDTH = 52;
 export const ROOM_W = 240;
 export const ROOM_H = 180;
+export const BOSS_ROOM_W = 360;
+export const BOSS_ROOM_H = 280;
 export const CORRIDOR_H_LEN = 64;
 export const CORRIDOR_V_LEN = 48;
 
@@ -64,6 +66,14 @@ export interface DungeonChest {
   lootId: string;
 }
 
+export interface DungeonHazard {
+  kind: 'poison' | 'spore';
+  x: number;
+  y: number;
+  radius: number;
+  roomIndex: number;
+}
+
 export interface DungeonLayout {
   biomeId: BiomeId;
   width: number;
@@ -71,6 +81,8 @@ export interface DungeonLayout {
   rooms: RoomLayout[];
   floors: Rect[];
   walls: Rect[];
+  bossGateWalls: Rect[];
+  hazards: DungeonHazard[];
   decor: DungeonDecor[];
   obstacles: DungeonObstacle[];
   chests: DungeonChest[];
@@ -237,6 +249,7 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
   }));
 
   const bossRoomIndex = assignRoomTypes(rooms, edges, rng);
+  expandBossRoom(rooms, bossRoomIndex);
 
   const floors: Rect[] = [];
   const walls: Rect[] = [];
@@ -252,8 +265,8 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
       const left = edge.dir === 'e' ? a : b;
       const half = CORRIDOR_WIDTH / 2;
       const corridor: Rect = {
-        x: left.rect.x + ROOM_W - WALL_THICKNESS,
-        y: left.rect.y + ROOM_H / 2 - half,
+        x: left.rect.x + left.rect.width - WALL_THICKNESS,
+        y: left.rect.y + left.rect.height / 2 - half,
         width: CORRIDOR_H_LEN + WALL_THICKNESS * 2,
         height: CORRIDOR_WIDTH,
       };
@@ -263,8 +276,8 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
       const upper = edge.dir === 's' ? a : b;
       const half = CORRIDOR_WIDTH / 2;
       const corridor: Rect = {
-        x: upper.rect.x + ROOM_W / 2 - half,
-        y: upper.rect.y + ROOM_H - WALL_THICKNESS,
+        x: upper.rect.x + upper.rect.width / 2 - half,
+        y: upper.rect.y + upper.rect.height - WALL_THICKNESS,
         width: CORRIDOR_WIDTH,
         height: CORRIDOR_V_LEN + WALL_THICKNESS * 2,
       };
@@ -322,6 +335,9 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
 
   const interactables = buildInteractables(rooms, reserved, safeZones, rng);
   const enemySpawns = pickEnemySpawns(rooms, rng, safeZones, floors, walls, obstacles, biome);
+  const bossRoom = rooms.find((r) => r.index === bossRoomIndex)!;
+  const bossGateWalls = buildBossGateWalls(bossRoom);
+  const hazards = populateBiomeHazards(rooms, rng, biomeId, bossRoomIndex, reserved, safeZones);
 
   const connections = edges.map((e) => ({ a: e.a, b: e.b }));
 
@@ -332,6 +348,8 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
     rooms,
     floors,
     walls,
+    bossGateWalls,
+    hazards,
     decor,
     obstacles,
     chests,
@@ -378,6 +396,90 @@ function assignRoomTypes(rooms: RoomLayout[], edges: GraphEdge[], rng: Rng): num
   }
 
   return bossRoom;
+}
+
+function expandBossRoom(rooms: RoomLayout[], bossRoomIndex: number): void {
+  const boss = rooms.find((r) => r.index === bossRoomIndex);
+  if (!boss) return;
+  const extraW = BOSS_ROOM_W - ROOM_W;
+  const extraH = BOSS_ROOM_H - ROOM_H;
+  boss.rect.x -= Math.floor(extraW / 2);
+  boss.rect.y -= Math.floor(extraH / 2);
+  boss.rect.width = BOSS_ROOM_W;
+  boss.rect.height = BOSS_ROOM_H;
+}
+
+function buildBossGateWalls(bossRoom: RoomLayout): Rect[] {
+  const gates: Rect[] = [];
+  const { rect, doors } = bossRoom;
+  const t = WALL_THICKNESS;
+  const half = CORRIDOR_WIDTH / 2;
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+
+  for (const door of doors) {
+    if (door === 'n') {
+      gates.push({ x: cx - half, y: rect.y, width: CORRIDOR_WIDTH, height: t });
+    }
+    if (door === 's') {
+      gates.push({ x: cx - half, y: rect.y + rect.height - t, width: CORRIDOR_WIDTH, height: t });
+    }
+    if (door === 'w') {
+      gates.push({ x: rect.x, y: cy - half, width: t, height: CORRIDOR_WIDTH });
+    }
+    if (door === 'e') {
+      gates.push({ x: rect.x + rect.width - t, y: cy - half, width: t, height: CORRIDOR_WIDTH });
+    }
+  }
+  return gates;
+}
+
+function populateBiomeHazards(
+  rooms: RoomLayout[],
+  rng: Rng,
+  biomeId: BiomeId,
+  bossRoomIndex: number,
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+): DungeonHazard[] {
+  const hazards: DungeonHazard[] = [];
+  const eligible = rooms.filter((r) => r.index !== 0 && r.index !== bossRoomIndex && r.type === 'combat');
+
+  if (biomeId === 'floresta') {
+    for (const room of eligible) {
+      if (rng() > 0.55) continue;
+      const pt = randomInteriorPoint(room, rng, reserved, 40, safeZones, 22);
+      if (!pt) continue;
+      reserved.push(pt);
+      hazards.push({
+        kind: 'spore',
+        x: pt.x,
+        y: pt.y,
+        radius: 28 + randInt(rng, 0, 12),
+        roomIndex: room.index,
+      });
+    }
+  }
+
+  if (biomeId === 'termal') {
+    for (const room of eligible) {
+      const count = randInt(rng, 1, 2);
+      for (let i = 0; i < count; i++) {
+        const pt = randomInteriorPoint(room, rng, reserved, 36, safeZones, 20);
+        if (!pt) continue;
+        reserved.push(pt);
+        hazards.push({
+          kind: 'poison',
+          x: pt.x,
+          y: pt.y,
+          radius: 24 + randInt(rng, 0, 10),
+          roomIndex: room.index,
+        });
+      }
+    }
+  }
+
+  return hazards;
 }
 
 function buildInteractables(
@@ -492,7 +594,10 @@ function pickEnemySpawns(
     }
 
     if (room.type === 'boss') {
-      const pt = pickClearPoint(room, 48);
+      const cx = room.rect.x + room.rect.width / 2;
+      const cy = room.rect.y + room.rect.height / 2;
+      const centerWalkable = isEntitySpawnWalkable(cx, cy, ENEMY_RADIUS, floors, walls, obstacles);
+      const pt = centerWalkable ? { x: cx, y: cy } : pickClearPoint(room, 48);
       if (!pt) continue;
       placed.push(pt);
       spawns.push({
@@ -875,6 +980,11 @@ function normalizeDungeonLayout(layout: DungeonLayout): DungeonLayout {
     for (const room of layout.rooms) shiftRect(room.rect, dx, dy);
     for (const floor of layout.floors) shiftRect(floor, dx, dy);
     for (const wall of layout.walls) shiftRect(wall, dx, dy);
+    for (const gate of layout.bossGateWalls) shiftRect(gate, dx, dy);
+    for (const h of layout.hazards) {
+      h.x += dx;
+      h.y += dy;
+    }
     for (const d of layout.decor) {
       d.x += dx;
       d.y += dy;

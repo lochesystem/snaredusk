@@ -288,13 +288,14 @@ export function drawDungeonLayout(
     rooms: { rect: { x: number; y: number; width: number; height: number }; type?: string }[];
     decor: { kind: string; x: number; y: number; size: number; variant: number }[];
     obstacles: { kind: string; x: number; y: number; radius: number }[];
+    hazards?: { kind: string; x: number; y: number; radius: number }[];
     chests: { x: number; y: number; opened?: boolean }[];
     width: number;
     height: number;
     theme?: BiomeTheme;
   },
 ): void {
-  const { floors, walls, rooms, decor, obstacles, chests, width, height } = layout;
+  const { floors, walls, rooms, decor, obstacles, hazards = [], chests, width, height } = layout;
   const theme = layout.theme ?? {
     void: 0x120f1a,
     floor: 0x2a4a2a,
@@ -328,6 +329,29 @@ export function drawDungeonLayout(
     g.stroke({ width: 2, color: 0x1a1520, alpha: 0.9 });
     g.circle(obs.x - obs.radius * 0.25, obs.y - obs.radius * 0.2, obs.radius * 0.2);
     g.fill({ color: 0x151018, alpha: 0.6 });
+  }
+
+  for (const hazard of hazards) {
+    if (hazard.kind === 'poison') {
+      g.ellipse(hazard.x, hazard.y + 2, hazard.radius, hazard.radius * 0.55);
+      g.fill({ color: 0x3a6a28, alpha: 0.55 });
+      g.ellipse(hazard.x, hazard.y, hazard.radius * 0.65, hazard.radius * 0.35);
+      g.fill({ color: 0x5a9a40, alpha: 0.35 });
+      g.ellipse(hazard.x, hazard.y - 2, hazard.radius * 0.35, hazard.radius * 0.2);
+      g.fill({ color: 0x8fd060, alpha: 0.25 });
+      continue;
+    }
+    if (hazard.kind === 'spore') {
+      g.circle(hazard.x, hazard.y, hazard.radius);
+      g.fill({ color: 0x2a4a2a, alpha: 0.35 });
+      g.circle(hazard.x, hazard.y, hazard.radius * 0.6);
+      g.fill({ color: 0x5dbb63, alpha: 0.2 });
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        g.circle(hazard.x + Math.cos(a) * hazard.radius * 0.7, hazard.y + Math.sin(a) * hazard.radius * 0.5, 4);
+        g.fill({ color: 0x8fd894, alpha: 0.35 });
+      }
+    }
   }
 
   for (const wall of walls) {

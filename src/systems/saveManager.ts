@@ -2,6 +2,7 @@ import { SAVE_KEY } from '../engine/constants.ts';
 import { STARTING_WEAPON_ID } from '../data/weapons.ts';
 import {
   createEmptyBag,
+  createEmptySpecialBag,
   createShopCages,
   createShopShelves,
   defaultGameState,
@@ -103,6 +104,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
     weaponHotbar: normalizeWeaponHotbar(partial.weaponHotbar, partial.ownedWeapons ?? base.ownedWeapons),
     bag: padBag(partial.bag),
+    dungeonSpecial: padSpecialBag(partial.dungeonSpecial),
     shopShelves: padShelves(partial.shopShelves, def.shelfCount),
     shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
     shopDayUsed: partial.shopDayUsed ?? false,
@@ -139,6 +141,17 @@ function padBag(bag: (GameState['bag'][number] | null)[] | undefined): GameState
   if (!bag) return slots;
   for (let i = 0; i < Math.min(bag.length, slots.length); i++) {
     slots[i] = bag[i] ?? null;
+  }
+  return slots;
+}
+
+function padSpecialBag(
+  special: (GameState['dungeonSpecial'][number] | null)[] | undefined,
+): GameState['dungeonSpecial'] {
+  const slots = createEmptySpecialBag();
+  if (!special) return slots;
+  for (let i = 0; i < Math.min(special.length, slots.length); i++) {
+    slots[i] = special[i] ?? null;
   }
   return slots;
 }

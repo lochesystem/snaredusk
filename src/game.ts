@@ -6,6 +6,7 @@ import { HabitatScene } from './scenes/habitatScene.ts';
 import { ShopScene } from './scenes/shopScene.ts';
 import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame, bagCount } from './systems/saveManager.ts';
+import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import { moveCreatureToBag, moveCreatureToHabitat } from './systems/habitat.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { HABITAT_CAPACITY, ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
@@ -22,7 +23,7 @@ import {
   closeInventoryModal,
   isInventoryModalOpen,
   openInventoryModal,
-  renderInventoryGrid,
+  renderInventoryPanel,
   type InventoryUICallbacks,
 } from './ui/inventoryUI.ts';
 import {
@@ -351,7 +352,7 @@ export class Game {
   }
 
   private renderInventoryPanel(): void {
-    renderInventoryGrid('inventory-grid', this.inventoryCallbacks());
+    renderInventoryPanel('inventory-panel', 'inventory-grid', 'inventory-special-grid', this.inventoryCallbacks());
   }
 
   private renderPartyPanel(): void {
@@ -659,6 +660,7 @@ export class Game {
     this.destroyDungeon();
     this.state.playerHp = PLAYER_MAX_HP;
     this.state.playerStamina = PLAYER_MAX_STAMINA;
+    clearDungeonSpecial(this.state);
     syncWeaponHotbar(this.state);
     const seed = Date.now();
 
@@ -719,6 +721,7 @@ export class Game {
       this.pendingDungeonExit = null;
       closeAbandonModal();
       closeInventoryModal();
+      clearDungeonSpecial(this.state);
       this.destroyDungeon();
       saveGame(this.state);
       this.showScreen('base');
