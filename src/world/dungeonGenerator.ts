@@ -41,6 +41,8 @@ export interface DungeonEnemySpawn {
   y: number;
   roomIndex: number;
   isBoss?: boolean;
+  /** HP customizado (ex.: tutorial). */
+  hp?: number;
 }
 
 export interface DungeonInteractable {

@@ -39,6 +39,8 @@ import { findChestAt } from '../systems/baseChest.ts';
 
 import { digCell, canDigCell } from '../systems/baseDig.ts';
 
+import { canUseBaseLandmark, canEnterDungeonDuringTutorial } from '../systems/tutorial.ts';
+
 import { distance, normalize } from '../systems/combat.ts';
 
 import { creaturePenId, getZoneForPen } from '../systems/habitat.ts';
@@ -809,7 +811,12 @@ export class BaseScene {
 
       if (landmark === 'portal') {
 
-        if (state.dungeonUsedToday) {
+        if (!canUseBaseLandmark(state, 'portal')) {
+          this.cb.showToast('Siga a orientação da Mira primeiro.');
+          return;
+        }
+
+        if (state.dungeonUsedToday && !canEnterDungeonDuringTutorial(state)) {
           this.cb.showToast('Você já foi à masmorra hoje — durma para um novo dia');
           return;
         }
@@ -821,6 +828,11 @@ export class BaseScene {
       }
 
       if (landmark === 'shop') {
+
+        if (!canUseBaseLandmark(state, 'shop')) {
+          this.cb.showToast('A Mira pediu para ir ao portal da masmorra primeiro.');
+          return;
+        }
 
         this.cb.onOpenShop();
 

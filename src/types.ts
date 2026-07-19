@@ -1,6 +1,22 @@
 import type { BiomeId } from './data/biomes.ts';
 import type { StationId } from './data/baseStations.ts';
 
+/** Passos do tutorial com Mira (MVP + reservados para PR 2). */
+export type TutorialStepId =
+  | 'welcome'
+  | 'go_portal'
+  | 'dungeon_move'
+  | 'dungeon_attack'
+  | 'dungeon_capture'
+  | 'dungeon_exit'
+  | 'return_home'
+  | 'done'
+  | 'build_habitat'
+  | 'place_creature'
+  | 'shop_stock'
+  | 'shop_sell'
+  | 'buy_orbes';
+
 export type ItemKind = 'loot' | 'creature';
 
 export interface LootItem {
@@ -130,6 +146,9 @@ export interface GameState {
   hasPrismaticKey: boolean;
   /** Grid escavável da base subterrânea. */
   base: BaseGridState;
+  /** Tutorial com Mira concluído (MVP: base + masmorra + captura). */
+  tutorialComplete: boolean;
+  tutorialStep: TutorialStepId;
 }
 
 export interface Rect {
@@ -196,5 +215,7 @@ export function defaultGameState(): GameState {
     hasSporeKey: false,
     hasPrismaticKey: false,
     base: createDefaultBaseGrid(),
+    tutorialComplete: false,
+    tutorialStep: 'welcome',
   };
 }

@@ -134,6 +134,8 @@ function normalizeState(partial: LegacyGameState): GameState {
     hasSporeKey: partial.hasSporeKey ?? false,
     hasPrismaticKey: partial.hasPrismaticKey ?? false,
     base: normalizeBaseGrid(partial.base),
+    tutorialComplete: partial.tutorialComplete ?? true,
+    tutorialStep: partial.tutorialStep ?? 'done',
   };
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;
