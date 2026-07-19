@@ -92,6 +92,16 @@ npm run build
 | 5b.2 | Equipar no modal da **bancada** | ☐ | |
 | 5b.3 | **Esquiva** com R; barra **STA** no HUD desce e regenera | ☐ | |
 
+### 5c. Chefe — HUD, fases e SFX (2 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 5c.1 | Ao iniciar luta do chefe, **barra grande no topo** com nome | ☐ | |
+| 5c.2 | Barra tem **duas fases visuais** (verde → vermelho na metade) | ☐ | |
+| 5c.3 | A **50% HP** toast "Fase 2!", pulso na barra, chefe mais agressivo | ☐ | |
+| 5c.4 | Golpes do chefe mostram **auras/VFX** (windup, charge, heat wave) | ☐ | |
+| 5c.5 | **SFX** audíveis: ataque, hit, dodge, baú, portão, captura, fase 2 | ☐ | Som após Novo Jogo/Continuar |
+
 ### 6. Loop completo (1 min)
 
 | # | Ação | OK? | Notas |

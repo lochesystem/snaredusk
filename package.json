@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "playtest:smoke": "node scripts/playtest-smoke.mjs",
     "sprites:placeholders": "node scripts/generate-creature-placeholders.mjs",
-    "sprites:environment": "node scripts/generate-environment-placeholders.mjs"
+    "sprites:environment": "node scripts/generate-environment-placeholders.mjs",
+    "audio:sfx": "node scripts/generate-sfx-placeholders.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1",

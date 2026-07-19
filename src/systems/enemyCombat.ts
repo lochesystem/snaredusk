@@ -1,5 +1,6 @@
 import type { EnemyBehaviorDef } from '../data/enemyBehaviors.ts';
 import { getEnemyBehavior, isBossBehaviorKind, isRangedBossKind } from '../data/enemyBehaviors.ts';
+import { getBossPhaseModifiers, type BossCombatPhase } from './bossPhase.ts';
 import { calcDamage, distance, normalize } from './combat.ts';
 import { createProjectileData } from './projectiles.ts';
 
@@ -21,6 +22,7 @@ export interface EnemyCombatEnemy {
   fled: boolean;
   captureLocked: boolean;
   isBoss: boolean;
+  bossCombatPhase: BossCombatPhase;
   def: number;
   behaviorId: string;
   shieldHp: number;
@@ -81,6 +83,26 @@ export function initEnemyCombatFields(
   };
 }
 
+function getEffectiveBehavior(enemy: EnemyCombatEnemy, behavior: EnemyBehaviorDef): EnemyBehaviorDef {
+  if (!enemy.isBoss) return behavior;
+  const mods = getBossPhaseModifiers(enemy, behavior);
+  return {
+    ...behavior,
+    attackCooldown: behavior.attackCooldown * mods.attackCooldownMult,
+    burstCount: (behavior.burstCount ?? 3) + mods.burstCountBonus,
+    chargeDuration: (behavior.chargeDuration ?? 0.55) * mods.chargeDurationMult,
+    leapInterval: (behavior.leapInterval ?? 5) * mods.leapIntervalMult,
+  };
+}
+
+function getMoveSpeed(enemy: EnemyCombatEnemy, behavior: EnemyBehaviorDef): number {
+  let mult = enemy.enraged ? 1.2 : 1;
+  if (enemy.isBoss) {
+    mult *= getBossPhaseModifiers(enemy, behavior).speedMult;
+  }
+  return enemy.speed * mult;
+}
+
 function spawnEnemyProjectile(
   enemy: EnemyCombatEnemy,
   behavior: EnemyBehaviorDef,
@@ -126,7 +148,8 @@ export function tickEnemyCombat(
 
   if (enemy.dead || enemy.fled || enemy.captureLocked) return result;
 
-  const behavior = getEnemyBehavior(enemy.behaviorId);
+  const behavior = getEffectiveBehavior(enemy, getEnemyBehavior(enemy.behaviorId));
+  const baseBehavior = getEnemyBehavior(enemy.behaviorId);
   const dist = distance(enemy.x, enemy.y, ctx.playerX, ctx.playerY);
 
   tickShieldRegen(enemy, behavior, ctx.dt);
@@ -149,7 +172,7 @@ export function tickEnemyCombat(
   if (enemy.combatPhase === 'leap') {
     enemy.phaseTimer -= ctx.dt;
     const dir = normalize(ctx.playerX - enemy.x, ctx.playerY - enemy.y);
-    const spd = (behavior.chargeSpeed ?? 200) * 1.15;
+    const spd = (baseBehavior.chargeSpeed ?? 200) * 1.15;
     result.moveX = enemy.x + dir.x * spd * ctx.dt;
     result.moveY = enemy.y + dir.y * spd * ctx.dt;
     if (enemy.phaseTimer <= 0) {
@@ -213,7 +236,7 @@ export function tickEnemyCombat(
 
     if (dist > 8) {
       const dir = normalize(ctx.playerX - enemy.x, ctx.playerY - enemy.y);
-      const spd = enemy.speed * (enemy.enraged ? 1.2 : 1);
+      const spd = getMoveSpeed(enemy, baseBehavior);
       result.moveX = enemy.x + dir.x * spd * ctx.dt;
       result.moveY = enemy.y + dir.y * spd * ctx.dt;
     }
@@ -261,7 +284,7 @@ export function tickEnemyCombat(
 
   if (dist > 8) {
     const dir = normalize(ctx.playerX - enemy.x, ctx.playerY - enemy.y);
-    const spd = enemy.speed * (enemy.enraged ? 1.2 : 1);
+    const spd = getMoveSpeed(enemy, baseBehavior);
     result.moveX = enemy.x + dir.x * spd * ctx.dt;
     result.moveY = enemy.y + dir.y * spd * ctx.dt;
   }

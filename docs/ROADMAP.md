@@ -168,7 +168,9 @@ Pendente:
 | **Iluminação** | Point lights por sala | Pendente |
 | **Parallax** | 4 camadas por bioma | Pendente |
 | **Partículas** | Ambiente por bioma | Pendente |
-| **SFX / Música** | Web Audio + tracks | Pendente |
+| **SFX / Música** | Web Audio API + placeholders WAV | **Parcial** | SFX de combate, masmorra, captura, chefe e UI; música pendente |
+| **Boss HUD + fases** | Barra topo + 50% HP | **Feito** | Nome, escudo, fase 2 com ataques escalados |
+| **Animações de golpe (corpo)** | Atlas attack / Spine | Pendente | VFX telegraph no MVP |
 | **UI** | 9-slice panels, animações | Parcial (boss intro, hotbar, abas bolsa) |
 | **Balance** | Dificuldade, preços, captura | Contínuo |
 

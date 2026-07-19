@@ -104,7 +104,25 @@ import {
   tickBossMechanics,
   type BossFightPhase,
 } from '../systems/bossMechanics.ts';
+import {
+  enterBossPhase2,
+  getBossPhaseModifiers,
+  shouldEnterBossPhase2,
+  type BossCombatPhase,
+} from '../systems/bossPhase.ts';
 import { showBossIntro, hideBossIntro } from '../ui/bossIntroUI.ts';
+import { showBossVictory, hideBossVictory } from '../ui/bossVictoryUI.ts';
+import { flashPhaseTransition, hideBossHud, showBossHud, updateBossHud } from '../ui/bossHudUI.ts';
+import { playSfx } from '../engine/audioManager.ts';
+import {
+  applyBossEnrageTint,
+  clearAllBossVfx,
+  clearBossVfxState,
+  spawnBossLeapImpactVfx,
+  spawnBossPhaseTransitionVfx,
+  spawnHeatWaveVfx,
+  tickBossCombatVfx,
+} from '../world/bossAttackVfx.ts';
 import {
   countRemainingPhaseEnemies,
   grantBossGateKey,
@@ -177,6 +195,7 @@ interface LiveEnemy {
   chargeDirY: number;
   mechanicCd: number;
   isMinion: boolean;
+  bossCombatPhase: BossCombatPhase;
   wanderTimer: number;
   wanderPauseTimer: number;
   wanderTargetX: number;
@@ -377,6 +396,9 @@ export class DungeonScene {
   exit(): void {
     this.active = false;
     hideBossIntro();
+    hideBossVictory();
+    hideBossHud();
+    clearAllBossVfx();
     document.getElementById('game-wrapper')?.classList.remove(
       'biome-hazard-spores',
       'biome-hazard-slippery',
@@ -429,6 +451,7 @@ export class DungeonScene {
         captureLocked: false,
         mechanicCd: spawn.isBoss ? initBossMechanicCd() : 0,
         isMinion: false,
+        bossCombatPhase: 1,
         ...initEnemyWanderFields(spawn.x, spawn.y),
         ...combatInit,
       };
@@ -474,6 +497,7 @@ export class DungeonScene {
       captureLocked: false,
       mechanicCd: 0,
       isMinion: true,
+      bossCombatPhase: 1,
       ...initEnemyWanderFields(x, y),
       ...combatInit,
     };
@@ -597,6 +621,7 @@ export class DungeonScene {
     this.playerStamina -= DODGE_STAMINA_COST;
     this.dodgeTimer = DODGE_DURATION;
     this.invincibleTimer = DODGE_DURATION;
+    playSfx('combat.dodge');
   }
 
   private getCollisionWalls() {
@@ -760,6 +785,8 @@ export class DungeonScene {
 
   private abortBossIntro(): void {
     hideBossIntro();
+    hideBossVictory();
+    hideBossHud();
     this.bossFightPhase = 'locked';
     this.bossIntroTimer = 0;
     if (hasBossGateKey(this.state, this.layout.biomeId)) {
@@ -780,8 +807,12 @@ export class DungeonScene {
       if (this.bossIntroTimer <= 0) {
         this.bossFightPhase = 'active';
         hideBossIntro();
-        const boss = this.enemies.find((e) => e.isBoss && !e.dead);
-        if (boss) boss.aggroed = true;
+        const boss = this.getActiveBoss();
+        if (boss) {
+          boss.aggroed = true;
+          this.syncBossHud(boss);
+        }
+        playSfx('boss.intro');
         this.callbacks.showToast('A luta começou!');
       }
       return;
@@ -856,7 +887,9 @@ export class DungeonScene {
     const angle = Math.atan2(dir.y, dir.x);
 
     if (weapon.kind === 'melee') {
-      this.playAttackFx(weapon.attackFx ?? 'knife', angle, weapon.range, weapon.slashColor ?? 0xf0e6d3);
+      const fxStyle = weapon.attackFx ?? 'knife';
+      this.playAttackFx(fxStyle, angle, weapon.range, weapon.slashColor ?? 0xf0e6d3);
+      playSfx(fxStyle === 'pickaxe' ? 'combat.attack.pickaxe' : fxStyle === 'spear_thrust' ? 'combat.attack.spear' : 'combat.attack.knife');
       const hits = findMeleeHits(
         this.playerX,
         this.playerY,
@@ -878,6 +911,7 @@ export class DungeonScene {
       }
     } else {
       this.playAttackFx(weapon.attackFx ?? 'spear_thrust', angle, weapon.range, weapon.slashColor ?? 0xc4f082);
+      playSfx('combat.attack.spear');
       const data = buildPlayerProjectile(this.playerX, this.playerY, angle, weapon);
       this.spawnProjectile(data, 'player', weapon.projectileStyle ?? 'orb');
     }
@@ -959,7 +993,14 @@ export class DungeonScene {
           if (enemy.dead || enemy.fled) continue;
           if (!projectileHitEnemy(p, enemy.id, enemy.x, enemy.y)) continue;
 
-          if (enemy.isBoss && enemy.speciesId === 'matriarca_prismatica' && enemy.shieldHp > 0) {
+          const behavior = getEnemyBehavior(enemy.behaviorId);
+          const phaseMods = getBossPhaseModifiers(enemy, behavior);
+          const canReflect =
+            enemy.isBoss &&
+            enemy.speciesId === 'matriarca_prismatica' &&
+            (enemy.shieldHp > 0 || phaseMods.reflectWithoutShield);
+
+          if (canReflect) {
             const angle = Math.atan2(enemy.y - this.playerY, enemy.x - this.playerX);
             const data = createProjectileData(
               enemy.x,
@@ -999,6 +1040,7 @@ export class DungeonScene {
           const dmg = calcDamage(p.damage, this.state.playerDef);
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+          playSfx('combat.hurt');
           hit = true;
         }
         if (hit) {
@@ -1008,6 +1050,39 @@ export class DungeonScene {
         }
       }
     }
+  }
+
+  private getActiveBoss(): LiveEnemy | undefined {
+    return this.enemies.find((e) => e.isBoss && !e.dead);
+  }
+
+  private getBossHudState(boss: LiveEnemy) {
+    const species = getSpecies(boss.speciesId);
+    return {
+      name: species.name,
+      hp: boss.hp,
+      maxHp: boss.maxHp,
+      shieldHp: boss.shieldHp,
+      shieldMax: boss.shieldMax,
+      phase: boss.bossCombatPhase,
+    };
+  }
+
+  private syncBossHud(boss?: LiveEnemy): void {
+    const active = boss ?? this.getActiveBoss();
+    if (!active || this.bossFightPhase !== 'active') return;
+    showBossHud(this.getBossHudState(active));
+  }
+
+  private tryBossPhaseTransition(enemy: LiveEnemy): void {
+    if (!enemy.isBoss || enemy.bossCombatPhase !== 1) return;
+    if (!shouldEnterBossPhase2(enemy.hp, enemy.maxHp)) return;
+    if (!enterBossPhase2(enemy)) return;
+    flashPhaseTransition();
+    playSfx('boss.phase2');
+    this.callbacks.showToast('Fase 2!');
+    spawnBossPhaseTransitionVfx(this.fxLayer, enemy.x, enemy.y, this.fxRunner);
+    this.syncBossHud(enemy);
   }
 
   private damageEnemy(enemy: LiveEnemy, rawDmg: number): void {
@@ -1021,6 +1096,11 @@ export class DungeonScene {
     const finalDmg = calcDamage(afterShield, enemy.def);
     enemy.hp = Math.max(0, enemy.hp - finalDmg);
     drawDamageNumber(this.fxLayer, finalDmg, enemy.x, enemy.y - 20, this.fxRunner);
+    playSfx('combat.hit');
+    this.tryBossPhaseTransition(enemy);
+    if (enemy.isBoss && this.bossFightPhase === 'active') {
+      updateBossHud(this.getBossHudState(enemy));
+    }
     if (enemy.hp <= 0) {
       this.eliminateEnemy(enemy);
     }
@@ -1053,6 +1133,9 @@ export class DungeonScene {
     }
 
     if (enemy.isBoss) {
+      hideBossHud();
+      clearBossVfxState(enemy.id);
+      const species = getSpecies(enemy.speciesId);
       const unlockedBefore = [...this.state.unlockedBiomes];
       onBiomeBossDefeated(this.state, this.layout.biomeId);
       this.bossFightPhase = 'done';
@@ -1061,12 +1144,17 @@ export class DungeonScene {
       this.rebuildPathfinder();
       this.callbacks.onStateChange();
       if (!options?.skipToast) {
-        const species = getSpecies(enemy.speciesId);
-        this.callbacks.showToast(`${species.name} derrotado — baú épico apareceu!`);
+        showBossVictory(this.layout.biomeId, species.name);
+        playSfx('boss.defeated');
+        setTimeout(() => {
+          this.callbacks.showToast('Baú épico apareceu — abra para ativar o portal');
+        }, 3400);
         for (const biomeId of this.state.unlockedBiomes) {
           if (unlockedBefore.includes(biomeId)) continue;
           const toast = getBiomeUnlockToast(biomeId);
-          if (toast) this.callbacks.showToast(toast);
+          if (toast) {
+            setTimeout(() => this.callbacks.showToast(toast), 4000);
+          }
         }
       }
     } else if (!enemy.isMinion && !options?.skipToast) {
@@ -1089,6 +1177,11 @@ export class DungeonScene {
 
   private updateEnemyStatusBars(enemy: LiveEnemy): void {
     if (!enemy.statusBars || enemy.dead) return;
+    if (enemy.isBoss && this.bossFightPhase === 'active') {
+      enemy.statusBars.root.visible = false;
+      return;
+    }
+    enemy.statusBars.root.visible = true;
     updateEnemyStatusBars(
       enemy.statusBars,
       enemy.hp,
@@ -1188,6 +1281,8 @@ export class DungeonScene {
         continue;
       }
 
+      const prevCombatPhase = enemy.combatPhase;
+
       const result = tickEnemyCombat(enemy, {
         playerX: this.playerX,
         playerY: this.playerY,
@@ -1213,6 +1308,15 @@ export class DungeonScene {
           const dmg = calcDamage(mech.heatWaveDamage, this.state.playerDef);
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+          playSfx('boss.heatwave');
+          spawnHeatWaveVfx(this.fxLayer, enemy.x, enemy.y, this.fxRunner);
+        }
+
+        tickBossCombatVfx(enemy, this.layout.biomeId, this.fxLayer, dt);
+        applyBossEnrageTint(enemy.container, enemy.bossCombatPhase);
+
+        if (prevCombatPhase === 'leap' && enemy.combatPhase === 'idle') {
+          spawnBossLeapImpactVfx(this.fxLayer, enemy.x, enemy.y, this.fxRunner);
         }
       }
 
@@ -1250,6 +1354,7 @@ export class DungeonScene {
         const dmg = calcDamage(result.playerDamage, this.state.playerDef);
         this.playerHp = Math.max(0, this.playerHp - dmg);
         drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+        playSfx('combat.hurt');
       }
 
       enemy.container.x = enemy.x;
@@ -1340,6 +1445,7 @@ export class DungeonScene {
 
     this.state.orbs -= 1;
     this.launchOrb(enemy);
+    playSfx('capture.throw');
     this.callbacks.onStateChange();
   }
 
@@ -1437,6 +1543,7 @@ export class DungeonScene {
         cap.shakeSubPhase = 'anim';
         cap.phaseTimer = CAPTURE_SHAKE_DURATION;
         cap.wobbleTime = 0;
+        playSfx('capture.shake');
       }
       return;
     }
@@ -1482,6 +1589,7 @@ export class DungeonScene {
       cap.currentShake += 1;
       cap.phaseTimer = CAPTURE_SHAKE_DURATION;
       cap.wobbleTime = 0;
+      playSfx('capture.shake');
       return;
     }
 
@@ -1527,6 +1635,7 @@ export class DungeonScene {
       const anchor = this.getCaptureAnchor(enemy);
       drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true, this.fxRunner);
       this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
+      playSfx('capture.success');
       this.callbacks.onStateChange();
       this.tryGrantBossKey();
     } else {
@@ -1541,6 +1650,7 @@ export class DungeonScene {
     enemy.captureLocked = false;
     enemy.container.alpha = 1;
     enemy.aggroed = true;
+    playSfx('capture.fail');
     this.callbacks.showToast(`${species.name} escapou da Orbe! (${formatCapturePercent(plan.chance)})`);
   }
 
@@ -1779,6 +1889,7 @@ export class DungeonScene {
       this.bossGateOpened = true;
       this.refreshBossGateGfx();
       this.rebuildPathfinder();
+      playSfx('dungeon.gate');
       this.callbacks.showToast('Portão aberto — entre na arena do chefe!');
       return;
     }
@@ -1813,6 +1924,7 @@ export class DungeonScene {
       }
 
       chest.opened = true;
+      playSfx('dungeon.chest');
       if (chest.epic) {
         this.bossChestOpened = true;
         this.updatePortalState();

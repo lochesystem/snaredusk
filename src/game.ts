@@ -16,6 +16,7 @@ import { ShopUI } from './ui/shopUI.ts';
 import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
+import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import {
   ensureBaseTilesetPreloaded,
   ensureEnvironmentPreloaded,
@@ -284,13 +285,21 @@ export class Game {
   }
 
   private bindDom(): void {
+    const beginSession = async () => {
+      await unlockAudio();
+      preloadAudio();
+      playSfx('ui.click');
+    };
+
     document.getElementById('btn-new-game')?.addEventListener('click', () => {
+      void beginSession();
       this.state = defaultGameState();
       saveGame(this.state);
       this.startGame();
     });
 
     document.getElementById('btn-continue')?.addEventListener('click', () => {
+      void beginSession();
       const loaded = loadGame();
       if (loaded) {
         this.state = loaded;
@@ -805,6 +814,7 @@ export class Game {
     if (!el) return;
     el.textContent = msg;
     el.classList.add('show');
+    playSfx('ui.toast', { volume: 0.35 });
     setTimeout(() => el.classList.remove('show'), 2200);
   }
 }

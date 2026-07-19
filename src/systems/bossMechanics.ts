@@ -1,5 +1,7 @@
 import type { BiomeId } from '../data/biomes.ts';
+import { getEnemyBehavior } from '../data/enemyBehaviors.ts';
 import { type DoorDir } from '../world/dungeonGenerator.ts';
+import { getBossPhaseModifiers, type BossCombatPhase } from './bossPhase.ts';
 import { distance } from './combat.ts';
 
 export type BossFightPhase = 'locked' | 'intro' | 'active' | 'done';
@@ -16,6 +18,9 @@ export interface BossMechanicEnemy {
   x: number;
   y: number;
   mechanicCd: number;
+  bossCombatPhase: BossCombatPhase;
+  behaviorId: string;
+  enraged: boolean;
 }
 
 export interface BossMechanicContext {
@@ -177,31 +182,36 @@ export function tickBossMechanics(
   if (!enemy.isBoss || enemy.dead || !ctx.bossFightActive) return result;
 
   enemy.mechanicCd -= ctx.dt;
+  const behavior = getEnemyBehavior(enemy.behaviorId);
+  const mods = getBossPhaseModifiers(enemy, behavior);
 
   if (enemy.speciesId === 'rei_esporas' && enemy.mechanicCd <= 0) {
-    enemy.mechanicCd = 7;
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 40 + Math.random() * 30;
-    result.summons.push({
-      speciesId: MINION_BY_BIOME.floresta,
-      x: enemy.x + Math.cos(angle) * dist,
-      y: enemy.y + Math.sin(angle) * dist,
-      roomIndex,
-    });
+    enemy.mechanicCd = 7 * mods.mechanicCdMult;
+    const count = mods.summonCount;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      const dist = 40 + Math.random() * 30;
+      result.summons.push({
+        speciesId: MINION_BY_BIOME.floresta,
+        x: enemy.x + Math.cos(angle) * dist,
+        y: enemy.y + Math.sin(angle) * dist,
+        roomIndex,
+      });
+    }
   }
 
   if (enemy.speciesId === 'salamandra_ancia' && enemy.mechanicCd <= 0) {
     const dist = distance(enemy.x, enemy.y, ctx.playerX, ctx.playerY);
     if (dist < 90) {
-      enemy.mechanicCd = 5.5;
+      enemy.mechanicCd = mods.heatWaveCd;
       result.heatWaveDamage = 8;
     } else {
       enemy.mechanicCd = 1.5;
     }
   }
 
-  if (enemy.speciesId === 'matriarca_prismatica' && enemy.hp / enemy.maxHp < 0.45 && enemy.mechanicCd <= 0) {
-    enemy.mechanicCd = 4;
+  if (enemy.speciesId === 'matriarca_prismatica' && enemy.bossCombatPhase === 2 && enemy.mechanicCd <= 0) {
+    enemy.mechanicCd = 4 * mods.mechanicCdMult;
     const angle = Math.random() * Math.PI * 2;
     result.summons.push({
       speciesId: MINION_BY_BIOME.cristal,

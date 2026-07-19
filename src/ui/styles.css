@@ -1273,3 +1273,173 @@ button:hover {
   background: linear-gradient(90deg, transparent, #c4f082, transparent);
   border-radius: 2px;
 }
+
+/* Boss fight HUD */
+.boss-hud {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(72%, 340px);
+  z-index: 15;
+  pointer-events: none;
+  text-align: center;
+}
+
+.boss-hud.hidden {
+  display: none;
+}
+
+.boss-hud-name {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f0e6d3;
+  text-shadow: 0 1px 0 #1a1410, 0 0 8px rgba(200, 120, 80, 0.45);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.boss-hud-shield-track {
+  margin-bottom: 3px;
+}
+
+.boss-hud-shield-track.hidden {
+  display: none;
+}
+
+.boss-hud-shield-frame {
+  height: 4px;
+  background: #120f1a;
+  border: 1px solid #5a4a7a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.boss-hud-shield-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #6a8fd8, #a8c8ff);
+  transition: width 0.12s linear;
+}
+
+.boss-hud-bar-frame {
+  position: relative;
+  height: 10px;
+  background: #120f1a;
+  border: 1px solid #4a3828;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.boss-hud-phase2 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #8b2020, #e83030);
+  transition: width 0.12s linear;
+}
+
+.boss-hud-phase1 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3d6b2a, #8fd894);
+  transition: width 0.12s linear;
+  z-index: 1;
+}
+
+.boss-hud-midmark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(240, 230, 211, 0.55);
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.boss-hud.phase-2 .boss-hud-phase1 {
+  background: linear-gradient(90deg, #6b4a1a, #e8a040);
+}
+
+.boss-hud.phase-2 .boss-hud-name {
+  color: #ffb080;
+  text-shadow: 0 1px 0 #2a1008, 0 0 10px rgba(255, 80, 40, 0.55);
+}
+
+.boss-hud.phase-flash .boss-hud-bar-frame {
+  animation: boss-hud-flash 0.55s ease-out;
+}
+
+@keyframes boss-hud-flash {
+  0% { box-shadow: 0 0 0 rgba(255, 120, 60, 0); }
+  30% { box-shadow: 0 0 14px rgba(255, 120, 60, 0.9); }
+  100% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+}
+
+/* Boss victory banner (Dark Souls style) */
+.boss-victory-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(8, 6, 14, 0.35) 0%, rgba(4, 3, 8, 0.72) 70%);
+  z-index: 45;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.boss-victory-overlay.visible {
+  opacity: 1;
+}
+
+.boss-victory-content {
+  text-align: center;
+  transform: translateY(12px);
+  opacity: 0;
+  transition: transform 0.7s ease, opacity 0.7s ease;
+}
+
+.boss-victory-overlay.visible .boss-victory-content {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.boss-victory-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 4.5vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e8dcc8;
+  text-shadow:
+    0 0 32px rgba(200, 160, 100, 0.45),
+    0 2px 0 #1a1410,
+    0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+.boss-victory-sub {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #a89878;
+  opacity: 0.9;
+}
+
+.boss-victory-line {
+  width: 160px;
+  height: 2px;
+  margin: 16px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(200, 160, 100, 0.7), transparent);
+}
