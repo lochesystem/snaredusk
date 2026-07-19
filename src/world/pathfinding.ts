@@ -3,6 +3,7 @@ import type { DungeonObstacle } from './dungeonGenerator.ts';
 import {
   collidesCircle,
   isInHole,
+  isInRock,
   isOnWalkableFloor,
   moveWithCollision,
 } from './collision.ts';
@@ -61,7 +62,8 @@ export function isWalkablePosition(
   return (
     isOnWalkableFloor(x, y, radius, floors) &&
     !collidesCircle(x, y, radius, walls) &&
-    !isInHole(x, y, radius, holes)
+    !isInHole(x, y, radius, holes) &&
+    !isInRock(x, y, radius, holes)
   );
 }
 

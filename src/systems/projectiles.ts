@@ -88,8 +88,8 @@ export function advanceProjectile(
   if (!onFloor) return false;
 
   for (const obs of obstacles) {
-    if (obs.kind !== 'hole') continue;
-    if (circlesOverlap(nx, ny, p.radius, obs.x, obs.y, obs.radius)) return false;
+    if (obs.kind === 'hole' && circlesOverlap(nx, ny, p.radius, obs.x, obs.y, obs.radius)) return false;
+    if (obs.kind === 'rock' && circlesOverlap(nx, ny, p.radius, obs.x, obs.y, obs.radius)) return false;
   }
 
   p.x = nx;

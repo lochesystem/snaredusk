@@ -65,6 +65,8 @@ export interface DungeonObstacle {
   y: number;
   radius: number;
   roomIndex: number;
+  /** Segundos restantes para obstáculos temporários (estalactites). */
+  ttl?: number;
 }
 
 export interface DungeonChest {
@@ -324,8 +326,8 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
 
   for (const room of rooms) {
     populateRoomDecor(room, rng, decor, reserved, safeZones, biome.decorKind);
-    if (room.type === 'combat') {
-      populateRoomObstacles(room, rng, obstacles, reserved, safeZones);
+    if (room.type === 'combat' || (room.type === 'boss' && biomeId === 'cristal')) {
+      populateRoomObstacles(room, rng, obstacles, reserved, safeZones, biomeId);
     }
     if (room.type === 'treasure') {
       populateTreasureRoom(room, rng, chests, reserved, safeZones, biome.chestLoot);
@@ -703,8 +705,15 @@ function populateRoomObstacles(
   obstacles: DungeonObstacle[],
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
+  biomeId: BiomeId,
 ): void {
-  if (rng() < 0.35) {
+  const isCristal = biomeId === 'cristal';
+  const isBoss = room.type === 'boss';
+  const attempts = isBoss && isCristal ? 3 : isCristal ? 2 : 1;
+  const chance = isCristal ? (isBoss ? 1 : 0.72) : 0.35;
+
+  for (let i = 0; i < attempts; i++) {
+    if (!isBoss && rng() > chance) continue;
     const holeRadius = 12 + randInt(rng, 0, 5);
     const pt = randomInteriorPoint(room, rng, reserved, 32, safeZones, holeRadius);
     if (pt) {

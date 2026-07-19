@@ -25,7 +25,7 @@ export function isOnWalkableFloor(cx: number, cy: number, radius: number, floors
   return false;
 }
 
-/** Buracos são áreas não caminháveis no chão. */
+/** Buracos são áreas não caminháveis no chão (para inimigos e pathfinding). */
 export function isInHole(
   cx: number,
   cy: number,
@@ -41,6 +41,40 @@ export function isInHole(
   return false;
 }
 
+/** Rochas bloqueiam movimento (inclui estalactites caídas). */
+export function isInRock(
+  cx: number,
+  cy: number,
+  radius: number,
+  obstacles: DungeonObstacle[],
+): boolean {
+  for (const obs of obstacles) {
+    if (obs.kind !== 'rock') continue;
+    const dx = cx - obs.x;
+    const dy = cy - obs.y;
+    if (dx * dx + dy * dy < (obs.radius + radius * 0.5) ** 2) return true;
+  }
+  return false;
+}
+
+export interface MoveCollisionOptions {
+  /** Jogador pode entrar no buraco para disparar queda. */
+  blockHoles?: boolean;
+  blockRocks?: boolean;
+}
+
+function isMovementBlocked(
+  cx: number,
+  cy: number,
+  radius: number,
+  obstacles: DungeonObstacle[],
+  options: MoveCollisionOptions,
+): boolean {
+  if (options.blockHoles !== false && isInHole(cx, cy, radius, obstacles)) return true;
+  if (options.blockRocks !== false && isInRock(cx, cy, radius, obstacles)) return true;
+  return false;
+}
+
 export function moveWithCollision(
   x: number,
   y: number,
@@ -49,7 +83,8 @@ export function moveWithCollision(
   radius: number,
   walls: Rect[],
   floors: Rect[],
-  holes: DungeonObstacle[] = [],
+  obstacles: DungeonObstacle[] = [],
+  options: MoveCollisionOptions = {},
 ): { x: number; y: number } {
   let nx = x + dx;
   let ny = y;
@@ -57,7 +92,7 @@ export function moveWithCollision(
   if (
     !collidesCircle(nx, ny, radius, walls) &&
     isOnWalkableFloor(nx, ny, radius, floors) &&
-    !isInHole(nx, ny, radius, holes)
+    !isMovementBlocked(nx, ny, radius, obstacles, options)
   ) {
     x = nx;
   }
@@ -66,7 +101,7 @@ export function moveWithCollision(
   if (
     !collidesCircle(x, ny, radius, walls) &&
     isOnWalkableFloor(x, ny, radius, floors) &&
-    !isInHole(x, ny, radius, holes)
+    !isMovementBlocked(x, ny, radius, obstacles, options)
   ) {
     y = ny;
   }

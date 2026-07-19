@@ -1,4 +1,12 @@
 import type { BiomeId } from '../data/biomes.ts';
+import {
+  STALACTITE_COOLDOWN_SEC,
+  STALACTITE_DAMAGE,
+  STALACTITE_RADIUS,
+  STALACTITE_SUMMON_COOLDOWN_SEC,
+  MATRIARCA_MAX_MINIONS,
+  type StalactiteRequest,
+} from './stalactiteMechanic.ts';
 import { getEnemyBehavior } from '../data/enemyBehaviors.ts';
 import { type DoorDir } from '../world/dungeonGenerator.ts';
 import { getBossPhaseModifiers, type BossCombatPhase } from './bossPhase.ts';
@@ -18,6 +26,7 @@ export interface BossMechanicEnemy {
   x: number;
   y: number;
   mechanicCd: number;
+  summonCd: number;
   bossCombatPhase: BossCombatPhase;
   behaviorId: string;
   enraged: boolean;
@@ -29,6 +38,7 @@ export interface BossMechanicContext {
   dt: number;
   biomeId: BiomeId;
   bossFightActive: boolean;
+  livingMatriarcaMinions: number;
 }
 
 export interface BossSummonRequest {
@@ -42,6 +52,7 @@ export interface BossMechanicResult {
   summons: BossSummonRequest[];
   slamDamage: number;
   heatWaveDamage: number;
+  stalactites: StalactiteRequest[];
 }
 
 const MINION_BY_BIOME: Record<BiomeId, string> = {
@@ -52,6 +63,10 @@ const MINION_BY_BIOME: Record<BiomeId, string> = {
 
 export function initBossMechanicCd(): number {
   return 2.5;
+}
+
+export function initBossSummonCd(): number {
+  return STALACTITE_SUMMON_COOLDOWN_SEC;
 }
 
 export function isPointInsideRoom(
@@ -178,10 +193,16 @@ export function tickBossMechanics(
   ctx: BossMechanicContext,
   roomIndex: number,
 ): BossMechanicResult {
-  const result: BossMechanicResult = { summons: [], slamDamage: 0, heatWaveDamage: 0 };
+  const result: BossMechanicResult = {
+    summons: [],
+    slamDamage: 0,
+    heatWaveDamage: 0,
+    stalactites: [],
+  };
   if (!enemy.isBoss || enemy.dead || !ctx.bossFightActive) return result;
 
   enemy.mechanicCd -= ctx.dt;
+  enemy.summonCd -= ctx.dt;
   const behavior = getEnemyBehavior(enemy.behaviorId);
   const mods = getBossPhaseModifiers(enemy, behavior);
 
@@ -210,8 +231,24 @@ export function tickBossMechanics(
     }
   }
 
-  if (enemy.speciesId === 'matriarca_prismatica' && enemy.bossCombatPhase === 2 && enemy.mechanicCd <= 0) {
-    enemy.mechanicCd = 4 * mods.mechanicCdMult;
+  if (enemy.speciesId === 'matriarca_prismatica' && enemy.mechanicCd <= 0) {
+    enemy.mechanicCd = STALACTITE_COOLDOWN_SEC;
+    result.stalactites.push({
+      x: ctx.playerX,
+      y: ctx.playerY,
+      radius: STALACTITE_RADIUS,
+      damage: STALACTITE_DAMAGE,
+      roomIndex,
+    });
+  }
+
+  if (
+    enemy.speciesId === 'matriarca_prismatica' &&
+    enemy.bossCombatPhase === 2 &&
+    ctx.livingMatriarcaMinions < MATRIARCA_MAX_MINIONS &&
+    enemy.summonCd <= 0
+  ) {
+    enemy.summonCd = STALACTITE_SUMMON_COOLDOWN_SEC;
     const angle = Math.random() * Math.PI * 2;
     result.summons.push({
       speciesId: MINION_BY_BIOME.cristal,

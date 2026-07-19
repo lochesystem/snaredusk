@@ -32,7 +32,7 @@ import { YSortLayer } from '../engine/ySortLayer.ts';
 import { getSpecies } from '../data/creatures.ts';
 import { getBiomeDef } from '../data/biomes.ts';
 import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
-import { generateDungeon, type DungeonInteractable, type DungeonLayout } from '../world/dungeonGenerator.ts';
+import { generateDungeon, type DungeonInteractable, type DungeonLayout, type DungeonObstacle } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
 import {
   DungeonPathfinder,
@@ -98,6 +98,7 @@ import {
 } from '../systems/biomeHazards.ts';
 import {
   initBossMechanicCd,
+  initBossSummonCd,
   isEntityInBossArena,
   isNearBossGate,
   shouldStartBossIntro,
@@ -126,6 +127,19 @@ import {
   tickBossCombatVfx,
 } from '../world/bossAttackVfx.ts';
 import {
+  findSafeBesideHole,
+  getHoleFallTrigger,
+  PIT_FALL_DAMAGE,
+  PIT_FALL_INVULN_SEC,
+} from '../systems/pitFall.ts';
+import {
+  createStalactiteTelegraph,
+  STALACTITE_ROCK_TTL_SEC,
+  STALACTITE_TELEGRAPH_SEC,
+  tickStalactiteTelegraphs,
+  type StalactiteTelegraph,
+} from '../systems/stalactiteMechanic.ts';
+import {
   countRemainingPhaseEnemies,
   grantBossGateKey,
   hasBossGateKey,
@@ -152,6 +166,7 @@ import {
   buildDungeonFloorLayer,
   spawnDungeonPropSprites,
 } from '../world/tileRenderer.ts';
+import { BossArenaFog } from '../world/bossArenaFog.ts';
 
 export type DungeonExitReason = 'portal' | 'death' | 'abandon';
 
@@ -201,6 +216,7 @@ interface LiveEnemy {
   chargeDirX: number;
   chargeDirY: number;
   mechanicCd: number;
+  summonCd: number;
   isMinion: boolean;
   bossCombatPhase: BossCombatPhase;
   wanderTimer: number;
@@ -306,6 +322,7 @@ export class DungeonScene {
   private bossIntroTimer = 0;
   private bossChestOpened = false;
   private bossGateGfx: Graphics | null = null;
+  private bossArenaFog: BossArenaFog;
   private slideVelX = 0;
   private slideVelY = 0;
   private hazardTickTimer = 0;
@@ -318,6 +335,10 @@ export class DungeonScene {
   private minimap: DungeonMinimap;
   private deathHandled = false;
   private lastKillerName = 'forças desconhecidas';
+  private pitFallCooldown = 0;
+  private stalactiteTelegraphs: StalactiteTelegraph[] = [];
+  private stalactiteShadowGfx: Graphics;
+  private runtimeRocks: { gfx: Graphics; obstacle: DungeonObstacle }[] = [];
   private fxRunner = new FxRunner();
 
   private state: GameState;
@@ -344,6 +365,8 @@ export class DungeonScene {
     );
     this.minimap = new DungeonMinimap(this.layout.portalRoomIndex);
 
+    this.stalactiteShadowGfx = new Graphics();
+
     const floorLayer = buildDungeonFloorLayer(
       {
         floors: this.layout.floors,
@@ -368,6 +391,12 @@ export class DungeonScene {
     this.world.addChild(this.bossGateGfx);
     this.refreshBossGateGfx();
 
+    this.bossArenaFog = new BossArenaFog();
+    const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
+    if (bossRoom) {
+      this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, dungeonSeed);
+    }
+
     this.playerX = this.layout.spawn.x;
     this.playerY = this.layout.spawn.y;
 
@@ -382,6 +411,8 @@ export class DungeonScene {
     this.entityLayer.addChild(this.playerSprite);
 
     this.world.addChild(this.entityLayer);
+    this.world.addChild(this.bossArenaFog.root);
+    this.world.addChild(this.stalactiteShadowGfx);
     this.world.addChild(this.fxLayer);
     this.root.addChild(this.world);
     this.root.addChild(this.minimap.container);
@@ -458,6 +489,7 @@ export class DungeonScene {
         capturableGlow: false,
         captureLocked: false,
         mechanicCd: spawn.isBoss ? initBossMechanicCd() : 0,
+        summonCd: spawn.isBoss ? initBossSummonCd() : 0,
         isMinion: false,
         bossCombatPhase: 1,
         ...initEnemyWanderFields(spawn.x, spawn.y),
@@ -469,9 +501,15 @@ export class DungeonScene {
     }
   }
 
-  private spawnBossMinion(speciesId: string, x: number, y: number, roomIndex: number): void {
+  private spawnBossMinion(
+    speciesId: string,
+    x: number,
+    y: number,
+    roomIndex: number,
+    maxMinions = 4,
+  ): void {
     const minionCount = this.enemies.filter((e) => e.isMinion && !e.dead).length;
-    if (minionCount >= 4) return;
+    if (minionCount >= maxMinions) return;
     const species = getSpecies(speciesId);
     const container = createCreatureSprite(species);
     container.x = x;
@@ -504,6 +542,7 @@ export class DungeonScene {
       capturableGlow: false,
       captureLocked: false,
       mechanicCd: 0,
+      summonCd: 0,
       isMinion: true,
       bossCombatPhase: 1,
       ...initEnemyWanderFields(x, y),
@@ -560,7 +599,10 @@ export class DungeonScene {
     this.tryDodge(dt);
     this.tryWeaponHotbar();
     this.updateBossFight(dt);
+    this.bossArenaFog.update(dt, this.bossFightPhase);
     this.movePlayer(dt);
+    this.updateStalactites(dt);
+    this.updateTemporaryObstacles(dt);
     this.updateBiomeHazards(dt);
     this.fxRunner.update(dt);
     this.updateAttackFx(dt);
@@ -621,11 +663,13 @@ export class DungeonScene {
       this.getCollisionWalls(),
       this.layout.floors,
       this.layout.obstacles,
+      { blockHoles: false, blockRocks: true },
     );
     this.playerX = moved.x;
     this.playerY = moved.y;
     this.playerSprite.x = moved.x;
     this.playerSprite.y = moved.y;
+    this.tryPitFall();
     this.playerStamina -= DODGE_STAMINA_COST;
     this.dodgeTimer = DODGE_DURATION;
     this.invincibleTimer = DODGE_DURATION;
@@ -733,6 +777,7 @@ export class DungeonScene {
       this.getCollisionWalls(),
       this.layout.floors,
       this.layout.obstacles,
+      { blockHoles: false, blockRocks: true },
     );
 
     if (biome.hazardKind === 'slippery') {
@@ -755,6 +800,8 @@ export class DungeonScene {
     const isMoving = slideSpeed > 10 || move.x !== 0 || move.y !== 0;
     const faceX = Math.abs(this.slideVelX) > 8 ? this.slideVelX : move.x;
     this.playerSprite.setLocomotion(isMoving, faceX);
+
+    this.tryPitFall();
 
     if (this.input.consumeClick() && this.attackCd <= 0) {
       const weapon = getEquippedWeapon(this.state.equippedWeaponId);
@@ -797,6 +844,7 @@ export class DungeonScene {
     hideBossHud();
     this.bossFightPhase = 'locked';
     this.bossIntroTimer = 0;
+    this.bossArenaFog.resetToFull();
     if (hasBossGateKey(this.state, this.layout.biomeId)) {
       this.bossGateClosed = false;
       this.bossGateOpened = true;
@@ -841,6 +889,7 @@ export class DungeonScene {
       this.refreshBossGateGfx();
       this.rebuildPathfinder();
       this.ensureCompanionInBossArena();
+      this.bossArenaFog.startDissipation();
       showBossIntro(bossName, biome.name);
       return;
     }
@@ -1313,11 +1362,16 @@ export class DungeonScene {
             dt,
             biomeId: this.layout.biomeId,
             bossFightActive: true,
+            livingMatriarcaMinions: this.countMatriarcaMinions(),
           },
           enemy.roomIndex,
         );
         for (const summon of mech.summons) {
-          this.spawnBossMinion(summon.speciesId, summon.x, summon.y, summon.roomIndex);
+          const maxMinions = enemy.speciesId === 'matriarca_prismatica' ? 2 : 4;
+          this.spawnBossMinion(summon.speciesId, summon.x, summon.y, summon.roomIndex, maxMinions);
+        }
+        for (const stalactite of mech.stalactites) {
+          this.stalactiteTelegraphs.push(createStalactiteTelegraph(stalactite));
         }
         if (mech.heatWaveDamage > 0 && this.invincibleTimer <= 0 && dist < 95) {
           const dmg = calcDamage(mech.heatWaveDamage, this.state.playerDef);
@@ -2175,6 +2229,139 @@ export class DungeonScene {
   private recordPlayerHit(sourceName: string): void {
     const trimmed = sourceName.trim();
     if (trimmed) this.lastKillerName = trimmed;
+  }
+
+  private countMatriarcaMinions(): number {
+    return this.enemies.filter((e) => e.isMinion && !e.dead).length;
+  }
+
+  private tryPitFall(): void {
+    if (this.pitFallCooldown > 0) return;
+    if (this.bossFightPhase === 'intro') return;
+    const hole = getHoleFallTrigger(this.playerX, this.playerY, this.layout.obstacles);
+    if (!hole) return;
+
+    const safe = findSafeBesideHole(
+      hole,
+      this.playerX,
+      this.playerY,
+      PLAYER_RADIUS,
+      this.getCollisionWalls(),
+      this.layout.floors,
+      this.layout.obstacles,
+    );
+    if (!safe) return;
+
+    if (this.invincibleTimer <= 0) {
+      this.playerHp = Math.max(0, this.playerHp - PIT_FALL_DAMAGE);
+      drawDamageNumber(this.fxLayer, PIT_FALL_DAMAGE, this.playerX, this.playerY - 20, this.fxRunner);
+      playSfx('combat.hurt');
+      this.recordPlayerHit('Um buraco');
+    }
+
+    this.playerX = safe.x;
+    this.playerY = safe.y;
+    this.playerSprite.x = safe.x;
+    this.playerSprite.y = safe.y;
+    this.slideVelX = 0;
+    this.slideVelY = 0;
+    this.pitFallCooldown = PIT_FALL_INVULN_SEC;
+    this.invincibleTimer = Math.max(this.invincibleTimer, PIT_FALL_INVULN_SEC);
+    this.callbacks.updateHud();
+  }
+
+  private updateStalactites(dt: number): void {
+    if (this.stalactiteTelegraphs.length === 0) {
+      this.stalactiteShadowGfx.clear();
+      return;
+    }
+
+    const ticked = tickStalactiteTelegraphs(this.stalactiteTelegraphs, dt);
+    this.stalactiteTelegraphs = ticked.remaining;
+
+    for (const impact of ticked.impacts) {
+      this.applyStalactiteImpact(impact);
+    }
+
+    this.renderStalactiteShadows();
+  }
+
+  private renderStalactiteShadows(): void {
+    const gfx = this.stalactiteShadowGfx;
+    gfx.clear();
+    for (const tele of this.stalactiteTelegraphs) {
+      const urgency = 1 - tele.timer / STALACTITE_TELEGRAPH_SEC;
+      const alpha = 0.25 + urgency * 0.45;
+      const rx = tele.radius * (0.85 + urgency * 0.2);
+      gfx.ellipse(tele.x, tele.y + 4, rx, rx * 0.55);
+      gfx.fill({ color: 0x180818, alpha });
+      gfx.ellipse(tele.x, tele.y + 4, rx * 0.55, rx * 0.3);
+      gfx.fill({ color: 0x402040, alpha: alpha * 0.8 });
+    }
+  }
+
+  private applyStalactiteImpact(impact: {
+    x: number;
+    y: number;
+    radius: number;
+    damage: number;
+    roomIndex: number;
+  }): void {
+    playSfx('boss.heatwave', { volume: 0.45 });
+
+    if (
+      this.invincibleTimer <= 0 &&
+      circlesOverlap(this.playerX, this.playerY, PLAYER_RADIUS, impact.x, impact.y, impact.radius)
+    ) {
+      const dmg = calcDamage(impact.damage, this.state.playerDef);
+      this.playerHp = Math.max(0, this.playerHp - dmg);
+      drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
+      playSfx('combat.hurt');
+      this.recordPlayerHit('Estalactite');
+    }
+
+    const rock: DungeonObstacle = {
+      kind: 'rock',
+      x: impact.x,
+      y: impact.y,
+      radius: impact.radius,
+      roomIndex: impact.roomIndex,
+      ttl: STALACTITE_ROCK_TTL_SEC,
+    };
+    this.layout.obstacles.push(rock);
+    this.addRockObstacleGfx(rock);
+    this.rebuildPathfinder();
+  }
+
+  private addRockObstacleGfx(rock: DungeonObstacle): void {
+    const gfx = new Graphics({ roundPixels: true });
+    gfx.circle(rock.x, rock.y, rock.radius);
+    gfx.fill({ color: 0x7a90b0, alpha: 0.92 });
+    gfx.circle(rock.x - rock.radius * 0.2, rock.y - rock.radius * 0.15, rock.radius * 0.35);
+    gfx.fill({ color: 0xa8c0e8, alpha: 0.55 });
+    this.entityLayer.addChild(gfx);
+    this.runtimeRocks.push({ gfx, obstacle: rock });
+  }
+
+  private updateTemporaryObstacles(dt: number): void {
+    if (this.pitFallCooldown > 0) this.pitFallCooldown -= dt;
+
+    let changed = false;
+    for (let i = this.runtimeRocks.length - 1; i >= 0; i--) {
+      const entry = this.runtimeRocks[i]!;
+      if (entry.obstacle.ttl === undefined) continue;
+      entry.obstacle.ttl -= dt;
+      if (entry.obstacle.ttl > 0) continue;
+
+      entry.gfx.parent?.removeChild(entry.gfx);
+      entry.gfx.destroy();
+      const idx = this.layout.obstacles.indexOf(entry.obstacle);
+      if (idx >= 0) this.layout.obstacles.splice(idx, 1);
+      this.runtimeRocks.splice(i, 1);
+      changed = true;
+    }
+
+    if (changed) this.rebuildPathfinder();
   }
 
   private hazardKillerLabel(): string {
