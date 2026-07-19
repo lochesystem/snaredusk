@@ -27,6 +27,7 @@ import {
   openAudioSettingsModal,
 } from './ui/audioSettingsUI.ts';
 import { isDayTransitionPlaying, playDayTransition } from './ui/dayTransitionUI.ts';
+import { playDeathTransition } from './ui/deathTransitionUI.ts';
 import {
   ensureBaseTilesetPreloaded,
   ensureEnvironmentPreloaded,
@@ -45,7 +46,7 @@ import {
   isAbandonModalOpen,
   openAbandonModal,
 } from './ui/abandonUI.ts';
-import type { DungeonExitReason } from './scenes/dungeonScene.ts';
+import type { DungeonReturnPayload } from './scenes/dungeonScene.ts';
 import { isBiomeUnlocked } from './systems/biomeProgress.ts';
 import { renderWeaponHotbar } from './ui/hotbarUI.ts';
 import { syncWeaponHotbar } from './systems/weaponHotbar.ts';
@@ -103,7 +104,8 @@ export class Game {
   private dungeon: DungeonScene | null = null;
   private baseScene: BaseScene | null = null;
   private shopScene: ShopScene | null = null;
-  private pendingDungeonExit: DungeonExitReason | null = null;
+  private pendingDungeonExit: DungeonReturnPayload | null = null;
+  private processingDungeonExit = false;
   private shopUI: ShopUI;
   private iconCache = new Map<string, string>();
 
@@ -682,10 +684,10 @@ export class Game {
     const seed = Date.now();
 
     this.dungeon = new DungeonScene(this.state, this.input, {
-      onReturnToBase: (reason) => {
+      onReturnToBase: (payload) => {
         markDungeonReturned(this.state);
         saveGame(this.state);
-        this.pendingDungeonExit = reason;
+        this.pendingDungeonExit = payload;
       },
       onStateChange: () => saveGame(this.state),
       showToast: (m) => this.showToast(m),
@@ -764,18 +766,36 @@ export class Game {
       if (hint) hint.textContent = this.dungeon.getHudHint();
     }
 
-    if (this.pendingDungeonExit !== null) {
-      const reason = this.pendingDungeonExit;
+    if (this.pendingDungeonExit !== null && !this.processingDungeonExit) {
+      const payload = this.pendingDungeonExit;
       this.pendingDungeonExit = null;
-      closeAbandonModal();
-      closeInventoryModal();
-      clearDungeonSpecial(this.state);
-      markDungeonReturned(this.state);
-      this.destroyDungeon();
-      saveGame(this.state);
-      this.showScreen('base');
-      if (reason === 'portal') this.showToast('Retornou à base com a bolsa!');
-      else if (reason === 'abandon') { /* toast já exibido na masmorra */ }
+      this.processingDungeonExit = true;
+      void this.finishDungeonExit(payload).finally(() => {
+        this.processingDungeonExit = false;
+      });
+    }
+  }
+
+  private async finishDungeonExit(payload: DungeonReturnPayload): Promise<void> {
+    closeAbandonModal();
+    closeInventoryModal();
+    clearDungeonSpecial(this.state);
+    markDungeonReturned(this.state);
+
+    if (payload.reason === 'death') {
+      await playDeathTransition({
+        killerName: payload.killerName ?? 'forças desconhecidas',
+      });
+    }
+
+    this.destroyDungeon();
+    saveGame(this.state);
+    this.showScreen('base');
+
+    if (payload.reason === 'portal') {
+      this.showToast('Retornou à base com a bolsa!');
+    } else if (payload.reason === 'death') {
+      this.showToast('Você desmaiou — perdeu a bolsa!');
     }
   }
 

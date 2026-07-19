@@ -155,8 +155,13 @@ import {
 
 export type DungeonExitReason = 'portal' | 'death' | 'abandon';
 
+export interface DungeonReturnPayload {
+  reason: DungeonExitReason;
+  killerName?: string;
+}
+
 export interface DungeonCallbacks {
-  onReturnToBase: (reason: DungeonExitReason) => void;
+  onReturnToBase: (payload: DungeonReturnPayload) => void;
   onStateChange: () => void;
   showToast: (msg: string) => void;
   updateHud: () => void;
@@ -312,6 +317,7 @@ export class DungeonScene {
   private glowTargetId: string | null = null;
   private minimap: DungeonMinimap;
   private deathHandled = false;
+  private lastKillerName = 'forças desconhecidas';
   private fxRunner = new FxRunner();
 
   private state: GameState;
@@ -868,6 +874,7 @@ export class DungeonScene {
     }
 
     if (damage > 0) {
+      this.recordPlayerHit(this.hazardKillerLabel());
       this.playerHp = Math.max(0, this.playerHp - damage);
       drawDamageNumber(this.fxLayer, damage, this.playerX, this.playerY - 20, this.fxRunner);
     }
@@ -949,6 +956,7 @@ export class DungeonScene {
     data: Omit<Projectile, 'container' | 'hitIds'>,
     owner: 'player' | 'enemy' | 'companion',
     style: 'orb' | 'spear' | 'spore' = 'orb',
+    sourceName?: string,
   ): void {
     const color = owner === 'enemy' ? 0x8fd894 : 0xc4f082;
     const container = createProjectileSprite(style, color);
@@ -964,6 +972,7 @@ export class DungeonScene {
       container,
       hitIds: new Set(),
       visualStyle: style,
+      sourceName,
     });
   }
 
@@ -1017,7 +1026,7 @@ export class DungeonScene {
               0,
               6,
             );
-            this.spawnProjectile(data, 'enemy', 'orb');
+            this.spawnProjectile(data, 'enemy', 'orb', this.enemyDisplayName(enemy));
             this.fxLayer.removeChild(p.container);
             p.container.destroy({ children: true });
             this.projectiles.splice(i, 1);
@@ -1042,6 +1051,7 @@ export class DungeonScene {
         }
         if (!hit && projectileHitPlayer(p, this.playerX, this.playerY, PLAYER_RADIUS)) {
           const dmg = calcDamage(p.damage, this.state.playerDef);
+          this.recordPlayerHit(p.sourceName ?? 'Um projétil');
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
           playSfx('combat.hurt');
@@ -1311,6 +1321,7 @@ export class DungeonScene {
         }
         if (mech.heatWaveDamage > 0 && this.invincibleTimer <= 0 && dist < 95) {
           const dmg = calcDamage(mech.heatWaveDamage, this.state.playerDef);
+          this.recordPlayerHit(this.enemyDisplayName(enemy));
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
           playSfx('boss.heatwave');
@@ -1352,11 +1363,12 @@ export class DungeonScene {
       }
 
       for (const shot of result.projectiles) {
-        this.spawnProjectile(shot.data, 'enemy');
+        this.spawnProjectile(shot.data, 'enemy', 'orb', this.enemyDisplayName(enemy));
       }
 
       if (result.playerDamage > 0 && this.invincibleTimer <= 0) {
         const dmg = calcDamage(result.playerDamage, this.state.playerDef);
+        this.recordPlayerHit(this.enemyDisplayName(enemy));
         this.playerHp = Math.max(0, this.playerHp - dmg);
         drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
         playSfx('combat.hurt');
@@ -1903,7 +1915,7 @@ export class DungeonScene {
     if (this.portalActive && portalDist < 28) {
       this.state.dungeonCleared = true;
       this.active = false;
-      this.callbacks.onReturnToBase('portal');
+      this.callbacks.onReturnToBase({ reason: 'portal' });
       return;
     }
 
@@ -2160,6 +2172,22 @@ export class DungeonScene {
     }
   }
 
+  private recordPlayerHit(sourceName: string): void {
+    const trimmed = sourceName.trim();
+    if (trimmed) this.lastKillerName = trimmed;
+  }
+
+  private hazardKillerLabel(): string {
+    const hazard = getBiomeDef(this.layout.biomeId).hazardKind;
+    if (hazard === 'spores') return 'Esporos tóxicos';
+    if (hazard === 'slippery') return 'Chão escorregadio';
+    return 'Veneno termal';
+  }
+
+  private enemyDisplayName(enemy: LiveEnemy): string {
+    return getSpecies(enemy.speciesId).name;
+  }
+
   private updatePortalState(): void {
     this.portalActive = this.bossChestOpened;
     this.portalSprite.visible = this.bossChestOpened;
@@ -2172,9 +2200,11 @@ export class DungeonScene {
     this.state.bag = this.state.bag.map(() => null);
     this.playerHp = PLAYER_MAX_HP;
     this.state.playerHp = PLAYER_MAX_HP;
-    this.callbacks.showToast('Você desmaiou — perdeu a bolsa!');
     this.active = false;
-    this.callbacks.onReturnToBase('death');
+    this.callbacks.onReturnToBase({
+      reason: 'death',
+      killerName: this.lastKillerName,
+    });
   }
 
   canAbandon(): boolean {
@@ -2186,7 +2216,7 @@ export class DungeonScene {
     this.state.bag = this.state.bag.map(() => null);
     this.active = false;
     this.callbacks.showToast('Desistiu — perdeu a bolsa!');
-    this.callbacks.onReturnToBase('abandon');
+    this.callbacks.onReturnToBase({ reason: 'abandon' });
   }
 
   getCompanionHud(): { hp: number; maxHp: number } | null {

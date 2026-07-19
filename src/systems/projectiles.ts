@@ -21,6 +21,8 @@ export interface Projectile {
   container: Container;
   radius: number;
   visualStyle?: 'orb' | 'spear' | 'spore';
+  /** Nome exibido na morte quando o projétil acerta o jogador. */
+  sourceName?: string;
 }
 
 let projectileIdCounter = 0;
