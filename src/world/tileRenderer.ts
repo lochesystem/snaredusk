@@ -447,13 +447,16 @@ export function createDecorPropSprite(
   return sprite;
 }
 
-export function createRockPropSprite(biomeId: BiomeId, radius: number): Sprite | null {
+/** Pé da pedra alinhado ao fallback vetorial (roundRect em placeholderArt). */
+export function rockPropFootY(obsY: number, radius: number): number {
+  return obsY + radius * 0.8;
+}
+
+export function createRockPropSprite(biomeId: BiomeId, _radius: number): Sprite | null {
   const texture = getBiomePropTexture(biomeId, 'rock');
   if (!texture) return null;
   const sprite = new Sprite(texture);
-  sprite.anchor.set(0.5, 0.85);
-  const scale = (radius * 2) / ENV_TILE_SIZE;
-  sprite.scale.set(scale);
+  sprite.anchor.set(0.5, 1);
   sprite.roundPixels = true;
   (sprite as Sprite & { zOffset?: number }).zOffset = 0.4;
   return sprite;
@@ -495,7 +498,7 @@ export function spawnDungeonPropSprites(
     const sprite = createRockPropSprite(biomeId, obs.radius);
     if (!sprite) continue;
     sprite.x = obs.x;
-    sprite.y = obs.y;
+    sprite.y = rockPropFootY(obs.y, obs.radius);
     props.push(sprite);
   }
 

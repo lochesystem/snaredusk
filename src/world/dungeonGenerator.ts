@@ -334,13 +334,6 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
     }
   }
 
-  for (const obs of obstacles) {
-    if (obs.kind === 'rock') {
-      const s = obs.radius;
-      walls.push(wallSegment({ x: obs.x - s, y: obs.y - s, width: s * 2, height: s * 2 }, 'h', 'n'));
-    }
-  }
-
   const interactables = buildInteractables(rooms, reserved, safeZones, rng);
   const enemySpawns = pickEnemySpawns(rooms, rng, safeZones, floors, walls, obstacles, biome);
   const bossRoom = rooms.find((r) => r.index === bossRoomIndex)!;
@@ -711,23 +704,6 @@ function populateRoomObstacles(
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
 ): void {
-  if (rng() > 0.55) return;
-
-  const rockCount = randInt(rng, 0, 2);
-  for (let i = 0; i < rockCount; i++) {
-    const rockRadius = 10 + randInt(rng, 0, 4);
-    const pt = randomInteriorPoint(room, rng, reserved, 36, safeZones, rockRadius);
-    if (!pt) continue;
-    reserved.push(pt);
-    obstacles.push({
-      kind: 'rock',
-      x: pt.x,
-      y: pt.y,
-      radius: rockRadius,
-      roomIndex: room.index,
-    });
-  }
-
   if (rng() < 0.35) {
     const holeRadius = 12 + randInt(rng, 0, 5);
     const pt = randomInteriorPoint(room, rng, reserved, 32, safeZones, holeRadius);

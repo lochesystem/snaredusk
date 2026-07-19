@@ -5,6 +5,7 @@ import {
   collectDoorJambCorners,
   cornerIdAt,
   resolveWallOrientation,
+  rockPropFootY,
   spawnDungeonPropSprites,
   trimWallSegment,
 } from '../src/world/tileRenderer.ts';
@@ -57,6 +58,10 @@ describe('tileRenderer dungeon', () => {
     expect(jambs).toHaveLength(2);
     expect(jambs[0]?.corner).toBe('se');
     expect(jambs[1]?.corner).toBe('sw');
+  });
+
+  it('rockPropFootY alinha pé da pedra ao fallback vetorial', () => {
+    expect(rockPropFootY(100, 10)).toBe(108);
   });
 
   it('buildDungeonFloorLayer fallback sem tileset', () => {

@@ -151,6 +151,8 @@ const WALL_META = {
   flipSouth: true,
   flipEast: true,
 };
+
+function atlasJson(imageName, frames, metaExtra = {}) {
   const frameEntries = {};
   const names = Object.keys(frames);
   const cols = names.length;
@@ -330,6 +332,14 @@ function writeFlorestaExampleSheet(frameData) {
   console.log('wrote floresta tileset example sheet');
 }
 
+/** Pedra orgânica (frame com alpha — props de masmorra pausados). */
+function drawOrganicRock({ fillCircle, fillRect }, { base, light, dark }) {
+  fillCircle(16, 16, 10, base);
+  fillCircle(12, 13, 6, light);
+  fillCircle(20, 17, 4, dark);
+  fillRect(9, 19, 14, 4, dark);
+}
+
 const BIOME_TILES = {
   floresta: {
     void: ({ fillRect }) => fillRect(0, 0, 32, 32, [18, 15, 26, 255]),
@@ -383,10 +393,12 @@ const BIOME_PROPS = {
       fillCircle(16, 11, 5, [143, 216, 148, 255]);
       fillRect(15, 11, 2, 16, [74, 106, 74, 255]);
     },
-    rock: ({ fillRect }) => {
-      fillRect(8, 14, 16, 12, [74, 74, 90, 255]);
-      fillRect(10, 12, 12, 6, [106, 106, 122, 255]);
-    },
+    rock: (ctx) =>
+      drawOrganicRock(ctx, {
+        base: [74, 74, 90, 255],
+        light: [118, 118, 132, 255],
+        dark: [50, 50, 62, 255],
+      }),
     chest: ({ fillRect }) => {
       fillRect(7, 14, 18, 12, [138, 106, 48, 255]);
       fillRect(7, 12, 18, 4, [196, 160, 64, 255]);
@@ -411,10 +423,12 @@ const BIOME_PROPS = {
       fillRect(14, 8, 5, 18, [180, 140, 255, 255]);
       fillRect(9, 16, 4, 8, [120, 90, 200, 255]);
     },
-    rock: ({ fillRect }) => {
-      fillRect(8, 16, 16, 10, [60, 70, 100, 255]);
-      fillRect(10, 12, 12, 8, [100, 130, 180, 255]);
-    },
+    rock: (ctx) =>
+      drawOrganicRock(ctx, {
+        base: [60, 70, 100, 255],
+        light: [100, 130, 180, 255],
+        dark: [40, 50, 75, 255],
+      }),
     chest: ({ fillRect }) => {
       fillRect(7, 14, 18, 12, [80, 100, 140, 255]);
       fillRect(7, 12, 18, 4, [160, 200, 255, 255]);
@@ -438,10 +452,12 @@ const BIOME_PROPS = {
       fillRect(10, 18, 12, 8, [120, 50, 20, 255]);
       fillRect(12, 10, 8, 10, [200, 100, 40, 200]);
     },
-    rock: ({ fillRect }) => {
-      fillRect(8, 15, 16, 11, [70, 45, 35, 255]);
-      fillRect(10, 12, 12, 6, [110, 70, 50, 255]);
-    },
+    rock: (ctx) =>
+      drawOrganicRock(ctx, {
+        base: [70, 45, 35, 255],
+        light: [110, 70, 50, 255],
+        dark: [45, 28, 22, 255],
+      }),
     chest: ({ fillRect }) => {
       fillRect(7, 14, 18, 12, [120, 70, 40, 255]);
       fillRect(7, 12, 18, 4, [200, 140, 60, 255]);

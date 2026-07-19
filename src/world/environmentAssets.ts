@@ -70,21 +70,31 @@ function baseTilesetUrl(): string {
   return `${assetBase()}/base/tileset.json`;
 }
 
-function texturesFromSheet(sheet: {
-  textures?: Record<string, Texture>;
-}): TileFrameMap {
+function texturesFromSheet(
+  sheet: { textures?: Record<string, Texture> },
+  scaleMode?: 'nearest' | 'linear',
+): TileFrameMap {
   const map: TileFrameMap = new Map();
   if (!sheet.textures) return map;
   for (const [name, texture] of Object.entries(sheet.textures)) {
+    if (scaleMode) texture.source.scaleMode = scaleMode;
     map.set(name, texture);
   }
   return map;
 }
 
-async function loadAtlas(jsonUrl: string, alias: string): Promise<TileFrameMap | null> {
+async function loadAtlas(
+  jsonUrl: string,
+  alias: string,
+  scaleMode?: 'nearest' | 'linear',
+): Promise<TileFrameMap | null> {
   try {
-    const sheet = await Assets.load({ alias, src: jsonUrl });
-    const textures = texturesFromSheet(sheet);
+    const sheet = await Assets.load({
+      alias,
+      src: jsonUrl,
+      data: scaleMode ? { textureOptions: { scaleMode } } : undefined,
+    });
+    const textures = texturesFromSheet(sheet, scaleMode);
     return textures.size > 0 ? textures : null;
   } catch {
     return null;
@@ -103,7 +113,7 @@ async function loadBiomeTilesetInternal(biomeId: BiomeId): Promise<void> {
 
 async function loadBiomePropsInternal(biomeId: BiomeId): Promise<void> {
   if (biomeProps.has(biomeId) || missingBiomeProps.has(biomeId)) return;
-  const textures = await loadAtlas(biomePropsUrl(biomeId), `biome-props:${biomeId}`);
+  const textures = await loadAtlas(biomePropsUrl(biomeId), `biome-props:${biomeId}`, 'nearest');
   if (textures) {
     biomeProps.set(biomeId, textures);
   } else {
