@@ -114,6 +114,8 @@ import { showBossIntro, hideBossIntro } from '../ui/bossIntroUI.ts';
 import { showBossVictory, hideBossVictory } from '../ui/bossVictoryUI.ts';
 import { flashPhaseTransition, hideBossHud, showBossHud, updateBossHud } from '../ui/bossHudUI.ts';
 import { playSfx } from '../engine/audioManager.ts';
+import { playMusic } from '../engine/musicManager.ts';
+import { musicForBiome, musicForBoss } from '../data/musicCatalog.ts';
 import {
   applyBossEnrageTint,
   clearAllBossVfx,
@@ -811,6 +813,8 @@ export class DungeonScene {
         if (boss) {
           boss.aggroed = true;
           this.syncBossHud(boss);
+          const bossTrack = musicForBoss(boss.speciesId);
+          if (bossTrack) playMusic(bossTrack);
         }
         playSfx('boss.intro');
         this.callbacks.showToast('A luta começou!');
@@ -1142,6 +1146,7 @@ export class DungeonScene {
       this.bossGateClosed = false;
       this.refreshBossGateGfx();
       this.rebuildPathfinder();
+      playMusic(musicForBiome(this.layout.biomeId));
       this.callbacks.onStateChange();
       if (!options?.skipToast) {
         showBossVictory(this.layout.biomeId, species.name);

@@ -6,6 +6,7 @@ export interface BaseBarCallbacks {
   getState: () => GameState;
   onParty: () => void;
   onOrbs: () => void;
+  onOptions: () => void;
 }
 
 export function renderBaseHeader(state: GameState): void {
@@ -21,6 +22,7 @@ export function renderBaseHeader(state: GameState): void {
 export function bindBaseBar(callbacks: BaseBarCallbacks): void {
   document.getElementById('btn-base-party')?.addEventListener('click', () => callbacks.onParty());
   document.getElementById('btn-base-orbs')?.addEventListener('click', () => callbacks.onOrbs());
+  document.getElementById('btn-base-options')?.addEventListener('click', () => callbacks.onOptions());
 }
 
 export function setBaseHint(text: string): void {

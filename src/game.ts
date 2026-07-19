@@ -17,6 +17,15 @@ import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
+import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
+import { musicForBiome } from './data/musicCatalog.ts';
+import { applyAudioSettings, loadAudioSettings } from './systems/audioSettings.ts';
+import {
+  bindAudioSettingsModal,
+  closeAudioSettingsModal,
+  isAudioSettingsModalOpen,
+  openAudioSettingsModal,
+} from './ui/audioSettingsUI.ts';
 import {
   ensureBaseTilesetPreloaded,
   ensureEnvironmentPreloaded,
@@ -119,6 +128,7 @@ export class Game {
     this.bindDom();
     bindInventoryModal();
     bindAbandonModal();
+    bindAudioSettingsModal();
     this.bindBaseUI();
   }
 
@@ -157,6 +167,7 @@ export class Game {
       getState: () => this.state,
       onParty: () => openPartyModal(modalCb),
       onOrbs: () => openOrbsModal(modalCb),
+      onOptions: () => this.openOptions(),
     });
     bindBuildModeModal(buildHotbarCb);
     bindChestModal({
@@ -211,6 +222,9 @@ export class Game {
   }
 
   async init(): Promise<void> {
+    loadAudioSettings();
+    applyAudioSettings();
+
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     this.app = new Application();
     await this.app.init({
@@ -237,6 +251,14 @@ export class Game {
     if (hasSave()) {
       document.getElementById('btn-continue')?.classList.remove('hidden');
     }
+
+    const unlockTitleAudio = async () => {
+      await unlockAudio();
+      setMusicUnlocked(true);
+      playMusic('title');
+      document.removeEventListener('pointerdown', unlockTitleAudio);
+    };
+    document.addEventListener('pointerdown', unlockTitleAudio, { once: true });
 
     this.app.ticker.add(
       (ticker) => {
@@ -287,9 +309,14 @@ export class Game {
   private bindDom(): void {
     const beginSession = async () => {
       await unlockAudio();
+      setMusicUnlocked(true);
       preloadAudio();
       playSfx('ui.click');
     };
+
+    document.getElementById('btn-options')?.addEventListener('click', () => {
+      void this.openOptions();
+    });
 
     document.getElementById('btn-new-game')?.addEventListener('click', () => {
       void beginSession();
@@ -307,6 +334,14 @@ export class Game {
         this.startGame();
       }
     });
+  }
+
+  private async openOptions(): Promise<void> {
+    await unlockAudio();
+    setMusicUnlocked(true);
+    if (this.screen === 'title') playMusic('title');
+    openAudioSettingsModal();
+    playSfx('ui.click');
   }
 
   private onBuildHotbarSelect(tool: BuildTool | null): void {
@@ -417,6 +452,7 @@ export class Game {
     document.getElementById('app')?.classList.toggle('layout-shop', screen === 'shop');
 
     if (screen === 'base') {
+      playMusic('base');
       if (syncDungeonDayFlagsAtBase(this.state)) saveGame(this.state);
       showBaseHub(true);
       this.closeBaseModals();
@@ -425,6 +461,7 @@ export class Game {
         requestAnimationFrame(() => this.fitCanvas());
       });
     } else if (screen === 'shop') {
+      playMusic('shop');
       showBaseHub(false);
       document.getElementById('shop-screen')?.classList.remove('hidden');
       this.showShopView();
@@ -447,6 +484,7 @@ export class Game {
     closeDungeonModal();
     closeOrbsModal();
     closeHabitatPenModal();
+    closeAudioSettingsModal();
     this.closeBaseBagModal();
     this.baseScene?.clearBuildTool();
     renderBaseBuildHotbar(this.state, {
@@ -657,6 +695,7 @@ export class Game {
     this.app.stage.addChild(this.dungeon.root);
     this.dungeon.enter();
     this.screen = 'dungeon';
+    playMusic(musicForBiome(this.state.activeBiome));
     document.querySelectorAll('.screen').forEach((el) => el.classList.add('hidden'));
     document.getElementById('hud')?.classList.remove('hidden');
     this.updateHud();
@@ -682,7 +721,8 @@ export class Game {
         { onSelect: (tool) => this.onBuildHotbarSelect(tool) },
       );
       if (this.input.consumeKey('escape')) {
-        if (isWorkshopModalOpen()) closeWorkshopModal();
+        if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
+        else if (isWorkshopModalOpen()) closeWorkshopModal();
         else if (isChestModalOpen()) closeChestModal();
         else if (isHabitatPenModalOpen()) closeHabitatPenModal();
         else if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
@@ -708,7 +748,8 @@ export class Game {
         else openInventoryModal(this.inventoryCallbacks());
       }
       if (this.input.consumeKey('escape')) {
-        if (isInventoryModalOpen()) closeInventoryModal();
+        if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
+        else if (isInventoryModalOpen()) closeInventoryModal();
         else if (isAbandonModalOpen()) closeAbandonModal();
         else if (this.dungeon.canAbandon()) {
           openAbandonModal(() => this.dungeon!.abandon());

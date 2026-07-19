@@ -66,6 +66,7 @@
         <nav id="base-hub-bar" class="base-hub-bar">
           <button id="btn-base-party" type="button">Companheiro</button>
           <button id="btn-base-orbs" type="button">Orbes</button>
+          <button id="btn-base-options" type="button">Opções</button>
         </nav>
         <div id="base-build-hotbar" class="base-build-hotbar"></div>
       </div>
@@ -76,6 +77,28 @@
       <p class="subtitle">Caça ao crepúsculo. Venda ao amanhecer.</p>
       <button id="btn-continue" class="hidden">Continuar</button>
       <button id="btn-new-game">Novo Jogo</button>
+      <button id="btn-options" type="button" class="title-secondary">Opções</button>
+    </div>
+
+    <div id="audio-settings-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content audio-settings-content">
+        <h3>Opções de áudio</h3>
+        <label class="audio-setting-row">
+          <span class="audio-setting-label">Música</span>
+          <input id="audio-music-volume" type="range" min="0" max="100" value="55" />
+          <span id="audio-music-value" class="audio-setting-value">55%</span>
+        </label>
+        <label class="audio-setting-row">
+          <span class="audio-setting-label">Efeitos</span>
+          <input id="audio-sfx-volume" type="range" min="0" max="100" value="65" />
+          <span id="audio-sfx-value" class="audio-setting-value">65%</span>
+        </label>
+        <label class="audio-setting-row audio-mute-row">
+          <input id="audio-mute" type="checkbox" />
+          <span>Silenciar tudo</span>
+        </label>
+        <button id="audio-settings-close" type="button">Fechar</button>
+      </div>
     </div>
 
     <div id="build-mode-modal" class="modal hidden" aria-hidden="true"></div>
