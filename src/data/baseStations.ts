@@ -1,4 +1,4 @@
-export type StationId = 'workbench' | 'chest_wood' | 'habitat_pen';
+export type StationId = 'workbench' | 'chest_wood' | 'habitat_pen' | 'bed';
 
 export interface StationDef {
   id: StationId;
@@ -9,7 +9,7 @@ export interface StationDef {
   goldCost: number;
   color: number;
   accent: number;
-  interact: 'craft' | 'chest' | 'habitat';
+  interact: 'craft' | 'chest' | 'habitat' | 'sleep';
 }
 
 export const BASE_STATIONS: Record<StationId, StationDef> = {
@@ -42,6 +42,16 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
     color: 0x3d5c3a,
     accent: 0x5dbb63,
     interact: 'habitat',
+  },
+  bed: {
+    id: 'bed',
+    name: 'Cama',
+    width: 1,
+    height: 1,
+    goldCost: 0,
+    color: 0x4a3d5c,
+    accent: 0x8a6a9a,
+    interact: 'sleep',
   },
 };
 

@@ -8,6 +8,7 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
+import { endDay, formatDayEndMessage, canSleepToday, canEnterDungeonToday } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
@@ -304,10 +305,21 @@ export class Game {
 
   private tryOpenShop(): void {
     if (this.state.shopDayUsed) {
-      this.showToast('A loja já fechou hoje — volte amanhã');
+      this.showToast('A loja já fechou hoje — durma ou espere o próximo dia');
       return;
     }
     this.showScreen('shop');
+  }
+
+  private handleSleep(): void {
+    if (!canSleepToday(this.state)) {
+      this.showToast('Volte da masmorra antes de dormir');
+      return;
+    }
+    const result = endDay(this.state);
+    saveGame(this.state);
+    this.refreshBaseUI();
+    this.showToast(formatDayEndMessage(result));
   }
 
   private toggleBaseBagModal(): void {
@@ -446,12 +458,22 @@ export class Game {
       setHint: (text) => this.shopUI.setHint(text),
       openPriceModal: (kind, index) => this.shopUI.openPriceModal(kind, index),
       onShopDayEnd: (gold) => {
+        let dayMsg = '';
+        if (this.state.shopDayUsed) {
+          const result = endDay(this.state);
+          dayMsg = formatDayEndMessage(result);
+        }
         saveGame(this.state);
         this.shopScene?.syncFromState(this.state);
         this.shopUI.render();
         this.shopUI.setShopDayBusy(false);
         this.refreshBaseUI();
-        this.showToast(gold > 0 ? `Dia de loja: +${gold} ouro` : 'Nenhuma venda hoje');
+        const shopPart = gold > 0 ? `Loja: +${gold} ouro` : 'Nenhuma venda hoje';
+        if (dayMsg) {
+          this.showToast(`${dayMsg} · ${shopPart}`);
+        } else {
+          this.showToast(shopPart);
+        }
       },
     });
 
@@ -500,7 +522,13 @@ export class Game {
         });
       },
       onOpenWorkbench: (cellX, cellY) => openWorkshopModal(cellX, cellY, this.workshopCallbacks()),
-      onOpenDungeon: () => openDungeonModal(this.baseModalCallbacks()),
+      onOpenDungeon: () => {
+        if (!canEnterDungeonToday(this.state)) {
+          this.showToast('Você já foi à masmorra hoje — durma para um novo dia');
+          return;
+        }
+        openDungeonModal(this.baseModalCallbacks());
+      },
       onOpenShop: () => this.tryOpenShop(),
       onOpenHabitatPen: (penId) => openHabitatPenModal(penId, this.habitatPenCallbacks()),
       onCreatureClick: (index) => {
@@ -514,6 +542,7 @@ export class Game {
         this.refreshBaseUI();
         this.showToast(`${moved.name} voltou para a bolsa`);
       },
+      onSleep: () => this.handleSleep(),
     });
     this.app.stage.removeChildren();
     this.app.stage.addChild(this.baseScene.root);
@@ -579,6 +608,10 @@ export class Game {
       this.showToast('Bioma ainda bloqueado');
       return;
     }
+    if (!canEnterDungeonToday(this.state)) {
+      this.showToast('Você já foi à masmorra hoje — durma para um novo dia');
+      return;
+    }
     await Promise.all([
       ensureCreatureSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
@@ -604,6 +637,9 @@ export class Game {
       showToast: (m) => this.showToast(m),
       updateHud: () => this.updateHud(),
     }, seed);
+
+    this.state.dungeonUsedToday = true;
+    saveGame(this.state);
 
     this.app.stage.addChild(this.dungeon.root);
     this.dungeon.enter();
@@ -677,6 +713,7 @@ export class Game {
       closeAbandonModal();
       closeInventoryModal();
       clearDungeonSpecial(this.state);
+      this.state.dungeonReturnedToday = true;
       this.destroyDungeon();
       saveGame(this.state);
       this.showScreen('base');
@@ -736,7 +773,7 @@ export class Game {
   private startShopDay(): void {
     if (!this.shopScene) return;
     if (this.state.shopDayUsed) {
-      this.showToast('Loja já abriu hoje — explore a masmorra para um novo dia');
+      this.showToast('Loja já abriu hoje — durma na base para um novo dia');
       return;
     }
     if (this.shopScene.startShopDay()) {

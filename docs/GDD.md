@@ -128,7 +128,7 @@ flowchart TD
 | **Dia** | Jogador acorda na base | Ilimitada | Loja, construção, habitats, craft |
 | **Entardecer** | Após 1 ciclo de loja aberta OU timer opcional | 2–5 min evento | Visitante especial ou +15% preço em raros |
 
-**Regra:** o jogador controla quando ir à masmorra; não há penalidade por "perder o dia". O dia só avança quando a loja é aberta ou o jogador dorme na cama.
+**Regra (MVP implementado):** o dia avança ao **dormir na cama** (após voltar da masmorra) ou ao **fechar a loja** após um dia de vendas. **Uma ida à masmorra por dia** — não dá para dormir nem farmar produção sem explorar primeiro.
 
 ### Estados do jogador
 
@@ -511,7 +511,7 @@ Hub persistente estilo Core Keeper: escave, construa, organize. Zona segura — 
 | Salamandra | Escama termal | 1 |
 | Vaporoso | Condensado | 2 |
 
-Fórmula: `producao = base * (humor/100) * (1 + 0.05 * nivel_criatura)`
+Fórmula (MVP): `producao = base` (humor fixo 100%). Fórmula completa: `producao = base * (humor/100) * (1 + 0.05 * nivel_criatura)`
 
 ### Iluminação
 

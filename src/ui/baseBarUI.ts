@@ -15,7 +15,7 @@ export function renderBaseHeader(state: GameState): void {
   const cap = getHabitatCapacity(state);
   const shopNote = state.shopDayUsed ? ' · Loja fechada' : '';
   stats.textContent =
-    `Ouro: ${state.gold} · Orbes: ${state.orbs} · STA: ${Math.round(state.playerStamina)} · Bolsa: ${bagCount(state)}/12 · Habitat: ${inHabitat}/${cap} · Dia 1${shopNote}`;
+    `Ouro: ${state.gold} · Orbes: ${state.orbs} · STA: ${Math.round(state.playerStamina)} · Bolsa: ${bagCount(state)}/12 · Habitat: ${inHabitat}/${cap} · Dia ${state.dayNumber}${shopNote}`;
 }
 
 export function bindBaseBar(callbacks: BaseBarCallbacks): void {

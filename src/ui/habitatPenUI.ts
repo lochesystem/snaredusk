@@ -7,6 +7,7 @@ import {
   moveCreatureToPen,
 } from '../systems/habitat.ts';
 import { DEFAULT_PEN_ID } from '../systems/habitatZones.ts';
+import { formatYieldPerDay } from '../data/habitatYields.ts';
 
 export interface HabitatPenCallbacks {
   getState: () => GameState;
@@ -53,7 +54,9 @@ export function renderHabitatPenModal(callbacks: HabitatPenCallbacks): void {
     btn.type = 'button';
     btn.className = 'party-pick';
     const inThisPen = creature.penId === activePenId;
-    btn.textContent = inThisPen ? `${creature.name} (aqui)` : creature.name;
+    const yieldLabel = formatYieldPerDay(creature.speciesId);
+    const yieldSuffix = yieldLabel ? ` · ${yieldLabel}` : '';
+    btn.textContent = inThisPen ? `${creature.name} (aqui)${yieldSuffix}` : `${creature.name}${yieldSuffix}`;
     if (inThisPen) {
       btn.addEventListener('click', () => {
         const moved = moveCreatureToBag(state, index);

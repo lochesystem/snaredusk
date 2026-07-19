@@ -38,6 +38,7 @@ export function createDefaultBaseGrid(): BaseGridState {
   const placements: BasePlacement[] = [
     { id: 'bench_default', stationId: 'workbench', cellX: startX + 4, cellY: startY + 5, rotation: 0 },
     { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 5, cellY: startY + 5, rotation: 0 },
+    { id: 'bed_default', stationId: 'bed', cellX: startX + 2, cellY: startY + 2, rotation: 0 },
   ];
 
   const chests = [
@@ -204,9 +205,17 @@ export function normalizeBaseGrid(partial: BaseGridState | undefined): BaseGridS
     width: partial.width ?? def.width,
     height: partial.height ?? def.height,
     cells,
-    placements: partial.placements ?? def.placements,
+    placements: ensureDefaultBed(partial.placements ?? def.placements),
     chests: partial.chests ?? def.chests,
     freeBuildsUsed: partial.freeBuildsUsed ?? 0,
     nextPlacementId: partial.nextPlacementId ?? 1,
   };
+}
+
+function ensureDefaultBed(placements: BasePlacement[]): BasePlacement[] {
+  if (placements.some((p) => p.stationId === 'bed')) return placements;
+  const def = createDefaultBaseGrid();
+  const bed = def.placements.find((p) => p.stationId === 'bed');
+  if (!bed) return placements;
+  return [...placements, bed];
 }

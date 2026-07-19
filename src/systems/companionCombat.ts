@@ -2,7 +2,6 @@ import type { Rect } from '../types.ts';
 import type { DungeonObstacle } from '../world/dungeonGenerator.ts';
 import {
   PARTY_ATTACK_RANGE,
-  PARTY_FOLLOW_GAP,
   PARTY_LEASH_RANGE,
   PARTY_RANGED_OFFSET,
 } from '../engine/constants.ts';

@@ -25,6 +25,8 @@ export const LOOT_TABLE: Record<string, LootDef> = {
   essencia_termal: { id: 'essencia_termal', name: 'Essência térmica', baseValue: 55, rarity: 'uncommon' },
   nucleo_bruma: { id: 'nucleo_bruma', name: 'Núcleo de bruma', baseValue: 95, rarity: 'rare' },
   coroa_termal: { id: 'coroa_termal', name: 'Coroa Termal', baseValue: 140, rarity: 'epic' },
+  po_bioluminescente: { id: 'po_bioluminescente', name: 'Pó bioluminescente', baseValue: 25, rarity: 'uncommon' },
+  condensado: { id: 'condensado', name: 'Condensado', baseValue: 22, rarity: 'common' },
 };
 
 export interface EnemyChestDrop {

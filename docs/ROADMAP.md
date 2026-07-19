@@ -101,10 +101,10 @@ flowchart LR
 | **Criaturas** | 18 espécies | **Parcial** | **12/18** (3 capturáveis + chefe por bioma) |
 | **Loot** | 30 itens | **Parcial** | **17/30** em `LOOT_TABLE` |
 | **Receitas** | 20 receitas | **Parcial** | **2/20** |
-| **Ciclo dia/noite** | Dormir, loja, entardecer | **Pendente** | Só flag `shopDayUsed` (1 loja por run) |
+| **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia; dormir após voltar ou fechar loja |
 | **Sentinelas** | 1 por bioma, passivos | **Pendente** | — |
 | **Base escavável** | Grid, escavação, baús, craft adjacente | **Feito (v0.4)** | Hub canvas + barra inferior; modo Construir; stamina para escavar |
-| **Produção habitat** | Recursos passivos | **Pendente** | Criaturas vagam no cercado; sem yield ainda |
+| **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
 | **Popularidade / reputação** | Níveis 1–3 | **Pendente** | — |
 | **Tutorial** | 15 min com Mira | **Pendente** | — |
 
@@ -113,10 +113,10 @@ flowchart LR
 - [ ] 8–12 horas de conteúdo jogável (estimativa atual: ~3–5 h)
 - [x] Todos os chefes derrotáveis com progressão de equipamento
 - [ ] Economia sem inflação em 10 ciclos dia/noite (teste Vitest)
-- [ ] Habitat produz recursos (craft adjacente **feito** em v0.4)
+- [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [ ] Reputação nível 1–3 alcançável
 - [~] Zero softlocks conhecidos (portão/chefe/chave corrigidos em v0.3.6; validação contínua)
-- [x] Suite Vitest abrangente (**112 testes**, 28 arquivos)
+- [x] Suite Vitest abrangente (**150 testes**, 36 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -132,6 +132,8 @@ tests/
   customers.test.ts      # arquétipos de cliente
   enemyAi.test.ts        # aggro
   habitat.test.ts        # bolsa ↔ habitat
+  habitatProduction.test.ts  # yield passivo, overflow
+  dayCycle.test.ts       # endDay, flags masmorra/dia
   inventory.test.ts      # descarte
   lootDrops.test.ts      # baús de inimigos
   orbShop.test.ts        # compra de orbes
@@ -199,9 +201,9 @@ Pendente:
 
 ## Próximas ações (prioridade)
 
-1. **Ciclo dia/noite jogável** — dormir na base, abrir loja ao anoitecer
+1. ~~**Ciclo dia/noite jogável**~~ — MVP: cama + `dayNumber` + loja reabre no novo dia
 2. **Conteúdo** — +6 criaturas, +13 loots, +18 receitas
-3. **Produção habitat** — yield passivo por criatura
+3. ~~**Produção habitat**~~ — MVP: yield fixo ao dormir/fechar loja (humor/fome depois)
 4. **Party 2 slots** + **sentinelas**
 5. **Bestiário UI** + **popularidade na loja**
 6. **Tutorial** com Mira (15 min)

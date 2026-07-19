@@ -2,6 +2,17 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [Unreleased]
+
+### Adicionado
+
+- **Ciclo dia/noite (MVP):** `dayNumber`, cama fixa na base, dormir ou fechar a loja avança o dia
+- **Produção passiva do habitat:** yield fixo por espécie (9 capturáveis); loot vai para a bolsa ao fim do dia
+- Novos ingredientes: Pó bioluminescente, Condensado
+- Regra diária: **1 masmorra por dia**; cama só após voltar da expedição (anti-farm)
+- Save v6 (`dayNumber`, flags de masmorra/dia)
+- Testes: `habitatProduction`, `dayCycle`
+
 ## [0.3.0] — 2026-07-17
 
 Sistema de combate variado com craft de armas.

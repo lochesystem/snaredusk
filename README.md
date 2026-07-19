@@ -21,7 +21,7 @@ Preparar (party + sentinelas) → Masmorra (combate + captura) → Retorno (port
     → Loja (vender loot e criaturas) → Base (habitats, craft, expansão) → Preparar…
 ```
 
-No **build atual** (vertical slice): masmorra → captura → portal → loja → habitat na base. Party, sentinelas, craft e ciclo dia/noite ainda estão no [GDD](docs/GDD.md).
+No **build atual**: masmorra (1×/dia) → captura → portal → **dormir na cama** (produção do habitat) → loja → habitat. Party, sentinelas e humor/fome ainda estão no [GDD](docs/GDD.md).
 
 ## Plataforma
 
@@ -34,7 +34,7 @@ No **build atual** (vertical slice): masmorra → captura → portal → loja �
 | WASD / setas | Mover personagem |
 | Mouse / clique | Atacar na direção do cursor |
 | **Q** | Orbe de Vínculo (captura) |
-| **E** | Interagir — portal, baús de tesouro |
+| **E** | Interagir — portal, baús, bancada, cama (dormir) |
 
 Controles planejados (fase 2+): Espaço, Tab, I, B, M, Esc — ver [UX-UI](docs/UX-UI.md).
 
@@ -48,9 +48,10 @@ Controles planejados (fase 2+): Espaço, Tab, I, B, M, Esc — ver [UX-UI](docs/
 | **Captura** | Orbe de Vínculo; taxa sobe conforme HP cai |
 | **3 criaturas** | Lumimorcego, Esporo Dorminhoco, Carapaça de Musgo |
 | **Loja** | 3 prateleiras, 1 gaiola, precificação por reação do cliente |
-| **Habitat** | Até 4 criaturas; cena visual na base; mover bolsa ↔ habitat |
+| **Habitat** | Cercados na base; criaturas vagam; **produção passiva** ao dormir |
+| **Ciclo dia** | 1 masmorra/dia; dormir na cama (após voltar) ou fechar loja avança o dia |
 | **Mercador de orbes** | Na base: ×1 por 25 ouro, ×3 por 70 ouro |
-| **Save** | localStorage entre sessões |
+| **Save** | localStorage v6 entre sessões |
 | **Deploy** | GitHub Actions → GitHub Pages |
 
 ## Conteúdo MVP (meta do GDD)
@@ -87,8 +88,9 @@ npm run build
 3. **Entrar na Masmorra** — layout procedural da Floresta Fúngica (7–9 salas)
 4. Explore, abra **baús** com **E**, combata com clique e capture com **Q**
 5. Derrote ou capture todos os inimigos; o **portal** ativa — vá até ele e pressione **E**
-6. Na base, coloque criaturas da bolsa no **habitat** (botão ou clique na cena)
-7. **Abrir Loja** — itens nas prateleiras/gaiola, ajuste preço, **Abrir loja ao público**
+6. Na base, coloque criaturas da bolsa no **cercado** (construir ou modal)
+7. **[E] na cama** para dormir — avança o dia e coleta produção do habitat (só após voltar da masmorra)
+8. **Abrir Loja** — itens nas prateleiras/gaiola, ajuste preço, **Abrir loja ao público** (também avança o dia ao fechar)
 
 ## Documentação de design
 

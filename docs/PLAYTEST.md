@@ -45,6 +45,9 @@ npm run build
 | 2.5 | **[E]** na **bancada** → craft com materiais do baú adjacente | ☐ | |
 | 2.6 | **Orbes** na barra → comprar orbes | ☐ | |
 | 2.7 | **Bolsa** → colocar criatura no habitat | ☐ | |
+| 2.9 | **[E] na cama** → dormir só após voltar da masmorra; dia avança, loot na bolsa | ☐ | |
+| 2.10 | Barra da base mostra **Dia N**; loja reabre no dia seguinte | ☐ | |
+| 2.11 | Portal bloqueado após 1 ida à masmorra no mesmo dia | ☐ | |
 | 2.8 | Clicar criatura no mapa → volta à bolsa | ☐ | |
 
 ### 3. Masmorra — exploração (4 min)
@@ -68,6 +71,8 @@ npm run build
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
 | 4.1 | Criaturas no **cercado** (se colocado) ou perto do spawn vagam | ☐ | |
+| 4.2 | Modal do cercado mostra **+X loot/dia** por criatura | ☐ | |
+| 4.3 | Após dormir, toast resume produção do habitat | ☐ | |
 
 ### 5. Loja (2 min)
 
@@ -98,7 +103,7 @@ npm run build
 
 ## Critérios de sucesso (Fase 1)
 
-- [ ] Loop masmorra → captura → portal → habitat → loja → ouro completado sem softlock
+- [ ] Loop masmorra (1×/dia) → captura → portal → dormir → habitat/loja completado sem softlock
 - [ ] Nenhum bug bloqueante (freeze, void, spawn preso)
 - [ ] Controles compreensíveis sem ler o README
 - [ ] Sensação geral ≥ **7/10** (anotar nota: ___/10)
@@ -125,6 +130,6 @@ npm run build
 | Bugs encontrados | Nenhum |
 | Aprovado Fase 1? | ☑ Sim ☐ Com ressalvas |
 
-**Notas da sessão manual:** loop completo (masmorra → captura → habitat → loja → trava diária). Emojis dos clientes visíveis; precificação por tentativa funcionou; nenhum softlock.
+**Notas da sessão manual:** loop completo (masmorra → captura → habitat → loja → trava diária). Emojis dos clientes visíveis; precificação por tentativa funcionou; nenhum softlock. *Atualização:* ciclo dia com cama + 1 masmorra/dia — validar em playtest.*
 
 *Após preencher, marcar playtest no [ROADMAP.md](ROADMAP.md) e registrar achados no [CHANGELOG.md](../CHANGELOG.md) se houver fixes.*

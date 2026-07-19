@@ -1,4 +1,5 @@
 import type { BiomeId } from './data/biomes.ts';
+import type { StationId } from './data/baseStations.ts';
 
 export type ItemKind = 'loot' | 'creature';
 
@@ -40,7 +41,7 @@ export interface BaseChestState {
 
 export interface BasePlacement {
   id: string;
-  stationId: 'workbench' | 'chest_wood' | 'habitat_pen';
+  stationId: StationId;
   cellX: number;
   cellY: number;
   rotation: 0 | 1 | 2 | 3;
@@ -106,6 +107,12 @@ export interface GameState {
   shopShelves: (ShopListing | null)[];
   shopCages: (ShopListing | null)[];
   shopDayUsed: boolean;
+  /** Dia do ciclo (começa em 1). Avança ao dormir ou ao fechar a loja. */
+  dayNumber: number;
+  /** Já entrou na masmorra neste dia (máx. 1 run). */
+  dungeonUsedToday: boolean;
+  /** Voltou da masmorra hoje — necessário para dormir. */
+  dungeonReturnedToday: boolean;
   /** Criatura escolhida na base para acompanhar na masmorra. */
   partyCompanion: CreatureItem | null;
   bestiary: string[];
@@ -172,6 +179,9 @@ export function defaultGameState(): GameState {
     shopShelves: createShopShelves(6),
     shopCages: createShopCages(1),
     shopDayUsed: false,
+    dayNumber: 1,
+    dungeonUsedToday: false,
+    dungeonReturnedToday: false,
     partyCompanion: null,
     bestiary: [],
     dungeonCleared: false,

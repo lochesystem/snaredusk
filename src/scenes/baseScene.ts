@@ -113,6 +113,7 @@ export interface BaseSceneCallbacks {
 
   onCreatureClick: (habitatIndex: number) => void;
 
+  onSleep: () => void;
 }
 
 
@@ -804,6 +805,11 @@ export class BaseScene {
 
       if (landmark === 'portal') {
 
+        if (state.dungeonUsedToday) {
+          this.cb.showToast('Você já foi à masmorra hoje — durma para um novo dia');
+          return;
+        }
+
         this.cb.onOpenDungeon();
 
         return;
@@ -867,6 +873,10 @@ export class BaseScene {
         } else if (near.kind === 'workbench' && near.cellX !== undefined && near.cellY !== undefined) {
 
           this.cb.onOpenWorkbench(near.cellX, near.cellY);
+
+        } else if (near.kind === 'bed') {
+
+          this.cb.onSleep();
 
         }
 
@@ -1012,7 +1022,7 @@ export class BaseScene {
 
   private findNearestInteractable(state: GameState): {
 
-    kind: 'chest' | 'workbench';
+    kind: 'chest' | 'workbench' | 'bed';
 
     chestId?: string;
 
@@ -1026,7 +1036,7 @@ export class BaseScene {
 
     let best: {
 
-      kind: 'chest' | 'workbench';
+      kind: 'chest' | 'workbench' | 'bed';
 
       chestId?: string;
 
@@ -1071,6 +1081,16 @@ export class BaseScene {
         if (!best || dist < best.dist) {
 
           best = { kind: 'workbench', cellX: p.cellX, cellY: p.cellY, dist };
+
+        }
+
+      }
+
+      if (p.stationId === 'bed') {
+
+        if (!best || dist < best.dist) {
+
+          best = { kind: 'bed', cellX: p.cellX, cellY: p.cellY, dist };
 
         }
 
@@ -1276,7 +1296,9 @@ export class BaseScene {
 
     if (landmark === 'portal') {
 
-      hint = '[E] Portal — escolher masmorra';
+      hint = state.dungeonUsedToday
+        ? 'Portal — masmorra já visitada hoje'
+        : '[E] Portal — escolher masmorra';
 
     } else if (landmark === 'shop') {
 
@@ -1297,6 +1319,12 @@ export class BaseScene {
         if (near?.kind === 'chest') hint = '[E] Abrir baú';
 
         else if (near?.kind === 'workbench') hint = '[E] Usar bancada';
+
+        else if (near?.kind === 'bed') {
+          hint = state.dungeonReturnedToday
+            ? '[E] Dormir'
+            : 'Cama — volte da masmorra para dormir';
+        }
 
       else if (this.findHabitatInteractTarget(state)) hint = '[E] Gerenciar criaturas do cercado';
 

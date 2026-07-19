@@ -15,14 +15,14 @@ import type { BiomeId } from '../data/biomes.ts';
 import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
 
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 
-interface SavePayloadV5 {
+interface SavePayloadV6 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -36,10 +36,13 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   hasSporeKey?: boolean;
   hasPrismaticKey?: boolean;
   base?: GameState['base'];
+  dayNumber?: number;
+  dungeonUsedToday?: boolean;
+  dungeonReturnedToday?: boolean;
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV5 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV6 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -51,6 +54,7 @@ export function deserializeState(raw: string): GameState | null {
     if (payload.version === 2) return normalizeState(migrateV2(payload.state));
     if (payload.version === 3) return normalizeState(payload.state);
     if (payload.version === 4) return normalizeState(payload.state);
+    if (payload.version === 5) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -112,6 +116,9 @@ function normalizeState(partial: LegacyGameState): GameState {
     shopShelves: padShelves(partial.shopShelves, def.shelfCount),
     shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
     shopDayUsed: partial.shopDayUsed ?? false,
+    dayNumber: partial.dayNumber ?? 1,
+    dungeonUsedToday: partial.dungeonUsedToday ?? false,
+    dungeonReturnedToday: partial.dungeonReturnedToday ?? false,
     partyCompanion: partial.partyCompanion ?? null,
     habitat: partial.habitat ?? [],
     bestiary: partial.bestiary ?? [],
