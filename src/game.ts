@@ -8,7 +8,7 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
-import { endDay, formatDayEndMessage, canSleepToday, canEnterDungeonToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from './systems/dayCycle.ts';
+import { endDay, canSleepToday, canEnterDungeonToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
@@ -26,6 +26,7 @@ import {
   isAudioSettingsModalOpen,
   openAudioSettingsModal,
 } from './ui/audioSettingsUI.ts';
+import { isDayTransitionPlaying, playDayTransition } from './ui/dayTransitionUI.ts';
 import {
   ensureBaseTilesetPreloaded,
   ensureEnvironmentPreloaded,
@@ -357,6 +358,7 @@ export class Game {
   }
 
   private handleSleep(): void {
+    if (isDayTransitionPlaying()) return;
     if (!canSleepToday(this.state)) {
       this.showToast('Volte da masmorra antes de dormir');
       return;
@@ -364,7 +366,7 @@ export class Game {
     const result = endDay(this.state);
     saveGame(this.state);
     this.refreshBaseUI();
-    this.showToast(formatDayEndMessage(result));
+    void playDayTransition({ result });
   }
 
   private toggleBaseBagModal(): void {
@@ -507,22 +509,23 @@ export class Game {
       setHint: (text) => this.shopUI.setHint(text),
       openPriceModal: (kind, index) => this.shopUI.openPriceModal(kind, index),
       onShopDayEnd: (gold) => {
-        let dayMsg = '';
+        const shopPart = gold > 0 ? `Loja: +${gold} ouro` : 'Nenhuma venda hoje';
         if (this.state.shopDayUsed) {
           const result = endDay(this.state);
-          dayMsg = formatDayEndMessage(result);
+          saveGame(this.state);
+          this.shopScene?.syncFromState(this.state);
+          this.shopUI.render();
+          this.shopUI.setShopDayBusy(false);
+          this.refreshBaseUI();
+          void playDayTransition({ result, footer: shopPart });
+          return;
         }
         saveGame(this.state);
         this.shopScene?.syncFromState(this.state);
         this.shopUI.render();
         this.shopUI.setShopDayBusy(false);
         this.refreshBaseUI();
-        const shopPart = gold > 0 ? `Loja: +${gold} ouro` : 'Nenhuma venda hoje';
-        if (dayMsg) {
-          this.showToast(`${dayMsg} · ${shopPart}`);
-        } else {
-          this.showToast(shopPart);
-        }
+        this.showToast(shopPart);
       },
     });
 
