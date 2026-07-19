@@ -125,16 +125,6 @@ function spawnEnemyProjectile(
   };
 }
 
-function tickShieldRegen(enemy: EnemyCombatEnemy, behavior: EnemyBehaviorDef, dt: number): void {
-  if (!isBossBehaviorKind(behavior.kind) && behavior.kind !== 'shielded') return;
-  if (enemy.shieldHp <= 0 && enemy.shieldRegenCd > 0) {
-    enemy.shieldRegenCd -= dt;
-    if (enemy.shieldRegenCd <= 0) {
-      enemy.shieldHp = enemy.shieldMax;
-    }
-  }
-}
-
 export function tickEnemyCombat(
   enemy: EnemyCombatEnemy,
   ctx: EnemyCombatContext,
@@ -151,8 +141,6 @@ export function tickEnemyCombat(
   const behavior = getEffectiveBehavior(enemy, getEnemyBehavior(enemy.behaviorId));
   const baseBehavior = getEnemyBehavior(enemy.behaviorId);
   const dist = distance(enemy.x, enemy.y, ctx.playerX, ctx.playerY);
-
-  tickShieldRegen(enemy, behavior, ctx.dt);
 
   if (enemy.combatPhase === 'charge') {
     enemy.phaseTimer -= ctx.dt;
@@ -303,9 +291,6 @@ export function applyShieldDamage(enemy: EnemyCombatEnemy, damage: number, behav
     const absorbed = Math.min(enemy.shieldHp, damage);
     enemy.shieldHp -= absorbed;
     const remaining = damage - absorbed;
-    if (enemy.shieldHp <= 0) {
-      enemy.shieldRegenCd = behavior.shieldRegenDelay ?? 5;
-    }
     return remaining;
   }
   return damage;
