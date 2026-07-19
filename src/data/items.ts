@@ -53,7 +53,7 @@ export function getEnemyChestDrop(speciesId: string, _isBoss: boolean): EnemyChe
     case 'carapaca_musgo':
       return { lootId: 'nucleo_fungico', quantity: 1, epic: false, goldBonus: 8 };
     case 'esporo_dorminhoco':
-      return { lootId: 'fibra_musgo', quantity: 2, epic: false, goldBonus: 0 };
+      return { lootId: 'cogumelo_comum', quantity: 2, epic: false, goldBonus: 0 };
     case 'prismarin':
       return { lootId: 'poeira_prismatica', quantity: 1, epic: false, goldBonus: 0 };
     case 'lumicascalho':

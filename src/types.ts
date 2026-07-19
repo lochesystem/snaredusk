@@ -111,7 +111,7 @@ export interface GameState {
   shopShelves: (ShopListing | null)[];
   shopCages: (ShopListing | null)[];
   shopDayUsed: boolean;
-  /** Dia do ciclo (começa em 1). Avança ao dormir ou ao fechar a loja. */
+  /** Dia do ciclo (começa em 1). Avança apenas ao dormir na cama. */
   dayNumber: number;
   /** Já entrou na masmorra neste dia (máx. 1 run). */
   dungeonUsedToday: boolean;

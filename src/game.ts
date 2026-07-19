@@ -353,7 +353,7 @@ export class Game {
 
   private tryOpenShop(): void {
     if (this.state.shopDayUsed) {
-      this.showToast('A loja já fechou hoje — durma ou espere o próximo dia');
+      this.showToast('A loja já fechou hoje — durma na cama para um novo dia');
       return;
     }
     this.showScreen('shop');
@@ -512,16 +512,6 @@ export class Game {
       openPriceModal: (kind, index) => this.shopUI.openPriceModal(kind, index),
       onShopDayEnd: (gold) => {
         const shopPart = gold > 0 ? `Loja: +${gold} ouro` : 'Nenhuma venda hoje';
-        if (this.state.shopDayUsed) {
-          const result = endDay(this.state);
-          saveGame(this.state);
-          this.shopScene?.syncFromState(this.state);
-          this.shopUI.render();
-          this.shopUI.setShopDayBusy(false);
-          this.refreshBaseUI();
-          void playDayTransition({ result, footer: shopPart });
-          return;
-        }
         saveGame(this.state);
         this.shopScene?.syncFromState(this.state);
         this.shopUI.render();
@@ -850,7 +840,7 @@ export class Game {
   private startShopDay(): void {
     if (!this.shopScene) return;
     if (this.state.shopDayUsed) {
-      this.showToast('Loja já abriu hoje — durma na base para um novo dia');
+      this.showToast('Loja já abriu hoje — durma na cama para um novo dia');
       return;
     }
     if (this.shopScene.startShopDay()) {

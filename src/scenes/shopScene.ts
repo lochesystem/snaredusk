@@ -213,7 +213,7 @@ export class ShopScene {
   startShopDay(): boolean {
     const state = this.cb.getState();
     if (state.shopDayUsed) {
-      this.cb.showToast('Loja já abriu hoje — explore a masmorra para um novo dia');
+      this.cb.showToast('Loja já abriu hoje — durma na cama para um novo dia');
       return false;
     }
     const hasStock = state.shopShelves.some(Boolean) || state.shopCages.some(Boolean);
@@ -384,7 +384,7 @@ export class ShopScene {
     if (this.customerQueue.length === 0 && activeCount === 0) {
       this.shopDayActive = false;
       this.cb.onShopDayEnd(this.shopDayGold);
-      this.cb.setHint('Dia encerrado — organize a loja ou abra de novo.');
+      this.cb.setHint('Expediente encerrado — volte à base e durma para o próximo dia.');
       this.updateHint();
     }
   }

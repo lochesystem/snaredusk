@@ -11,6 +11,7 @@ describe('getEnemyChestDrop', () => {
 
   it('common enemies drop appropriate loot', () => {
     expect(getEnemyChestDrop('lumimorcego', false).lootId).toBe('esporo_brilhante');
+    expect(getEnemyChestDrop('esporo_dorminhoco', false).lootId).toBe('cogumelo_comum');
     expect(getEnemyChestDrop('esporo_dorminhoco', false).quantity).toBe(2);
     expect(getEnemyChestDrop('carapaca_musgo', false).lootId).toBe('nucleo_fungico');
   });
