@@ -301,7 +301,7 @@ export function removePlacement(state: GameState, placementId: string): PlaceRes
 
   if (placement.stationId === 'chest_wood') {
     const chest = findChestAt(state.base, placement.cellX, placement.cellY);
-    if (chest && chest.slots.some(Boolean)) {
+    if (chest && (chest.slots.some(Boolean) || chest.weaponSlots?.some(Boolean))) {
       return { ok: false, message: 'Esvazie o baú antes de remover' };
     }
     state.base.chests = state.base.chests.filter((c) => c.id !== placement.id);

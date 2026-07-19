@@ -4,7 +4,7 @@ import type { BaseChestState, GameState } from '../types.ts';
 import { getStation } from '../data/baseStations.ts';
 import { countLootInChest, removeLootFromChest } from './baseChest.ts';
 import { countLootInBag } from './craft.ts';
-import { syncWeaponHotbar } from './weaponHotbar.ts';
+import { acquireWeapon } from './weaponArmory.ts';
 
 export type ChestDirection = 'north' | 'east' | 'south' | 'west';
 
@@ -165,9 +165,8 @@ export function craftWeaponFromWorkbench(
   if (!consumeFromPlan(state, preview.consumePlan, adjacent)) return false;
 
   if (!state.ownedWeapons.includes(recipe.weaponId)) {
-    state.ownedWeapons.push(recipe.weaponId);
+    acquireWeapon(state, recipe.weaponId);
   }
-  syncWeaponHotbar(state);
   return true;
 }
 

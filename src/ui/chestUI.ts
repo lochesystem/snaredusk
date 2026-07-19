@@ -1,5 +1,11 @@
 import type { GameState } from '../types.ts';
-import { findChestById, transferLootToBag, transferLootToChest } from '../systems/baseChest.ts';
+import { WEAPONS } from '../data/weapons.ts';
+import {
+  findChestById,
+  transferLootToBag,
+  transferLootToChest,
+} from '../systems/baseChest.ts';
+import { withdrawWeaponFromChest } from '../systems/weaponArmory.ts';
 
 export interface ChestUICallbacks {
   getState: () => GameState;
@@ -37,10 +43,12 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
 
   const chestGrid = document.getElementById('chest-modal-grid');
   const bagGrid = document.getElementById('chest-bag-grid');
-  if (!chestGrid || !bagGrid) return;
+  const weaponGrid = document.getElementById('chest-weapon-grid');
+  if (!chestGrid || !bagGrid || !weaponGrid) return;
 
   chestGrid.innerHTML = '';
   bagGrid.innerHTML = '';
+  weaponGrid.innerHTML = '';
 
   chest.slots.forEach((slot, index) => {
     const btn = document.createElement('button');
@@ -63,6 +71,30 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
       btn.disabled = true;
     }
     chestGrid.appendChild(btn);
+  });
+
+  (chest.weaponSlots ?? []).forEach((weaponId, index) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'inv-slot';
+    if (weaponId && WEAPONS[weaponId]) {
+      btn.textContent = `⚔ ${WEAPONS[weaponId].name}`;
+      btn.title = 'Retirar para o arsenal';
+      btn.addEventListener('click', () => {
+        if (withdrawWeaponFromChest(state, chest, index)) {
+          callbacks.onChange();
+          renderChestModal(callbacks);
+          callbacks.showToast(`${WEAPONS[weaponId].name} retirada — configure na bancada`);
+        } else {
+          callbacks.showToast('Não foi possível retirar a arma');
+        }
+      });
+    } else {
+      btn.classList.add('empty');
+      btn.textContent = '—';
+      btn.disabled = true;
+    }
+    weaponGrid.appendChild(btn);
   });
 
   state.bag.forEach((entry, index) => {

@@ -3,6 +3,7 @@ import { BAG_SLOTS } from '../engine/constants.ts';
 import type { GameState } from '../types.ts';
 import type { BaseChestState } from '../types.ts';
 import { getStation } from '../data/baseStations.ts';
+import { emptyWeaponSlots } from './weaponArmory.ts';
 
 export const CHEST_SLOT_COUNT = 12;
 
@@ -20,6 +21,7 @@ export function createChestState(id: string, cellX: number, cellY: number): Base
     cellX,
     cellY,
     slots: Array.from({ length: CHEST_SLOT_COUNT }, () => null),
+    weaponSlots: emptyWeaponSlots(),
   };
 }
 
@@ -125,6 +127,16 @@ export function bagHasLootSpace(state: GameState): boolean {
 
 export function chestHasSpace(chest: BaseChestState): boolean {
   return chest.slots.some((s) => s === null);
+}
+
+export function chestWeaponHasSpace(chest: BaseChestState): boolean {
+  return (chest.weaponSlots ?? emptyWeaponSlots()).some((s) => s === null);
+}
+
+export function normalizeChestWeapons(chest: BaseChestState): void {
+  if (!chest.weaponSlots || chest.weaponSlots.length !== emptyWeaponSlots().length) {
+    chest.weaponSlots = emptyWeaponSlots();
+  }
 }
 
 export function maxBagLootSlots(): number {

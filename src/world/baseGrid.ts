@@ -1,5 +1,7 @@
 import type { BaseGridState, BasePlacement } from '../types.ts';
 import { BASE_CELL_SIZE, BASE_MAP_HEIGHT, BASE_MAP_WIDTH } from '../engine/constants.ts';
+import { getStation } from '../data/baseStations.ts';
+import { createChestState } from '../systems/baseChest.ts';
 
 export const BaseCellKind = {
   Void: 0,
@@ -41,14 +43,7 @@ export function createDefaultBaseGrid(): BaseGridState {
     { id: 'bed_default', stationId: 'bed', cellX: startX + 2, cellY: startY + 2, rotation: 0 },
   ];
 
-  const chests = [
-    {
-      id: 'chest_default',
-      cellX: startX + 5,
-      cellY: startY + 5,
-      slots: Array.from({ length: 12 }, () => null),
-    },
-  ];
+  const chests = [createChestState('chest_default', startX + 5, startY + 5)];
 
   return {
     width: BASE_MAP_WIDTH,
@@ -157,6 +152,33 @@ export function getRockWallsForCollision(base: BaseGridState): { x: number; y: n
         walls.push({
           x: x * BASE_CELL_SIZE,
           y: y * BASE_CELL_SIZE,
+          width: BASE_CELL_SIZE,
+          height: BASE_CELL_SIZE,
+        });
+      }
+    }
+  }
+  return walls;
+}
+
+/** Colisão das estações construídas (cercado é atravessável). */
+export function getStationWallsForCollision(
+  base: BaseGridState,
+  excludePlacementId?: string | null,
+): { x: number; y: number; width: number; height: number }[] {
+  const walls: { x: number; y: number; width: number; height: number }[] = [];
+  for (const placement of base.placements) {
+    if (excludePlacementId && placement.id === excludePlacementId) continue;
+    if (placement.stationId === 'habitat_pen') continue;
+
+    const def = getStation(placement.stationId);
+    for (let dy = 0; dy < def.height; dy++) {
+      for (let dx = 0; dx < def.width; dx++) {
+        const cx = placement.cellX + dx;
+        const cy = placement.cellY + dy;
+        walls.push({
+          x: cx * BASE_CELL_SIZE,
+          y: cy * BASE_CELL_SIZE,
           width: BASE_CELL_SIZE,
           height: BASE_CELL_SIZE,
         });

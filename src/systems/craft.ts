@@ -1,9 +1,8 @@
 import type { CraftRecipe } from '../data/recipes.ts';
 import { CRAFT_RECIPES, getRecipe } from '../data/recipes.ts';
 import { LOOT_TABLE } from '../data/items.ts';
-import { WEAPONS } from '../data/weapons.ts';
 import type { GameState } from '../types.ts';
-import { syncWeaponHotbar } from './weaponHotbar.ts';
+import { acquireWeapon, equipWeapon as armoryEquip } from './weaponArmory.ts';
 
 export interface CraftStatus {
   canCraft: boolean;
@@ -72,18 +71,13 @@ export function craftWeapon(state: GameState, recipeId: string): boolean {
     if (!consumeLoot(state, ing.lootId, ing.quantity)) return false;
   }
   if (!state.ownedWeapons.includes(recipe.weaponId)) {
-    state.ownedWeapons.push(recipe.weaponId);
+    acquireWeapon(state, recipe.weaponId);
   }
-  syncWeaponHotbar(state);
   return true;
 }
 
 export function equipWeapon(state: GameState, weaponId: string): boolean {
-  if (!state.ownedWeapons.includes(weaponId)) return false;
-  if (!WEAPONS[weaponId]) return false;
-  state.equippedWeaponId = weaponId;
-  syncWeaponHotbar(state);
-  return true;
+  return armoryEquip(state, weaponId);
 }
 
 export function listRecipes(): CraftRecipe[] {

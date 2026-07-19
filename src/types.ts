@@ -37,6 +37,8 @@ export interface BaseChestState {
   cellX: number;
   cellY: number;
   slots: (LootItem | null)[];
+  /** Armas guardadas neste baú (até 4). */
+  weaponSlots?: (string | null)[];
 }
 
 export interface BasePlacement {
@@ -97,7 +99,9 @@ export interface GameState {
   playerDef: number;
   equippedWeaponId: string;
   ownedWeapons: string[];
-  /** Slots 1–2 na hotbar (armas possuídas). */
+  /** Armas no arsenal da base (fora dos slots 1–2 e dos baús). */
+  weaponStash: string[];
+  /** Slots 1–2 na hotbar (armas levadas à masmorra). */
   weaponHotbar: [string | null, string | null];
   bag: (BagEntry | null)[];
   /** Itens especiais da expedição — não ocupam slots da bolsa; somem ao voltar à base. */
@@ -171,6 +175,7 @@ export function defaultGameState(): GameState {
     playerDef: 5,
     equippedWeaponId: STARTING_WEAPON_ID,
     ownedWeapons: [STARTING_WEAPON_ID],
+    weaponStash: [],
     weaponHotbar: defaultWeaponHotbar(),
     bag: createEmptyBag(),
     dungeonSpecial: createEmptySpecialBag(),

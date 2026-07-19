@@ -691,6 +691,32 @@ button:hover {
   height: 24px;
 }
 
+.armory-slot-box {
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid #4a4038;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.armory-row-wrap {
+  margin-bottom: 8px;
+}
+
+.armory-weapon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.armory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
 #workshop-panel,
 #armory-panel {
   margin-top: 16px;

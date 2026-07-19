@@ -1,5 +1,6 @@
 import type { GameState } from '../types.ts';
 import { STARTING_WEAPON_ID } from '../data/weapons.ts';
+import { normalizeWeaponArmory } from './weaponArmory.ts';
 
 export const WEAPON_HOTBAR_SLOTS = 2;
 
@@ -7,26 +8,9 @@ export function defaultWeaponHotbar(): [string | null, string | null] {
   return [STARTING_WEAPON_ID, null];
 }
 
-/** Preenche slots vazios com armas possuídas. */
+/** Valida hotbar e migra armas extras para o arsenal. */
 export function syncWeaponHotbar(state: GameState): void {
-  const owned = state.ownedWeapons;
-  const hotbar = state.weaponHotbar;
-
-  for (let i = 0; i < WEAPON_HOTBAR_SLOTS; i++) {
-    if (hotbar[i] && !owned.includes(hotbar[i]!)) hotbar[i] = null;
-  }
-
-  for (const id of owned) {
-    if (hotbar.includes(id)) continue;
-    const empty = hotbar.findIndex((s) => s === null);
-    if (empty === -1) break;
-    hotbar[empty] = id;
-  }
-
-  if (owned.includes(state.equippedWeaponId) && !hotbar.includes(state.equippedWeaponId)) {
-    const empty = hotbar.findIndex((s) => s === null);
-    if (empty !== -1) hotbar[empty] = state.equippedWeaponId;
-  }
+  normalizeWeaponArmory(state);
 }
 
 export function selectHotbarSlot(state: GameState, index: number): boolean {

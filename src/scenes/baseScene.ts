@@ -59,6 +59,7 @@ import {
   getDungeonPortalWorld,
   getFloorsForCollision,
   getRockWallsForCollision,
+  getStationWallsForCollision,
   getShopStaircaseWorld,
   getSpawnPosition,
   worldToCell,
@@ -448,7 +449,10 @@ export class BaseScene {
 
     this.floors = getFloorsForCollision(state.base);
 
-    this.walls = getRockWallsForCollision(state.base);
+    this.walls = [
+      ...getRockWallsForCollision(state.base),
+      ...getStationWallsForCollision(state.base, this.heldPlacementId),
+    ];
 
   }
 

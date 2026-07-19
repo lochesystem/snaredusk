@@ -14,15 +14,16 @@ import { syncBiomeUnlocks } from './biomeProgress.ts';
 import type { BiomeId } from '../data/biomes.ts';
 import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
+import { normalizeWeaponArmory } from './weaponArmory.ts';
 
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 
-interface SavePayloadV6 {
+interface SavePayloadV7 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -30,6 +31,7 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   playerDef?: number;
   equippedWeaponId?: string;
   ownedWeapons?: string[];
+  weaponStash?: string[];
   activeBiome?: BiomeId;
   unlockedBiomes?: BiomeId[];
   biomeBossDefeated?: Partial<Record<BiomeId, boolean>>;
@@ -42,7 +44,7 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV6 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV7 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -55,6 +57,7 @@ export function deserializeState(raw: string): GameState | null {
     if (payload.version === 3) return normalizeState(payload.state);
     if (payload.version === 4) return normalizeState(payload.state);
     if (payload.version === 5) return normalizeState(payload.state);
+    if (payload.version === 6) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -110,6 +113,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     playerDef: partial.playerDef ?? base.playerDef,
     equippedWeaponId: partial.equippedWeaponId ?? base.equippedWeaponId,
     ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
+    weaponStash: partial.weaponStash ?? [],
     weaponHotbar: normalizeWeaponHotbar(partial.weaponHotbar, partial.ownedWeapons ?? base.ownedWeapons),
     bag: padBag(partial.bag),
     dungeonSpecial: padSpecialBag(partial.dungeonSpecial),
@@ -135,6 +139,7 @@ function normalizeState(partial: LegacyGameState): GameState {
   }
   syncBiomeUnlocks(normalized);
   migrateLegacyHabitatCreatures(normalized);
+  normalizeWeaponArmory(normalized);
   return normalized;
 }
 

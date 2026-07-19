@@ -3,21 +3,23 @@ import { defaultGameState } from '../src/types.ts';
 import { selectHotbarSlot, syncWeaponHotbar } from '../src/systems/weaponHotbar.ts';
 
 describe('weaponHotbar', () => {
-  it('preenche slots com armas possuídas', () => {
+  it('valida hotbar sem auto-preencher além dos slots', () => {
     const state = defaultGameState();
-    state.ownedWeapons = ['faca_enferrujada', 'picareta_combate'];
-    state.weaponHotbar = [null, null];
+    state.ownedWeapons = ['faca_enferrujada', 'picareta_combate', 'lanca_esporo'];
+    state.weaponHotbar = ['faca_enferrujada', 'picareta_combate'];
+    state.weaponStash = ['lanca_esporo'];
 
     syncWeaponHotbar(state);
 
-    expect(state.weaponHotbar).toContain('faca_enferrujada');
-    expect(state.weaponHotbar).toContain('picareta_combate');
+    expect(state.weaponHotbar).toEqual(['faca_enferrujada', 'picareta_combate']);
+    expect(state.weaponStash).toContain('lanca_esporo');
   });
 
   it('troca arma equipada pelo slot da hotbar', () => {
     const state = defaultGameState();
     state.ownedWeapons = ['faca_enferrujada', 'picareta_combate'];
     state.weaponHotbar = ['faca_enferrujada', 'picareta_combate'];
+    state.weaponStash = [];
     state.equippedWeaponId = 'faca_enferrujada';
 
     expect(selectHotbarSlot(state, 1)).toBe(true);

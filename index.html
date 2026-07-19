@@ -68,11 +68,13 @@
     <div id="chest-modal" class="modal hidden">
       <div class="modal-content chest-modal-content">
         <h3>Baú</h3>
-        <p class="panel-hint">Clique para mover loot entre baú e bolsa.</p>
+        <p class="panel-hint">Clique para mover loot entre baú e bolsa. Armas guardadas aqui são retiradas pelo arsenal da bancada.</p>
         <div class="chest-modal-columns">
           <div>
-            <h4 class="subheading">Baú</h4>
+            <h4 class="subheading">Baú — loot</h4>
             <div id="chest-modal-grid" class="inventory-grid"></div>
+            <h4 class="subheading">Baú — armas</h4>
+            <div id="chest-weapon-grid" class="inventory-grid"></div>
           </div>
           <div>
             <h4 class="subheading">Bolsa</h4>
@@ -86,9 +88,9 @@
     <div id="workshop-modal" class="modal hidden">
       <div class="modal-content workshop-modal-content">
         <h3>Bancada — Oficina</h3>
-        <p class="panel-hint">Craft usa materiais dos baús adjacentes (N/E/S/O).</p>
+        <p class="panel-hint">Craft usa baús adjacentes. Gerencie slots 1–2 e arsenal abaixo.</p>
         <div id="workshop-modal-recipes"></div>
-        <h4 class="subheading">Arsenal</h4>
+        <h4 class="subheading">Equipamento</h4>
         <div id="workshop-modal-armory"></div>
         <button id="workshop-modal-close" type="button">Fechar</button>
       </div>
