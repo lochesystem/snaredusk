@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, TilingSprite } from 'pixi.js';
 import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
 import type { DungeonDecor, DungeonLayout, DungeonObstacle, DungeonWall, WallFacing } from './dungeonGenerator.ts';
-import { WALL_THICKNESS } from './dungeonGenerator.ts';
+import { CORRIDOR_WIDTH, WALL_THICKNESS } from './dungeonGenerator.ts';
 import type { BaseCellKind } from './baseGrid.ts';
 import { BaseCellKind as CellKind } from './baseGrid.ts';
 import { BASE_CELL_SIZE } from '../engine/constants.ts';
@@ -22,10 +22,25 @@ import {
 } from './environmentAssets.ts';
 import { drawDungeonLayoutVector } from './placeholderArt.ts';
 
+import {
+  cornerSpriteFlips,
+  computeWallStripTilePosition,
+  shouldFlipWallStrip,
+  type WallCornerId,
+} from './wallRendering.ts';
+
+export type { WallCornerId };
+
+type DoorDir = 'n' | 's' | 'e' | 'w';
+
 export interface DungeonLayoutDrawInput {
   floors: { x: number; y: number; width: number; height: number }[];
   walls: DungeonWall[];
-  rooms: { rect: { x: number; y: number; width: number; height: number }; type?: string }[];
+  rooms: {
+    rect: { x: number; y: number; width: number; height: number };
+    doors?: DoorDir[];
+    type?: string;
+  }[];
   decor: DungeonDecor[];
   obstacles: DungeonObstacle[];
   hazards?: { kind: string; x: number; y: number; radius: number }[];
@@ -66,10 +81,6 @@ export function resolveWallOrientation(wall: {
   return { axis: wall.axis ?? 'h', facing: wall.facing ?? 'n' };
 }
 
-function tileMod(n: number, size: number): number {
-  return ((n % size) + size) % size;
-}
-
 function cornerKey(x: number, y: number): string {
   return `${x},${y}`;
 }
@@ -90,8 +101,6 @@ export function collectRoomCornerKeys(
   return corners;
 }
 
-export type WallCornerId = 'nw' | 'ne' | 'sw' | 'se';
-
 export function cornerIdAt(
   rooms: { rect: { x: number; y: number; width: number; height: number } }[],
   x: number,
@@ -108,13 +117,87 @@ export function cornerIdAt(
   return null;
 }
 
+/** Encurta segmentos nas quinas da sala — evita sobrepor wall_h e wall_v no mesmo bloco 14×14. */
+export function trimWallSegment(
+  wall: DungeonWall,
+  corners: Set<string>,
+): DungeonWall | null {
+  const t = WALL_THICKNESS;
+  let { x, y, width, height } = wall;
+  const { axis } = resolveWallOrientation(wall);
+
+  if (axis === 'h') {
+    if (corners.has(cornerKey(x, y))) {
+      x += t;
+      width -= t;
+    }
+    if (corners.has(cornerKey(x + width - t, y))) {
+      width -= t;
+    }
+  } else {
+    if (corners.has(cornerKey(x, y))) {
+      y += t;
+      height -= t;
+    }
+    if (corners.has(cornerKey(x, y + height - t))) {
+      height -= t;
+    }
+  }
+
+  if (width <= 0 || height <= 0) return null;
+  return { ...wall, x, y, width, height };
+}
+
+export interface DoorJambCorner {
+  x: number;
+  y: number;
+  corner: WallCornerId;
+}
+
+/** Quinas internas nas ombreiras das portas (corredor ↔ sala). */
+export function collectDoorJambCorners(
+  rooms: { rect: { x: number; y: number; width: number; height: number }; doors?: DoorDir[] }[],
+): DoorJambCorner[] {
+  const t = WALL_THICKNESS;
+  const half = CORRIDOR_WIDTH / 2;
+  const jambs: DoorJambCorner[] = [];
+
+  for (const room of rooms) {
+    const r = room.rect;
+    if (!room.doors?.length) continue;
+    const cx = r.x + r.width / 2;
+    const cy = r.y + r.height / 2;
+    const gapL = cx - half;
+    const gapR = cx + half;
+
+    if (room.doors.includes('n')) {
+      jambs.push({ x: gapL - t, y: r.y, corner: 'se' });
+      jambs.push({ x: gapR, y: r.y, corner: 'sw' });
+    }
+    if (room.doors.includes('s')) {
+      jambs.push({ x: gapL - t, y: r.y + r.height - t, corner: 'ne' });
+      jambs.push({ x: gapR, y: r.y + r.height - t, corner: 'nw' });
+    }
+    if (room.doors.includes('w')) {
+      jambs.push({ x: r.x, y: cy - half - t, corner: 'se' });
+      jambs.push({ x: r.x, y: cy + half, corner: 'ne' });
+    }
+    if (room.doors.includes('e')) {
+      jambs.push({ x: r.x + r.width - t, y: cy - half - t, corner: 'sw' });
+      jambs.push({ x: r.x + r.width - t, y: cy + half, corner: 'nw' });
+    }
+  }
+
+  return jambs;
+}
+
 interface WallStripTextures {
   h: import('pixi.js').Texture;
   v: import('pixi.js').Texture;
   corner: import('pixi.js').Texture;
 }
 
-function addOrientedWallTile(
+function addOrientedWallStrip(
   parent: Container,
   strips: WallStripTextures,
   wall: DungeonWall,
@@ -123,16 +206,17 @@ function addOrientedWallTile(
   const texture = axis === 'h' ? strips.h : strips.v;
   const tile = new TilingSprite({ texture, width: wall.width, height: wall.height });
   tile.roundPixels = true;
-  tile.tilePosition.set(tileMod(-wall.x, texture.width), tileMod(-wall.y, texture.height));
-
+  const phase = computeWallStripTilePosition(axis, wall.x, wall.y);
+  tile.tilePosition.set(phase.x, phase.y);
   tile.x = wall.x;
   tile.y = wall.y;
 
-  if (axis === 'h' && facing === 's') {
+  const { flipX, flipY } = shouldFlipWallStrip(axis, facing);
+  if (flipY) {
     tile.scale.y = -1;
     tile.y = wall.y + wall.height;
   }
-  if (axis === 'v' && facing === 'e') {
+  if (flipX) {
     tile.scale.x = -1;
     tile.x = wall.x + wall.width;
   }
@@ -147,22 +231,15 @@ function addWallCornerSprite(
   y: number,
   corner: WallCornerId,
 ): void {
+  const { flipX, flipY } = cornerSpriteFlips(corner);
   const sprite = new Sprite(texture);
   sprite.width = WALL_THICKNESS;
   sprite.height = WALL_THICKNESS;
   sprite.roundPixels = true;
-  sprite.x = x;
-  sprite.y = y;
-
-  if (corner === 'ne' || corner === 'se') {
-    sprite.scale.x = -1;
-    sprite.x += WALL_THICKNESS;
-  }
-  if (corner === 'sw' || corner === 'se') {
-    sprite.scale.y = -1;
-    sprite.y += WALL_THICKNESS;
-  }
-
+  sprite.x = flipX ? x + WALL_THICKNESS : x;
+  sprite.y = flipY ? y + WALL_THICKNESS : y;
+  if (flipX) sprite.scale.x = -1;
+  if (flipY) sprite.scale.y = -1;
   parent.addChild(sprite);
 }
 
@@ -172,15 +249,29 @@ function renderDungeonWalls(
   rooms: DungeonLayoutDrawInput['rooms'],
   strips: WallStripTextures,
 ): void {
+  const corners = collectRoomCornerKeys(rooms);
+  const vertical: DungeonWall[] = [];
+  const horizontal: DungeonWall[] = [];
+
   for (const wall of walls) {
-    addOrientedWallTile(parent, strips, wall);
+    const trimmed = trimWallSegment(wall, corners);
+    if (!trimmed) continue;
+    const { axis } = resolveWallOrientation(trimmed);
+    if (axis === 'v') vertical.push(trimmed);
+    else horizontal.push(trimmed);
   }
 
-  const corners = collectRoomCornerKeys(rooms);
+  for (const wall of vertical) addOrientedWallStrip(parent, strips, wall);
+  for (const wall of horizontal) addOrientedWallStrip(parent, strips, wall);
+
   for (const key of corners) {
     const [cx, cy] = key.split(',').map(Number);
     const id = cornerIdAt(rooms, cx, cy);
     if (id) addWallCornerSprite(parent, strips.corner, cx, cy, id);
+  }
+
+  for (const jamb of collectDoorJambCorners(rooms)) {
+    addWallCornerSprite(parent, strips.corner, jamb.x, jamb.y, jamb.corner);
   }
 }
 

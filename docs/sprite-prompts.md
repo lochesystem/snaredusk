@@ -292,17 +292,19 @@ Referência: [Pixel art tiles that don't look terrible (Sprite-AI, 2026)](https:
 
 Biomas `cristal` e `termal` usam a mesma estrutura em `public/assets/biomes/{id}/`.
 
+**Exemplo visual (Floresta):** gere com `npm run sprites:environment` e abra `docs/examples/floresta-tileset-example.png` — mostra o atlas + mini sala em **grade 32×32** (como o jogo renderiza).
+
 ### Frames obrigatórios — tileset de masmorra
 
 | Frame | Descrição | Área visível no jogo |
 |-------|-----------|----------------------|
 | `floor` | Chão caminhável com musgo/cristal/vapor conforme bioma | **32×32** (tileado) |
-| `wall_h` | Faixa horizontal N/S | **32×14** no topo do frame 32×32; highlight no **topo**; repete na largura |
-| `wall_v` | Faixa vertical L/O | **14×32** na **esquerda** do frame 32×32; highlight na **esquerda**; repete na altura |
+| `wall_h` | Parede horizontal N/S | Célula **32×32** — borda clara no **topo**; resto preenchido com cor `void` |
+| `wall_v` | Parede vertical L/O | Célula **32×32** — borda clara na **esquerda**; resto `void` |
 | `void` | Fundo escuro fora das salas | **32×32** (tileado) |
 | `hole` | Buraco no chão (opcional; fallback vector) | **32×32** |
 | `ceiling_band` | Sombra no topo da sala | **32×22** — desenhe nos **22 px superiores**; repete na largura da sala (tileado) |
-| `wall_corner` | Quina externa 14×14 | Bloco no **canto superior-esquerdo** do frame 32×32; highlight no topo e esquerda; engine espelha para as outras quinas |
+| `wall_corner` | Quina externa | Célula **32×32** — bloco 14×14 no canto sup.-esq. com highlight em L; resto `void`; engine espelha |
 
 ### Frames obrigatórios — props de masmorra
 
@@ -352,7 +354,7 @@ landscape, perspective horizon, anti-aliasing, blur, watermark, text
 2. Desloque meio tile (offset 50%) — expõe emendas escondidas.
 3. Se a IA gerou vignette nas bordas: recorte no Aseprite ou use modo tile/offset (Filter → Other → Offset) e pinte a costura no centro.
 
-**Tamanho no jogo:** `floor` e `void` usam **32×32** com `TilingSprite`. Paredes usam **`wall_h`** (32×14, horizontal) e **`wall_v`** (14×32, vertical) com espessura de colisão **14 px**. Cantos usam **`wall_corner`** (14×14). `ceiling_band` repete a cada 32 px com **22 px** de altura.
+**Tamanho no jogo:** `floor` e `void` usam **32×32** com `TilingSprite`. Paredes usam faixas recortadas **`wall_h`** (32×14), **`wall_v`** (14×32) e **`wall_corner`** (14×14) com colisão **14 px**; espelhamento em `src/world/wallRendering.ts`. `ceiling_band` repete a cada 32 px com **22 px** de altura.
 
 ---
 
@@ -444,6 +446,52 @@ pixel art underground cave wall vertical strip, 14x32 pixels on left of tile,
 dark green-brown rock with moss highlight along left outer edge,
 flat even lighting, tileable top-bottom repeat,
 limited palette max 8 colors, transparent padding on right
+```
+
+### Guia — alinhar `wall_h`, `wall_v` e `wall_corner` (leia antes de pintar)
+
+O engine monta cada parede de sala assim:
+
+```
+     [wall_h norte — recortada nas pontas]
+[wall_v] [corner NW]········[corner NE] [wall_v]
+oeste    │                  │           leste
+         │     CHÃO         │
+[wall_v] [corner SW]········[corner SE] [wall_v]
+     [wall_h sul — recortada nas pontas]
+```
+
+| Frame | O que desenhar no canvas 32×32 | Highlight (borda clara) |
+|-------|-------------------------------|-------------------------|
+| `wall_h` | Faixa **32×14 no topo** | Sempre no **topo** do frame (engine espelha verticalmente na parede sul) |
+| `wall_v` | Faixa **14×32 à esquerda** | Sempre na **esquerda** do frame (engine espelha horizontalmente na parede leste) |
+| `wall_corner` | Quadrado **14×14 no canto superior-esquerdo** | **Topo + esquerda** do quadrado (engine espelha para NE/SW/SE) |
+
+**Regras para costura perfeita:**
+
+1. **Mesma cor base** nos três frames (`wall_h`, `wall_v`, `wall_corner`) — use a mesma paleta.
+2. **Mesma espessura de highlight** (2–3 px) em todos; a borda clara deve “continuar” da reta para a quina.
+3. **`wall_h` e `wall_v`**: padrão seamless na direção do tileado (horizontal / vertical). Sem detalhe único no centro que quebre a repetição.
+4. **`wall_corner`**: pinte como se fosse a união do fim de um `wall_h` com o fim de um `wall_v` — o highlight faz L no canto externo.
+5. **Validação no Aseprite:** monte um quadrado de sala 3×3 células (só paredes) e confira os 4 cantos antes de exportar.
+6. **Corredores** ainda não têm peça de junção T — só as **4 quinas de cada sala** usam `wall_corner`. Entradas de corredor no meio da parede podem parecer diferentes (esperado no MVP).
+
+**O que o engine faz (não precisa duplicar na arte):**
+
+- Recorte **fixo** do frame 32×32 (ver `WALL_STRIP_CROPS` em `src/world/environmentAssets.ts`) — não muda por parede.
+- Tileado só no eixo **longo** (a cada 32 px); a faixa de 14 px nunca é deslocada (ver `computeWallStripTilePosition` em `src/world/wallRendering.ts`).
+- Parede sul: espelha `wall_h` no eixo Y (`DEFAULT_WALL_FACING_FLIPS.flipSouth`).
+- Parede leste: espelha `wall_v` no eixo X (`DEFAULT_WALL_FACING_FLIPS.flipEast`).
+- Quinas NE/SW/SE: espelha `wall_corner` conforme o canto.
+
+**Ajuste fino sem mexer na arte:** edite `DEFAULT_WALL_FACING_FLIPS` em `src/world/wallRendering.ts` (inverta `flipSouth` / `flipEast` se a borda clara ficar do lado errado em todo o bioma).
+
+### Prompt — `wall_corner` (Floresta)
+
+```
+pixel art game wall outer corner tile, 14x14 block in top-left of 32x32 canvas,
+dark green-brown rock, moss highlight along top AND left outer edges forming L-shape,
+flat even lighting, limited palette max 8 colors, transparent padding elsewhere
 ```
 
 ### Prompt — `rock` (prop — obstáculo)

@@ -3,8 +3,17 @@ import type { BiomeId } from '../data/biomes.ts';
 
 export const ENV_TILE_SIZE = 32;
 
-/** Espessura de colisão/render das paredes — use os 14 px superiores (H) ou esquerdos (V) do frame `wall`. */
+/** Espessura visível / colisão das paredes (faixa dentro do frame 32×32). */
 export const WALL_TILE_VISIBLE_PX = 14;
+
+/** Recorte fixo por frame — região do PNG, igual para todas as paredes do bioma. */
+export const WALL_STRIP_CROPS = {
+  wall_h: { x: 0, y: 0, w: ENV_TILE_SIZE, h: WALL_TILE_VISIBLE_PX },
+  wall_v: { x: 0, y: 0, w: WALL_TILE_VISIBLE_PX, h: ENV_TILE_SIZE },
+  wall_corner: { x: 0, y: 0, w: WALL_TILE_VISIBLE_PX, h: WALL_TILE_VISIBLE_PX },
+} as const;
+
+/** Espessura de colisão/render das paredes — use os 14 px superiores (H) ou esquerdos (V) do frame `wall`. */
 
 /** Altura visível do frame `ceiling_band` — use os 22 px superiores do tile. */
 export const CEILING_BAND_VISIBLE_PX = 22;
@@ -157,77 +166,38 @@ export function getBaseTileTexture(frame: string): Texture | null {
 
 /** Faixa horizontal 32×14 para paredes N/S. */
 export function getWallHorizontalTexture(biomeId: BiomeId): Texture | null {
+  const crop = WALL_STRIP_CROPS.wall_h;
   const direct = getBiomeTileTexture(biomeId, 'wall_h');
   if (direct) {
-    return cropStrip(
-      direct,
-      0,
-      0,
-      ENV_TILE_SIZE,
-      WALL_TILE_VISIBLE_PX,
-      wallStripCacheKey(biomeId, 'h'),
-    );
+    return cropStrip(direct, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'h'));
   }
   const legacy = getBiomeTileTexture(biomeId, 'wall');
   if (!legacy) return null;
-  return cropStrip(
-    legacy,
-    0,
-    0,
-    ENV_TILE_SIZE,
-    WALL_TILE_VISIBLE_PX,
-    wallStripCacheKey(biomeId, 'h'),
-  );
+  return cropStrip(legacy, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'h'));
 }
 
 /** Faixa vertical 14×32 para paredes L/O. */
 export function getWallVerticalTexture(biomeId: BiomeId): Texture | null {
+  const crop = WALL_STRIP_CROPS.wall_v;
   const direct = getBiomeTileTexture(biomeId, 'wall_v');
   if (direct) {
-    return cropStrip(
-      direct,
-      0,
-      0,
-      WALL_TILE_VISIBLE_PX,
-      ENV_TILE_SIZE,
-      wallStripCacheKey(biomeId, 'v'),
-    );
+    return cropStrip(direct, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'v'));
   }
   const legacy = getBiomeTileTexture(biomeId, 'wall');
   if (!legacy) return null;
-  return cropStrip(
-    legacy,
-    0,
-    0,
-    WALL_TILE_VISIBLE_PX,
-    ENV_TILE_SIZE,
-    wallStripCacheKey(biomeId, 'v'),
-  );
+  return cropStrip(legacy, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'v'));
 }
 
 /** Quina externa 14×14 (NW no atlas; renderer espelha). */
 export function getWallCornerTexture(biomeId: BiomeId): Texture | null {
+  const crop = WALL_STRIP_CROPS.wall_corner;
   const direct = getBiomeTileTexture(biomeId, 'wall_corner');
   if (direct) {
-    return cropStrip(
-      direct,
-      0,
-      0,
-      WALL_TILE_VISIBLE_PX,
-      WALL_TILE_VISIBLE_PX,
-      wallStripCacheKey(biomeId, 'corner'),
-    );
+    return cropStrip(direct, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'corner'));
   }
   const legacy = getBiomeTileTexture(biomeId, 'wall');
   if (!legacy) return null;
-  return cropStrip(
-    legacy,
-    0,
-    0,
-    WALL_TILE_VISIBLE_PX,
-    WALL_TILE_VISIBLE_PX,
-    wallStripCacheKey(biomeId, 'corner'),
-  );
+  return cropStrip(legacy, crop.x, crop.y, crop.w, crop.h, wallStripCacheKey(biomeId, 'corner'));
 }
 
 export function decorPropFrameName(kind: string, variant: number): string {
