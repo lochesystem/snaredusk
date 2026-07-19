@@ -8,7 +8,7 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
-import { endDay, formatDayEndMessage, canSleepToday, canEnterDungeonToday } from './systems/dayCycle.ts';
+import { endDay, formatDayEndMessage, canSleepToday, canEnterDungeonToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
@@ -294,6 +294,7 @@ export class Game {
       const loaded = loadGame();
       if (loaded) {
         this.state = loaded;
+        if (syncDungeonDayFlagsAtBase(this.state)) saveGame(this.state);
         this.startGame();
       }
     });
@@ -407,6 +408,7 @@ export class Game {
     document.getElementById('app')?.classList.toggle('layout-shop', screen === 'shop');
 
     if (screen === 'base') {
+      if (syncDungeonDayFlagsAtBase(this.state)) saveGame(this.state);
       showBaseHub(true);
       this.closeBaseModals();
       void this.showBaseView().then(() => {
@@ -631,6 +633,8 @@ export class Game {
 
     this.dungeon = new DungeonScene(this.state, this.input, {
       onReturnToBase: (reason) => {
+        markDungeonReturned(this.state);
+        saveGame(this.state);
         this.pendingDungeonExit = reason;
       },
       onStateChange: () => saveGame(this.state),
@@ -713,7 +717,7 @@ export class Game {
       closeAbandonModal();
       closeInventoryModal();
       clearDungeonSpecial(this.state);
-      this.state.dungeonReturnedToday = true;
+      markDungeonReturned(this.state);
       this.destroyDungeon();
       saveGame(this.state);
       this.showScreen('base');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGameState, type CreatureItem } from '../src/types.ts';
-import { endDay, canEnterDungeonToday, canSleepToday } from '../src/systems/dayCycle.ts';
+import { endDay, canEnterDungeonToday, canSleepToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from '../src/systems/dayCycle.ts';
 import { canPlaceHabitatPen, placeHabitatPen } from '../src/systems/baseBuild.ts';
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 import { PLAYER_MAX_HP, PLAYER_MAX_STAMINA } from '../src/engine/constants.ts';
@@ -64,5 +64,34 @@ describe('dayCycle', () => {
     expect(canSleepToday(state)).toBe(false);
     state.dungeonReturnedToday = true;
     expect(canSleepToday(state)).toBe(true);
+  });
+
+  it('markDungeonReturned enables sleep', () => {
+    const state = defaultGameState();
+    state.dungeonUsedToday = true;
+    markDungeonReturned(state);
+    expect(state.dungeonReturnedToday).toBe(true);
+    expect(canSleepToday(state)).toBe(true);
+  });
+
+  it('syncDungeonDayFlagsAtBase heals inconsistent save when player is at base', () => {
+    const state = defaultGameState();
+    state.dungeonUsedToday = true;
+    state.dungeonReturnedToday = false;
+
+    expect(syncDungeonDayFlagsAtBase(state)).toBe(true);
+    expect(state.dungeonReturnedToday).toBe(true);
+    expect(canSleepToday(state)).toBe(true);
+    expect(syncDungeonDayFlagsAtBase(state)).toBe(false);
+  });
+
+  it('syncDungeonDayFlagsAtBase does nothing when flags are consistent', () => {
+    const fresh = defaultGameState();
+    expect(syncDungeonDayFlagsAtBase(fresh)).toBe(false);
+
+    const returned = defaultGameState();
+    returned.dungeonUsedToday = true;
+    returned.dungeonReturnedToday = true;
+    expect(syncDungeonDayFlagsAtBase(returned)).toBe(false);
   });
 });

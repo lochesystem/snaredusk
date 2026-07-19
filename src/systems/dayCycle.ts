@@ -21,6 +21,23 @@ export function canSleepToday(state: GameState): boolean {
   return state.dungeonReturnedToday;
 }
 
+/** Marca retorno da masmorra (permite dormir). */
+export function markDungeonReturned(state: GameState): void {
+  state.dungeonReturnedToday = true;
+}
+
+/**
+ * Corrige save inconsistente: ida registrada mas retorno não salvo
+ * (ex.: refresh após entrar na masmorra, ou bug no loop de saída).
+ */
+export function syncDungeonDayFlagsAtBase(state: GameState): boolean {
+  if (state.dungeonUsedToday && !state.dungeonReturnedToday) {
+    state.dungeonReturnedToday = true;
+    return true;
+  }
+  return false;
+}
+
 export function endDay(state: GameState): DayEndResult {
   const production = collectHabitatProduction(state);
   state.dayNumber += 1;

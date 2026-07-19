@@ -15,6 +15,7 @@ import type { BiomeId } from '../data/biomes.ts';
 import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
 import { normalizeWeaponArmory } from './weaponArmory.ts';
+import { syncDungeonDayFlagsAtBase } from './dayCycle.ts';
 
 const SAVE_VERSION = 7;
 
@@ -140,6 +141,7 @@ function normalizeState(partial: LegacyGameState): GameState {
   syncBiomeUnlocks(normalized);
   migrateLegacyHabitatCreatures(normalized);
   normalizeWeaponArmory(normalized);
+  syncDungeonDayFlagsAtBase(normalized);
   return normalized;
 }
 

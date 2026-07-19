@@ -78,6 +78,7 @@ import {
   type CaptureSequencePlan,
 } from '../systems/capture.ts';
 import { shouldEnemyAggro } from '../systems/enemyAi.ts';
+import { initEnemyWanderFields, tickEnemyWander } from '../systems/enemyWander.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
 import { losePartyCompanion } from '../systems/party.ts';
@@ -176,6 +177,13 @@ interface LiveEnemy {
   chargeDirY: number;
   mechanicCd: number;
   isMinion: boolean;
+  wanderTimer: number;
+  wanderPauseTimer: number;
+  wanderTargetX: number;
+  wanderTargetY: number;
+  wanderIdlePhase: number;
+  homeX: number;
+  homeY: number;
 }
 
 type CaptureOrbPhase = 'flying' | 'arrived' | 'shaking' | 'success_fx' | 'fail_fx';
@@ -421,6 +429,7 @@ export class DungeonScene {
         captureLocked: false,
         mechanicCd: spawn.isBoss ? initBossMechanicCd() : 0,
         isMinion: false,
+        ...initEnemyWanderFields(spawn.x, spawn.y),
         ...combatInit,
       };
       this.attachEnemyShield(enemy);
@@ -465,6 +474,7 @@ export class DungeonScene {
       captureLocked: false,
       mechanicCd: 0,
       isMinion: true,
+      ...initEnemyWanderFields(x, y),
       ...combatInit,
     };
     this.attachEnemyShield(enemy);
@@ -1131,14 +1141,15 @@ export class DungeonScene {
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
 
-      if (enemy.isBoss && this.bossFightPhase !== 'active') {
-        enemy.aggroed = false;
+      if (enemy.isBoss && this.bossFightPhase === 'intro') {
         enemy.container.x = enemy.x;
         enemy.container.y = enemy.y;
+        enemy.container.setLocomotion(false, 0);
         continue;
       }
 
       const dist = distance(this.playerX, this.playerY, enemy.x, enemy.y);
+      const wasAggroed = enemy.aggroed;
       enemy.aggroed = shouldEnemyAggro({
         aggroed: enemy.aggroed,
         enraged: enemy.enraged,
@@ -1146,6 +1157,36 @@ export class DungeonScene {
         distToPlayer: dist,
         playerInSpawnRoom: this.isPlayerInRoom(enemy.roomIndex),
       });
+
+      if (!wasAggroed && enemy.aggroed) {
+        enemy.wanderPauseTimer = 0;
+      }
+
+      const room = this.layout.rooms.find((r) => r.index === enemy.roomIndex);
+      const canWander =
+        !enemy.aggroed &&
+        enemy.combatPhase === 'idle' &&
+        room &&
+        (!enemy.isBoss || this.bossFightPhase === 'locked');
+
+      if (canWander && room) {
+        const wander = tickEnemyWander(enemy, enemy.x, enemy.y, {
+          roomRect: room.rect,
+          dt,
+          walls,
+          floors: this.layout.floors,
+          obstacles: this.layout.obstacles,
+        });
+        enemy.x = wander.x;
+        enemy.y = wander.y;
+        enemy.container.setLocomotion(wander.moving, wander.faceDx);
+        enemy.container.x = enemy.x;
+        enemy.container.y = enemy.y + wander.bobOffset;
+        snapContainer(enemy.container);
+        this.updateEnemyShieldGfx(enemy);
+        this.updateEnemyStatusBars(enemy);
+        continue;
+      }
 
       const result = tickEnemyCombat(enemy, {
         playerX: this.playerX,
@@ -1177,6 +1218,7 @@ export class DungeonScene {
 
       if (enemy.aggroed || enemy.combatPhase !== 'idle') {
         const prevX = enemy.x;
+        const prevY = enemy.y;
         const moved = moveWithCollision(
           enemy.x,
           enemy.y,
@@ -1189,7 +1231,15 @@ export class DungeonScene {
         );
         enemy.x = moved.x;
         enemy.y = moved.y;
-        enemy.container.setFacing(moved.x - prevX);
+        const movedDx = enemy.x - prevX;
+        const movedDy = enemy.y - prevY;
+        enemy.container.setLocomotion(
+          Math.abs(movedDx) > 0.01 || Math.abs(movedDy) > 0.01,
+          movedDx,
+        );
+        enemy.container.setFacing(movedDx);
+      } else {
+        enemy.container.setLocomotion(false, 0);
       }
 
       for (const shot of result.projectiles) {
