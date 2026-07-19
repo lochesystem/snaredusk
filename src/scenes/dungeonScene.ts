@@ -86,7 +86,6 @@ import {
   computeCompanionIntent,
   findCompanionSpawnNearPlayer,
   shouldMoveTowardGoal,
-  tickCompanionRecall,
 } from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
@@ -263,7 +262,6 @@ export class DungeonScene {
   private companionPathGoal = { x: 0, y: 0 };
   private companionPathReplanTimer = 0;
   private companionStuckTimer = 0;
-  private companionFarTimer = 0;
   private companionLastX = 0;
   private companionLastY = 0;
   private active = false;
@@ -640,7 +638,6 @@ export class DungeonScene {
     this.companionPath = [];
     this.companionPathIndex = 0;
     this.companionStuckTimer = 0;
-    this.companionFarTimer = 0;
     this.companionLastX = comp.x;
     this.companionLastY = comp.y;
   }
@@ -1837,7 +1834,6 @@ export class DungeonScene {
     this.companionLastY = startY;
     this.companionPath = [];
     this.companionPathIndex = 0;
-    this.companionFarTimer = 0;
     this.companionStuckTimer = 0;
   }
 
@@ -1860,7 +1856,6 @@ export class DungeonScene {
     const comp = this.companion;
     if (!comp || comp.dead) return;
 
-    const distToPlayer = distance(comp.x, comp.y, this.playerX, this.playerY);
     const movedDist = Math.hypot(comp.x - this.companionLastX, comp.y - this.companionLastY);
     if (movedDist < 1.5) {
       this.companionStuckTimer += dt;
@@ -1869,25 +1864,8 @@ export class DungeonScene {
     }
 
     const bossFightActive = this.bossGateClosed && this.bossFightPhase !== 'locked';
-    const recall = tickCompanionRecall({
-      distToPlayer,
-      farTimer: this.companionFarTimer,
-      stuckTimer: this.companionStuckTimer,
-      dt,
-      bossFightActive,
-    });
-    this.companionFarTimer = recall.farTimer;
-
     if (bossFightActive) {
       this.ensureCompanionInBossArena();
-    }
-
-    if (recall.shouldRecall) {
-      this.snapCompanionToPlayer();
-      comp.container.setFacing(this.playerX - comp.x);
-      comp.container.setLocomotion(false, this.playerX - comp.x);
-      comp.container.alpha = comp.hp / comp.maxHp < 0.35 ? 0.65 : 1;
-      return;
     }
 
     if (comp.attackCd > 0) comp.attackCd -= dt;

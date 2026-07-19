@@ -39,6 +39,7 @@ flowchart LR
 - [x] [README.md](../README.md) — pitch, controles, visão
 - [x] [docs/GDD.md](GDD.md) — sistemas, números, catálogo
 - [x] [docs/art-bible.md](art-bible.md) — perspectiva, pipeline visual
+- [x] [docs/wall-tiles.md](wall-tiles.md) — pipeline técnico de paredes de masmorra
 - [x] [docs/UX-UI.md](UX-UI.md) — wireframes, HUD, fluxos
 - [x] [docs/ROADMAP.md](ROADMAP.md) — este documento
 
@@ -160,6 +161,7 @@ Pendente:
 | Área | Escopo | Status |
 |------|--------|--------|
 | **Arte** | Sprites pintados bioma 1; placeholders 2–3 | Pendente |
+| **Tileset masmorra** | Paredes alinhadas (faixas 14 px) — [wall-tiles.md](wall-tiles.md) | Parcial (Floresta OK) |
 | **Normal maps** | Jogador + props + criaturas | Pendente |
 | **Iluminação** | Point lights por sala | Pendente |
 | **Parallax** | 4 camadas por bioma | Pendente |

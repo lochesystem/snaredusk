@@ -5,10 +5,6 @@ import {
   PARTY_FOLLOW_GAP,
   PARTY_LEASH_RANGE,
   PARTY_RANGED_OFFSET,
-  PARTY_RECALL_DELAY,
-  PARTY_RECALL_DELAY_BOSS,
-  PARTY_RECALL_DISTANCE,
-  PARTY_STUCK_RECALL_DELAY,
 } from '../engine/constants.ts';
 import type { EnemyBehaviorDef } from '../data/enemyBehaviors.ts';
 import { getEnemyBehavior, isRangedBossKind } from '../data/enemyBehaviors.ts';
@@ -236,34 +232,6 @@ export function shouldMoveTowardGoal(
   return distance(compX, compY, goalX, goalY) > minGap;
 }
 
-export interface CompanionRecallInput {
-  distToPlayer: number;
-  farTimer: number;
-  stuckTimer: number;
-  dt: number;
-  bossFightActive?: boolean;
-}
-
-export interface CompanionRecallResult {
-  farTimer: number;
-  shouldRecall: boolean;
-}
-
-export function tickCompanionRecall(input: CompanionRecallInput): CompanionRecallResult {
-  const recallDistance = PARTY_RECALL_DISTANCE;
-  const recallDelay = input.bossFightActive ? PARTY_RECALL_DELAY_BOSS : PARTY_RECALL_DELAY;
-  const isFar = input.distToPlayer > recallDistance;
-  const nextFarTimer = isFar ? input.farTimer + input.dt : 0;
-  const stuckAndFar =
-    input.stuckTimer >= PARTY_STUCK_RECALL_DELAY &&
-    input.distToPlayer > PARTY_FOLLOW_GAP * 1.15;
-
-  return {
-    farTimer: nextFarTimer,
-    shouldRecall: nextFarTimer >= recallDelay || stuckAndFar,
-  };
-}
-
 const SPAWN_OFFSETS = [
   { x: 0, y: 0 },
   { x: -18, y: 0 },
@@ -276,7 +244,7 @@ const SPAWN_OFFSETS = [
   { x: 12, y: 12 },
 ];
 
-/** Posição caminhável perto do jogador para recall/respawn. */
+/** Posição caminhável perto do jogador (spawn inicial / arena do chefe). */
 export function findCompanionSpawnNearPlayer(
   playerX: number,
   playerY: number,

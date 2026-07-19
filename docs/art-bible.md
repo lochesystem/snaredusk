@@ -352,6 +352,8 @@ Inspirado no padrão [vinculo-vivo/docs/art-bible.md](../../vinculo-vivo/docs/ar
 7. Aprovação → commit em public/assets/
 ```
 
+**Masmorra — paredes:** após importar tileset, validar alinhamento com [wall-tiles.md](wall-tiles.md) e checklist em [PLAYTEST.md](PLAYTEST.md) § 3.0a–c.
+
 ### Naming convention
 
 ```
@@ -387,7 +389,8 @@ assets/
 
 ```
 1. Parallax layers (back → front)
-2. Tilemap chão
+2. Tilemap chão + void
+2b. Paredes masmorra (faixas 14 px + quinas) — [wall-tiles.md](wall-tiles.md)
 3. Y-sorted entities (sombra → sprite → overlay)
 4. Partículas
 5. Foreground parallax
@@ -408,6 +411,7 @@ Antes de considerar um bioma "pronto":
 - [ ] Partículas ambientais ativas
 - [ ] Sombra projetada em todas as entidades
 - [ ] Transição de tile sem costura visível
+- [ ] Paredes de masmorra: quinas externas e faces opostas alinhadas ([wall-tiles.md](wall-tiles.md))
 - [ ] Paleta do bioma respeitada (≤48 cores)
 - [ ] HUD legível sobre qualquer fundo do bioma
 - [ ] 60 FPS com cena típica (desktop)

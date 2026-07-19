@@ -8,7 +8,6 @@ import {
   hasLineOfSight,
   isCompanionRanged,
   shouldMoveTowardGoal,
-  tickCompanionRecall,
 } from '../src/systems/companionCombat.ts';
 
 describe('companionCombat', () => {
@@ -90,44 +89,5 @@ describe('companionCombat', () => {
   it('shouldMoveTowardGoal respeita gap mínimo', () => {
     expect(shouldMoveTowardGoal(0, 0, 10, 0, 6)).toBe(true);
     expect(shouldMoveTowardGoal(0, 0, 3, 0, 6)).toBe(false);
-  });
-
-  it('recall após ficar longe por tempo suficiente', () => {
-    let farTimer = 0;
-    for (let i = 0; i < 20; i++) {
-      const tick = tickCompanionRecall({
-        distToPlayer: 140,
-        farTimer,
-        stuckTimer: 0,
-        dt: 0.1,
-      });
-      farTimer = tick.farTimer;
-      if (tick.shouldRecall) {
-        expect(i).toBeGreaterThan(10);
-        return;
-      }
-    }
-    expect.fail('deveria ter feito recall');
-  });
-
-  it('recall rápido se preso e longe', () => {
-    const tick = tickCompanionRecall({
-      distToPlayer: 80,
-      farTimer: 0,
-      stuckTimer: 0.6,
-      dt: 0.1,
-    });
-    expect(tick.shouldRecall).toBe(true);
-  });
-
-  it('recall mais rápido na luta do chefe', () => {
-    const tick = tickCompanionRecall({
-      distToPlayer: 120,
-      farTimer: 0.7,
-      stuckTimer: 0,
-      dt: 0.1,
-      bossFightActive: true,
-    });
-    expect(tick.shouldRecall).toBe(true);
   });
 });

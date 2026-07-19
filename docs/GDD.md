@@ -150,6 +150,8 @@ flowchart TD
 - Cada run gera 8–14 salas + sala de chefe
 - Progresso **persistente por bioma**: chefes derrotados, atalhos e sentinelas permanecem
 
+**Cenário (técnico):** salas usam tileset 32×32 com paredes em faixas de 14 px — ver [wall-tiles.md](wall-tiles.md).
+
 ### Tipos de sala
 
 | Tipo | Frequência | Conteúdo |

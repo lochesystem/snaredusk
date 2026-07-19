@@ -52,6 +52,9 @@ npm run build
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
 | 3.0 | Masmorra usa **tileset do bioma** (chão/parede repetidos; props como sprites) | ☐ | |
+| 3.0a | **Paredes:** borda clara alinhada nas 4 quinas externas da sala | ☐ | Ver [wall-tiles.md](wall-tiles.md) |
+| 3.0b | **Paredes:** esquerda/direita e norte/sul com highlight simétrico (sem “borda no meio”) | ☐ | |
+| 3.0c | **Portas:** ombreiras sem buraco grosso de void (junção T pode ficar imperfeita — OK no MVP) | ☐ | |
 | 3.1 | **Entrar na Masmorra**; layout diferente a cada run? | ☐ | |
 | 3.2 | **Minimapa** atualiza ao entrar em salas novas | ☐ | |
 | 3.3 | Câmera segue o jogador; sem andar no void | ☐ | |

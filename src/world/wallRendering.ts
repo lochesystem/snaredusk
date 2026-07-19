@@ -6,9 +6,11 @@ export type WallCornerId = 'nw' | 'ne' | 'sw' | 'se';
 export { WALL_STRIP_CROPS, WALL_TILE_VISIBLE_PX };
 
 /**
- * Espelhamento por face da parede.
- * Edite aqui (ou no `meta.snaredusk.walls` do tileset) se a borda clara ficar do lado errado.
+ * Pipeline de render de paredes de masmorra.
+ * Documentação completa: docs/wall-tiles.md
  */
+
+/** Espelhamento por face da parede — edite se a borda clara ficar do lado errado no bioma inteiro. */
 export interface WallFacingFlipConfig {
   /** Parede sul: espelha `wall_h` no eixo Y. */
   flipSouth: boolean;
