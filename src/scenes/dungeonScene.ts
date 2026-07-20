@@ -168,6 +168,12 @@ import {
   spawnDungeonPropSprites,
 } from '../world/tileRenderer.ts';
 import { BossArenaFog } from '../world/bossArenaFog.ts';
+import {
+  calcAimAngle,
+  calcAimReticlePosition,
+  createAimReticle,
+  drawAimReticle,
+} from '../world/aimReticle.ts';
 
 export type DungeonExitReason = 'portal' | 'death' | 'abandon';
 
@@ -303,6 +309,8 @@ export class DungeonScene {
   private playerSprite = createPlayerSprite();
   private portalSprite = createPortalSprite();
   private attackFx: WeaponAttackFxState | null = null;
+  private aimReticleGfx = createAimReticle();
+  private lastAimAngle = 0;
 
   private playerX = 0;
   private playerY = 0;
@@ -426,6 +434,7 @@ export class DungeonScene {
     this.world.addChild(this.entityLayer);
     this.world.addChild(this.bossArenaFog.root);
     this.world.addChild(this.stalactiteShadowGfx);
+    this.fxLayer.addChild(this.aimReticleGfx);
     this.world.addChild(this.fxLayer);
     this.root.addChild(this.world);
     this.root.addChild(this.minimap.container);
@@ -620,6 +629,7 @@ export class DungeonScene {
       this.bossArenaFog.update(dt, this.bossFightPhase);
     }
     this.movePlayer(dt);
+    this.updateAimReticle();
     this.updateStalactites(dt);
     this.updateTemporaryObstacles(dt);
     this.updateBiomeHazards(dt);
@@ -830,6 +840,30 @@ export class DungeonScene {
     }
   }
 
+  private updateAimReticle(): void {
+    const hidden =
+      this.bossFightPhase === 'intro' ||
+      this.pendingChoices !== null ||
+      this.playerHp <= 0;
+    if (hidden) {
+      this.aimReticleGfx.visible = false;
+      return;
+    }
+
+    const weapon = getEquippedWeapon(this.state.equippedWeaponId);
+    const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
+    this.lastAimAngle = calcAimAngle(
+      this.playerX,
+      this.playerY,
+      worldMouse.x,
+      worldMouse.y,
+      this.lastAimAngle,
+    );
+    const tip = calcAimReticlePosition(this.playerX, this.playerY, this.lastAimAngle, weapon.range);
+    drawAimReticle(this.aimReticleGfx, tip.x, tip.y);
+    this.aimReticleGfx.visible = true;
+  }
+
   private refreshBossGateGfx(): void {
     const gfx = this.bossGateGfx;
     if (!gfx) return;
@@ -963,8 +997,8 @@ export class DungeonScene {
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
     if (this.playerStamina < weapon.staminaCost) return;
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
-    const dir = normalize(worldMouse.x - this.playerX, worldMouse.y - this.playerY);
-    const angle = Math.atan2(dir.y, dir.x);
+    const angle = calcAimAngle(this.playerX, this.playerY, worldMouse.x, worldMouse.y, this.lastAimAngle);
+    this.lastAimAngle = angle;
 
     if (weapon.kind === 'melee') {
       const fxStyle = weapon.attackFx ?? 'knife';
