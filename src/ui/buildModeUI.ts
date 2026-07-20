@@ -1,4 +1,5 @@
 import { BUILDABLE_STATIONS, getStation, type StationId } from '../data/baseStations.ts';
+import { canUseBuildTool } from '../systems/tutorial.ts';
 import type { GameState } from '../types.ts';
 
 export type BuildTool = StationId | 'move';
@@ -57,6 +58,7 @@ export function renderBaseBuildHotbar(state: GameState, callbacks: BuildHotbarCa
       slot.appendChild(label);
     } else {
       const def = getStation(tool);
+      if (tool === 'habitat_pen') slot.id = 'build-hotbar-habitat-pen';
       const icon = document.createElement('span');
       icon.className = 'hotbar-icon-text';
       icon.style.background = `#${def.color.toString(16).padStart(6, '0')}`;
@@ -72,6 +74,7 @@ export function renderBaseBuildHotbar(state: GameState, callbacks: BuildHotbarCa
     }
 
     slot.addEventListener('click', () => {
+      if (!canUseBuildTool(state, tool)) return;
       const next = toggleBuildTool(tool);
       callbacks.onSelect(next);
       renderBaseBuildHotbar(state, callbacks);
@@ -89,6 +92,7 @@ export function bindBuildHotbarKeys(
   for (let i = 0; i < BUILD_HOTBAR_SLOTS.length; i++) {
     if (consumeKey(String(i + 1))) {
       const tool = BUILD_HOTBAR_SLOTS[i]!;
+      if (!canUseBuildTool(state, tool)) continue;
       const next = toggleBuildTool(tool);
       callbacks.onSelect(next);
       renderBaseBuildHotbar(state, callbacks);

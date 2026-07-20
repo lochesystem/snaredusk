@@ -114,7 +114,7 @@ npm run build
 | 6.4 | Diálogo WASD; atacar esporo com **clique** | ☐ | |
 | 6.5 | **Q** para captura; highlight na tecla Q no HUD | ☐ | |
 | 6.6 | Portal de saída após captura ou derrota; **[E]** volta à base | ☐ | |
-| 6.7 | Diálogo final da Mira; **Continuar** encerra tutorial | ☐ | |
+| 6.7 | **Continuar** → cercado (tecla 3), colocar criatura, vender na loja, comprar orbes | ☐ | Tutorial completo ao comprar orbes |
 | 6.8 | **Pular tutorial** em qualquer passo → toast e jogo livre | ☐ | |
 | 6.9 | **Continuar** após tutorial parcial salva progresso do passo | ☐ | F5 + Continuar |
 

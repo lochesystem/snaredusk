@@ -106,7 +106,7 @@ flowchart LR
 | **Base escavável** | Grid, escavação, baús, craft adjacente | **Feito (v0.4)** | Hub canvas + barra inferior; modo Construir; stamina para escavar |
 | **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
 | **Popularidade / reputação** | Níveis 1–3 | **Feito (MVP)** | Ouro vendido; +1 prateleira (nív. 2); colecionador (nív. 3) |
-| **Tutorial** | 15 min com Mira | **Parcial (MVP)** | Base + masmorra scriptada + captura (Q); habitat/loja/orbes no PR 2 |
+| **Tutorial** | 15 min com Mira | **Parcial (MVP+)** | Masmorra + captura + habitat + loja + compra de orbes |
 
 ### Critérios de done
 
@@ -207,7 +207,7 @@ Pendente:
 2. **Conteúdo** — +6 criaturas, +13 loots, +18 receitas
 3. ~~**Produção habitat**~~ — MVP: yield fixo ao dormir/fechar loja (humor/fome depois)
 4. **Party 2 slots** + **sentinelas**
-5. **Bestiário UI** + popularidade por item (opcional)
+5. **Bestiário UI** + **popularidade na loja**
 6. **Tutorial** com Mira (15 min)
 7. `economy.test.ts` — validar sinks de ouro
 

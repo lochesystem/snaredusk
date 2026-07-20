@@ -112,6 +112,9 @@ function clearHighlights(): void {
   document.getElementById('base-hub-hint')?.classList.remove('tutorial-highlight');
   document.getElementById('hud-hint')?.classList.remove('tutorial-highlight');
   document.getElementById('hud-orbs')?.classList.remove('tutorial-highlight');
+  document.getElementById('build-hotbar-habitat-pen')?.classList.remove('tutorial-highlight');
+  document.getElementById('btn-shop-open')?.classList.remove('tutorial-highlight');
+  document.getElementById('btn-base-orbs')?.classList.remove('tutorial-highlight');
 }
 
 function applyHighlight(highlight: TutorialHighlight): void {
@@ -121,6 +124,16 @@ function applyHighlight(highlight: TutorialHighlight): void {
   } else if (highlight === 'capture_q') {
     document.getElementById('hud-hint')?.classList.add('tutorial-highlight');
     document.getElementById('hud-orbs')?.classList.add('tutorial-highlight');
+  } else if (highlight === 'build_pen') {
+    document.getElementById('build-hotbar-habitat-pen')?.classList.add('tutorial-highlight');
+  } else if (highlight === 'bag') {
+    document.getElementById('base-hub-hint')?.classList.add('tutorial-highlight');
+  } else if (highlight === 'shop') {
+    document.getElementById('base-hub-hint')?.classList.add('tutorial-highlight');
+  } else if (highlight === 'shop_open') {
+    document.getElementById('btn-shop-open')?.classList.add('tutorial-highlight');
+  } else if (highlight === 'orbes') {
+    document.getElementById('btn-base-orbs')?.classList.add('tutorial-highlight');
   }
 }
 

@@ -96,6 +96,12 @@ import {
 import {
   advanceTutorial,
   canEnterDungeonDuringTutorial,
+  canOpenBaseBagDuringTutorial,
+  canOpenOrbsDuringTutorial,
+  canOpenShopDuringTutorial,
+  canSleepDuringTutorial,
+  canStartShopDayDuringTutorial,
+  canUseBuildTool,
   isTutorialActive,
   shouldBlockTutorialGameplay,
   shouldUseTutorialDungeon,
@@ -178,6 +184,9 @@ export class Game {
 
     if (result.completed || this.state.tutorialStep === 'done') {
       hideTutorialDialog();
+      if (result.completed) {
+        this.showToast('Tutorial completo!');
+      }
     }
 
     if (event === 'returned_to_base' || result.nextStep === 'return_home') {
@@ -238,7 +247,13 @@ export class Game {
     bindBaseBar({
       getState: () => this.state,
       onParty: () => openPartyModal(modalCb),
-      onOrbs: () => openOrbsModal(modalCb),
+      onOrbs: () => {
+        if (isTutorialActive(this.state) && !canOpenOrbsDuringTutorial(this.state)) {
+          this.showToast('Siga a orientação da Mira primeiro.');
+          return;
+        }
+        openOrbsModal(modalCb);
+      },
       onOptions: () => this.openOptions(),
     });
     bindBuildModeModal(buildHotbarCb);
@@ -276,6 +291,7 @@ export class Game {
         if (isHabitatPenModalOpen()) renderHabitatPenModal(this.habitatPenCallbacks());
       },
       showToast: (m: string) => this.showToast(m),
+      onCreaturePlaced: () => this.notifyCreaturePlaced(),
     };
   }
 
@@ -417,10 +433,30 @@ export class Game {
   }
 
   private onBuildHotbarSelect(tool: BuildTool | null): void {
+    if (tool && !canUseBuildTool(this.state, tool)) {
+      clearBuildTool();
+      this.baseScene?.clearBuildTool();
+      this.showToast('Siga a orientação da Mira — use o cercado (tecla 3).');
+      renderBaseBuildHotbar(this.state, {
+        onSelect: (t) => this.onBuildHotbarSelect(t),
+      });
+      return;
+    }
     this.baseScene?.setBuildTool(tool);
   }
 
+  private notifyCreaturePlaced(): void {
+    if (!isTutorialActive(this.state)) return;
+    if (this.state.tutorialStep !== 'place_creature') return;
+    this.handleTutorialEvent('creature_placed');
+    syncTutorialDialog(this.state);
+  }
+
   private tryOpenShop(): void {
+    if (isTutorialActive(this.state) && !canOpenShopDuringTutorial(this.state)) {
+      this.showToast('Siga a orientação da Mira primeiro.');
+      return;
+    }
     if (this.state.shopDayUsed) {
       this.showToast('A loja já fechou hoje — durma na cama para um novo dia');
       return;
@@ -430,6 +466,10 @@ export class Game {
 
   private handleSleep(): void {
     if (isDayTransitionPlaying()) return;
+    if (!canSleepDuringTutorial(this.state)) {
+      this.showToast('Termine as orientações da Mira primeiro.');
+      return;
+    }
     if (!canSleepToday(this.state)) {
       this.showToast('Volte da masmorra antes de dormir');
       return;
@@ -488,6 +528,7 @@ export class Game {
             this.refreshBaseUI();
             this.renderBaseBagModal();
             this.showToast(`${moved.name} entrou no cercado!`);
+            this.notifyCreaturePlaced();
           } else {
             this.showToast('Cercado cheio');
           }
@@ -498,6 +539,10 @@ export class Game {
   }
 
   private tryBuyOrbs(pack: 'single' | 'bundle'): void {
+    if (isTutorialActive(this.state) && !canOpenOrbsDuringTutorial(this.state)) {
+      this.showToast('Siga a orientação da Mira primeiro.');
+      return;
+    }
     if (!canBuyOrbPack(this.state, pack)) {
       this.showToast('Ouro insuficiente para comprar orbes');
       return;
@@ -507,6 +552,10 @@ export class Game {
     saveGame(this.state);
     this.refreshBaseUI();
     this.showToast(qty === 1 ? '+1 Orbe de Vínculo' : `+${qty} Orbes de Vínculo`);
+    if (isTutorialActive(this.state)) {
+      this.handleTutorialEvent('orbes_purchased');
+      syncTutorialDialog(this.state);
+    }
   }
 
   private startGame(): void {
@@ -588,6 +637,15 @@ export class Game {
         this.shopUI.setShopDayBusy(false);
         this.refreshBaseUI();
         this.showToast(shopPart);
+        if (isTutorialActive(this.state)) {
+          this.handleTutorialEvent('shop_day_finished');
+          syncTutorialDialog(this.state);
+        }
+      },
+      onCreatureStocked: () => {
+        if (!isTutorialActive(this.state)) return;
+        this.handleTutorialEvent('shop_item_stocked');
+        syncTutorialDialog(this.state);
       },
     });
 
@@ -658,6 +716,11 @@ export class Game {
         this.showToast(`${moved.name} voltou para a bolsa`);
       },
       onSleep: () => this.handleSleep(),
+      onHabitatPenPlaced: () => {
+        if (!isTutorialActive(this.state)) return;
+        this.handleTutorialEvent('habitat_pen_placed');
+        syncTutorialDialog(this.state);
+      },
     });
     this.app.stage.removeChildren();
     this.app.stage.addChild(this.baseScene.root);
@@ -790,7 +853,10 @@ export class Game {
       }
       if (this.input.consumeKey('i')) {
         if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
-        else this.toggleBaseBagModal();
+        else if (canOpenBaseBagDuringTutorial(this.state)) this.toggleBaseBagModal();
+        else if (isTutorialActive(this.state)) {
+          this.showToast('Siga a orientação da Mira primeiro.');
+        }
       }
       bindBuildHotbarKeys(
         (key) => this.input.consumeKey(key),
@@ -927,6 +993,10 @@ export class Game {
 
   private startShopDay(): void {
     if (!this.shopScene) return;
+    if (isTutorialActive(this.state) && !canStartShopDayDuringTutorial(this.state)) {
+      this.showToast('Primeiro exponha a criatura na gaiola.');
+      return;
+    }
     if (this.state.shopDayUsed) {
       this.showToast('Loja já abriu hoje — durma na cama para um novo dia');
       return;

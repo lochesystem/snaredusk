@@ -1,4 +1,7 @@
 import type { GameState, TutorialStepId } from '../types.ts';
+import type { StationId } from '../data/baseStations.ts';
+
+type BuildTool = StationId | 'move';
 
 export type TutorialEvent =
   | 'dialog_next'
@@ -9,9 +12,14 @@ export type TutorialEvent =
   | 'capture_success'
   | 'enemy_defeated'
   | 'returned_to_base'
+  | 'habitat_pen_placed'
+  | 'creature_placed'
+  | 'shop_item_stocked'
+  | 'shop_day_finished'
+  | 'orbes_purchased'
   | 'skip';
 
-export type TutorialHighlight = 'portal' | 'capture_q' | null;
+export type TutorialHighlight = 'portal' | 'capture_q' | 'build_pen' | 'bag' | 'shop' | 'shop_open' | 'orbes' | null;
 
 export interface TutorialDialogContent {
   step: TutorialStepId;
@@ -27,6 +35,14 @@ const DUNGEON_STEPS: TutorialStepId[] = [
   'dungeon_attack',
   'dungeon_capture',
   'dungeon_exit',
+];
+
+const BASE_ACTION_STEPS: TutorialStepId[] = [
+  'build_habitat',
+  'place_creature',
+  'shop_stock',
+  'shop_sell',
+  'buy_orbes',
 ];
 
 const STEP_COPY: Record<TutorialStepId, Omit<TutorialDialogContent, 'step'>> = {
@@ -73,48 +89,48 @@ const STEP_COPY: Record<TutorialStepId, Omit<TutorialDialogContent, 'step'>> = {
     highlight: null,
   },
   return_home: {
-    text: 'Primeira expedição concluída. A criatura está na bolsa — depois você pode colocá-la no habitat ou vendê-la na loja. Por hoje, isso basta.',
+    text: 'Primeira expedição concluída! A criatura está na bolsa. Agora monte um cercado — tecla [3] na barra de construção, arraste uma área no chão.',
     showSkip: false,
     showContinue: true,
     skipLabel: '',
     highlight: null,
   },
-  done: {
-    text: '',
-    showSkip: false,
-    showContinue: false,
-    skipLabel: '',
-    highlight: null,
-  },
   build_habitat: {
-    text: '',
+    text: 'Arraste no chão para definir o cercado do habitat. Precisa de espaço livre na base.',
     showSkip: false,
     showContinue: false,
     skipLabel: '',
-    highlight: null,
+    highlight: 'build_pen',
   },
   place_creature: {
-    text: '',
+    text: 'Pressione [I] para abrir a bolsa ou [E] no cercado para colocar a criatura capturada.',
     showSkip: false,
     showContinue: false,
     skipLabel: '',
-    highlight: null,
+    highlight: 'bag',
   },
   shop_stock: {
-    text: '',
+    text: 'Hora de vender! Vá até a loja na base e pressione [E]. Coloque a criatura numa gaiola e confirme o preço.',
     showSkip: false,
     showContinue: false,
     skipLabel: '',
-    highlight: null,
+    highlight: 'shop',
   },
   shop_sell: {
-    text: '',
+    text: 'Clientes mostram emojis no balcão — 😊 compram fácil, 😐 hesitam, 😠 desistem. Pressione «Abrir loja ao público» quando estiver pronto.',
     showSkip: false,
     showContinue: false,
     skipLabel: '',
-    highlight: null,
+    highlight: 'shop_open',
   },
   buy_orbes: {
+    text: 'Volte à base, abra Orbes no canto superior e compre mais Orbes de Vínculo para a próxima expedição.',
+    showSkip: false,
+    showContinue: false,
+    skipLabel: '',
+    highlight: 'orbes',
+  },
+  done: {
     text: '',
     showSkip: false,
     showContinue: false,
@@ -142,9 +158,42 @@ export function canUseBaseLandmark(
   landmark: 'portal' | 'shop',
 ): boolean {
   if (!isTutorialActive(state)) return true;
-  if (landmark === 'shop') return state.tutorialStep !== 'go_portal' && state.tutorialStep !== 'welcome';
+  if (landmark === 'shop') {
+    return state.tutorialStep === 'shop_stock' || state.tutorialStep === 'shop_sell';
+  }
   if (landmark === 'portal') return state.tutorialStep === 'go_portal';
   return true;
+}
+
+export function canOpenShopDuringTutorial(state: GameState): boolean {
+  if (!isTutorialActive(state)) return true;
+  return state.tutorialStep === 'shop_stock' || state.tutorialStep === 'shop_sell';
+}
+
+export function canStartShopDayDuringTutorial(state: GameState): boolean {
+  if (!isTutorialActive(state)) return true;
+  return state.tutorialStep === 'shop_sell';
+}
+
+export function canUseBuildTool(state: GameState, tool: BuildTool | null): boolean {
+  if (!isTutorialActive(state)) return true;
+  if (tool === null) return true;
+  if (state.tutorialStep === 'build_habitat') return tool === 'habitat_pen';
+  return false;
+}
+
+export function canOpenBaseBagDuringTutorial(state: GameState): boolean {
+  if (!isTutorialActive(state)) return true;
+  return state.tutorialStep === 'place_creature';
+}
+
+export function canOpenOrbsDuringTutorial(state: GameState): boolean {
+  if (!isTutorialActive(state)) return true;
+  return state.tutorialStep === 'buy_orbes';
+}
+
+export function canSleepDuringTutorial(state: GameState): boolean {
+  return !isTutorialActive(state);
 }
 
 export function shouldBlockBaseActions(state: GameState): boolean {
@@ -169,6 +218,7 @@ export function shouldShowTutorialDialog(state: GameState): boolean {
   if (!dialog) return false;
   if (state.tutorialStep === 'go_portal') return true;
   if (state.tutorialStep === 'dungeon_capture' && !dialog.showContinue) return true;
+  if (BASE_ACTION_STEPS.includes(state.tutorialStep)) return true;
   return dialog.showContinue;
 }
 
@@ -200,10 +250,7 @@ export function advanceTutorial(state: GameState, event: TutorialEvent): Tutoria
     case 'dialog_next':
       if (state.tutorialStep === 'welcome') next = 'go_portal';
       else if (state.tutorialStep === 'dungeon_move') next = 'dungeon_attack';
-      else if (state.tutorialStep === 'return_home') {
-        completeTutorial(state);
-        next = 'done';
-      }
+      else if (state.tutorialStep === 'return_home') next = 'build_habitat';
       break;
     case 'portal_opened':
       if (state.tutorialStep === 'welcome' || state.tutorialStep === 'go_portal') {
@@ -232,6 +279,24 @@ export function advanceTutorial(state: GameState, event: TutorialEvent): Tutoria
     case 'returned_to_base':
       if (state.tutorialStep === 'dungeon_exit') next = 'return_home';
       break;
+    case 'habitat_pen_placed':
+      if (state.tutorialStep === 'build_habitat') next = 'place_creature';
+      break;
+    case 'creature_placed':
+      if (state.tutorialStep === 'place_creature') next = 'shop_stock';
+      break;
+    case 'shop_item_stocked':
+      if (state.tutorialStep === 'shop_stock') next = 'shop_sell';
+      break;
+    case 'shop_day_finished':
+      if (state.tutorialStep === 'shop_sell') next = 'buy_orbes';
+      break;
+    case 'orbes_purchased':
+      if (state.tutorialStep === 'buy_orbes') {
+        completeTutorial(state);
+        next = 'done';
+      }
+      break;
     default:
       break;
   }
@@ -242,6 +307,6 @@ export function advanceTutorial(state: GameState, event: TutorialEvent): Tutoria
     advanced,
     completed: state.tutorialComplete,
     previousStep,
-    nextStep: next,
+    nextStep: state.tutorialStep,
   };
 }

@@ -3,6 +3,9 @@ import { deserializeState, serializeState } from '../src/systems/saveManager.ts'
 import {
   advanceTutorial,
   canEnterDungeonDuringTutorial,
+  canOpenShopDuringTutorial,
+  canStartShopDayDuringTutorial,
+  canUseBuildTool,
   completeTutorial,
   isTutorialActive,
   shouldShowTutorialDialog,
@@ -69,10 +72,31 @@ describe('tutorial system', () => {
     expect(state.tutorialStep).toBe('return_home');
   });
 
-  it('completes tutorial on dialog_next at return_home', () => {
+  it('advances return_home → build_habitat on dialog_next', () => {
     const state = freshState();
     state.tutorialStep = 'return_home';
     const result = advanceTutorial(state, 'dialog_next');
+    expect(result.advanced).toBe(true);
+    expect(result.completed).toBe(false);
+    expect(state.tutorialStep).toBe('build_habitat');
+  });
+
+  it('advances PR2 base steps through habitat, shop and orbes', () => {
+    const state = freshState();
+    state.tutorialStep = 'build_habitat';
+    advanceTutorial(state, 'habitat_pen_placed');
+    expect(state.tutorialStep).toBe('place_creature');
+
+    advanceTutorial(state, 'creature_placed');
+    expect(state.tutorialStep).toBe('shop_stock');
+
+    advanceTutorial(state, 'shop_item_stocked');
+    expect(state.tutorialStep).toBe('shop_sell');
+
+    advanceTutorial(state, 'shop_day_finished');
+    expect(state.tutorialStep).toBe('buy_orbes');
+
+    const result = advanceTutorial(state, 'orbes_purchased');
     expect(result.completed).toBe(true);
     expect(state.tutorialComplete).toBe(true);
     expect(state.tutorialStep).toBe('done');
@@ -107,6 +131,9 @@ describe('tutorial system', () => {
 
     state.tutorialStep = 'return_home';
     expect(shouldUseTutorialDungeon(state)).toBe(false);
+
+    state.tutorialStep = 'shop_stock';
+    expect(shouldUseTutorialDungeon(state)).toBe(false);
   });
 
   it('canEnterDungeonDuringTutorial mirrors dungeon access steps', () => {
@@ -119,6 +146,44 @@ describe('tutorial system', () => {
 
     state.tutorialStep = 'dungeon_exit';
     expect(canEnterDungeonDuringTutorial(state)).toBe(true);
+
+    state.tutorialStep = 'build_habitat';
+    expect(canEnterDungeonDuringTutorial(state)).toBe(false);
+  });
+
+  it('canOpenShopDuringTutorial only on shop steps', () => {
+    const state = freshState();
+    state.tutorialStep = 'place_creature';
+    expect(canOpenShopDuringTutorial(state)).toBe(false);
+
+    state.tutorialStep = 'shop_stock';
+    expect(canOpenShopDuringTutorial(state)).toBe(true);
+
+    state.tutorialStep = 'shop_sell';
+    expect(canOpenShopDuringTutorial(state)).toBe(true);
+
+    completeTutorial(state);
+    expect(canOpenShopDuringTutorial(state)).toBe(true);
+  });
+
+  it('canStartShopDayDuringTutorial only on shop_sell', () => {
+    const state = freshState();
+    state.tutorialStep = 'shop_stock';
+    expect(canStartShopDayDuringTutorial(state)).toBe(false);
+
+    state.tutorialStep = 'shop_sell';
+    expect(canStartShopDayDuringTutorial(state)).toBe(true);
+  });
+
+  it('canUseBuildTool only allows habitat pen during build_habitat', () => {
+    const state = freshState();
+    state.tutorialStep = 'build_habitat';
+    expect(canUseBuildTool(state, 'habitat_pen')).toBe(true);
+    expect(canUseBuildTool(state, 'workbench')).toBe(false);
+    expect(canUseBuildTool(state, 'move')).toBe(false);
+
+    state.tutorialStep = 'place_creature';
+    expect(canUseBuildTool(state, 'habitat_pen')).toBe(false);
   });
 
   it('shouldShowTutorialDialog for actionable steps', () => {
@@ -129,6 +194,9 @@ describe('tutorial system', () => {
     expect(shouldShowTutorialDialog(state)).toBe(true);
 
     state.tutorialStep = 'dungeon_capture';
+    expect(shouldShowTutorialDialog(state)).toBe(true);
+
+    state.tutorialStep = 'build_habitat';
     expect(shouldShowTutorialDialog(state)).toBe(true);
 
     state.tutorialStep = 'done';
@@ -150,6 +218,9 @@ describe('tutorial system', () => {
 
     state.tutorialStep = 'return_home';
     expect(shouldBlockTutorialGameplay(state)).toBe(true);
+
+    state.tutorialStep = 'build_habitat';
+    expect(shouldBlockTutorialGameplay(state)).toBe(false);
   });
 });
 

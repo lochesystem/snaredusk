@@ -71,6 +71,7 @@ export interface ShopSceneCallbacks {
   setHint: (text: string) => void;
   openPriceModal: (kind: 'shelf' | 'cage', index: number) => void;
   onShopDayEnd: (goldEarned: number) => void;
+  onCreatureStocked?: () => void;
 }
 
 export class ShopScene {
@@ -363,6 +364,9 @@ export class ShopScene {
     this.cb.onStateChange();
     this.syncFromState(state);
     this.cb.openPriceModal(slot.kind, slot.index);
+    if (entry.kind === 'creature' && slot.kind === 'cage') {
+      this.cb.onCreatureStocked?.();
+    }
   }
 
   private updateCustomers(dt: number): void {

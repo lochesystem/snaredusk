@@ -117,6 +117,8 @@ export interface BaseSceneCallbacks {
   onCreatureClick: (habitatIndex: number) => void;
 
   onSleep: () => void;
+
+  onHabitatPenPlaced?: () => void;
 }
 
 
@@ -762,6 +764,8 @@ export class BaseScene {
           this.rebuildWorld();
 
           this.cb.showToast(result.message);
+
+          this.cb.onHabitatPenPlaced?.();
 
         } else {
 

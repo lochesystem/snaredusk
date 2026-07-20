@@ -13,6 +13,7 @@ export interface HabitatPenCallbacks {
   getState: () => GameState;
   onChange: () => void;
   showToast: (msg: string) => void;
+  onCreaturePlaced?: () => void;
 }
 
 let activePenId: string = DEFAULT_PEN_ID;
@@ -96,6 +97,7 @@ export function renderHabitatPenModal(callbacks: HabitatPenCallbacks): void {
         callbacks.onChange();
         renderHabitatPenModal(callbacks);
         callbacks.showToast(`${moved.name} entrou no ${penName.toLowerCase()}`);
+        callbacks.onCreaturePlaced?.();
       } else {
         callbacks.showToast('Área cheia ou bolsa inválida');
       }
