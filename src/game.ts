@@ -61,6 +61,7 @@ import {
   bindBuildModeModal,
   bindBuildHotbarKeys,
   clearBuildTool,
+  getSelectedBuildTool,
   renderBaseBuildHotbar,
   type BuildTool,
 } from './ui/buildModeUI.ts';
@@ -194,6 +195,21 @@ export class Game {
     if (event === 'returned_to_base' || result.nextStep === 'return_home') {
       syncTutorialDialog(this.state);
     }
+
+    this.clearBuildToolIfTutorialRestricted();
+  }
+
+  /** Com ferramenta ativa, a base ignora [E] em marcos (loja, portal, etc.). */
+  private clearBuildToolIfTutorialRestricted(): void {
+    if (!isTutorialActive(this.state) || this.state.tutorialStep === 'build_habitat') return;
+    if (!getSelectedBuildTool() && !this.baseScene?.getBuildTool()) return;
+    clearBuildTool();
+    this.baseScene?.clearBuildTool();
+    if (this.screen === 'base') {
+      renderBaseBuildHotbar(this.state, {
+        onSelect: (t) => this.onBuildHotbarSelect(t),
+      });
+    }
   }
 
   private onDungeonTutorialEvent(
@@ -216,6 +232,7 @@ export class Game {
       saveGame(this.state);
       this.refreshBaseUI();
     }
+    this.clearBuildToolIfTutorialRestricted();
     syncTutorialDialog(this.state);
   }
 
@@ -463,6 +480,7 @@ export class Game {
       this.showToast('Siga a orientação da Mira primeiro.');
       return;
     }
+    this.clearBuildToolIfTutorialRestricted();
     if (ensureTutorialCreatureInBagForShop(this.state)) {
       saveGame(this.state);
       this.refreshBaseUI();
@@ -596,6 +614,7 @@ export class Game {
     } else if (screen === 'shop') {
       playMusic('shop');
       showBaseHub(false);
+      clearBuildTool();
       document.getElementById('shop-screen')?.classList.remove('hidden');
       this.showShopView();
       this.shopUI.render();

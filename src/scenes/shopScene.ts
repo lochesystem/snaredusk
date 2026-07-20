@@ -313,19 +313,21 @@ export class ShopScene {
         return;
       }
       if (listing) {
-        this.cb.showToast('Slot ocupado — clique no item para ajustar preço');
+        this.selectedBagIndex = -1;
+        this.updateCarriedVisual(state);
+        this.cb.showToast('Seleção cancelada — retirando item da prateleira');
+      } else {
+        if (nearSlot.kind === 'cage' && entry.kind !== 'creature') {
+          this.cb.showToast('Criaturas vão nas gaiolas');
+          return;
+        }
+        if (nearSlot.kind === 'shelf' && entry.kind !== 'loot') {
+          this.cb.showToast('Loot vai nas prateleiras');
+          return;
+        }
+        this.placeItem(state, nearSlot, this.selectedBagIndex, entry);
         return;
       }
-      if (nearSlot.kind === 'cage' && entry.kind !== 'creature') {
-        this.cb.showToast('Criaturas vão nas gaiolas');
-        return;
-      }
-      if (nearSlot.kind === 'shelf' && entry.kind !== 'loot') {
-        this.cb.showToast('Loot vai nas prateleiras');
-        return;
-      }
-      this.placeItem(state, nearSlot, this.selectedBagIndex, entry);
-      return;
     }
 
     if (listing) {

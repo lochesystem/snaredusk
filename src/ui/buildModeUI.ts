@@ -74,7 +74,7 @@ export function renderBaseBuildHotbar(state: GameState, callbacks: BuildHotbarCa
     }
 
     slot.addEventListener('click', () => {
-      if (!canUseBuildTool(state, tool)) return;
+      if (!canUseBuildTool(state, tool) && selected !== tool) return;
       const next = toggleBuildTool(tool);
       callbacks.onSelect(next);
       renderBaseBuildHotbar(state, callbacks);
@@ -92,7 +92,7 @@ export function bindBuildHotbarKeys(
   for (let i = 0; i < BUILD_HOTBAR_SLOTS.length; i++) {
     if (consumeKey(String(i + 1))) {
       const tool = BUILD_HOTBAR_SLOTS[i]!;
-      if (!canUseBuildTool(state, tool)) continue;
+      if (!canUseBuildTool(state, tool) && selected !== tool) continue;
       const next = toggleBuildTool(tool);
       callbacks.onSelect(next);
       renderBaseBuildHotbar(state, callbacks);
