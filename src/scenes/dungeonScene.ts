@@ -32,7 +32,8 @@ import { YSortLayer } from '../engine/ySortLayer.ts';
 import { getSpecies } from '../data/creatures.ts';
 import { getBiomeDef } from '../data/biomes.ts';
 import { LOOT_TABLE, getEnemyChestDrop } from '../data/items.ts';
-import { generateDungeon, type DungeonInteractable, type DungeonLayout, type DungeonObstacle } from '../world/dungeonGenerator.ts';
+import type { DungeonInteractable, DungeonLayout, DungeonObstacle } from '../world/dungeonGenerator.ts';
+import { generateDungeon } from '../world/dungeonGenerator.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
 import {
   DungeonPathfinder,
@@ -180,6 +181,13 @@ export interface DungeonCallbacks {
   onStateChange: () => void;
   showToast: (msg: string) => void;
   updateHud: () => void;
+  onTutorialEvent?: (event: 'dungeon_entered' | 'enemy_damaged' | 'capture_attempted' | 'capture_success' | 'enemy_defeated') => void;
+}
+
+export interface DungeonSceneConfig {
+  seed: number;
+  layout?: DungeonLayout;
+  tutorialRun?: boolean;
 }
 
 interface LiveEnemy {
@@ -340,6 +348,8 @@ export class DungeonScene {
   private stalactiteShadowGfx: Graphics;
   private runtimeRocks: { gfx: Graphics; obstacle: DungeonObstacle }[] = [];
   private fxRunner = new FxRunner();
+  private tutorialRun = false;
+  private tutorialEnemyDamaged = false;
 
   private state: GameState;
   private input: InputManager;
@@ -349,14 +359,15 @@ export class DungeonScene {
     state: GameState,
     input: InputManager,
     callbacks: DungeonCallbacks,
-    dungeonSeed: number,
+    config: DungeonSceneConfig,
   ) {
     this.state = state;
     this.input = input;
     this.callbacks = callbacks;
+    this.tutorialRun = config.tutorialRun ?? false;
     this.playerHp = state.playerHp;
     this.playerStamina = state.playerStamina;
-    this.layout = generateDungeon(dungeonSeed, state.activeBiome);
+    this.layout = config.layout ?? generateDungeon(config.seed, state.activeBiome);
     const biome = getBiomeDef(this.layout.biomeId);
     this.pathfinder = new DungeonPathfinder(
       this.layout.floors,
@@ -392,9 +403,11 @@ export class DungeonScene {
     this.refreshBossGateGfx();
 
     this.bossArenaFog = new BossArenaFog();
-    const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
-    if (bossRoom) {
-      this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, dungeonSeed);
+    if (!this.tutorialRun) {
+      const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
+      if (bossRoom) {
+        this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, config.seed);
+      }
     }
 
     this.playerX = this.layout.spawn.x;
@@ -428,8 +441,11 @@ export class DungeonScene {
     const hazardClass = getBiomeHazardClass(getBiomeDef(this.layout.biomeId).hazardKind);
     const wrapper = document.getElementById('game-wrapper');
     wrapper?.classList.remove('biome-hazard-spores', 'biome-hazard-slippery', 'biome-hazard-poison');
-    if (hazardClass) wrapper?.classList.add(hazardClass);
+    if (hazardClass && !this.tutorialRun) wrapper?.classList.add(hazardClass);
     this.callbacks.updateHud();
+    if (this.tutorialRun) {
+      this.callbacks.onTutorialEvent?.('dungeon_entered');
+    }
   }
 
   exit(): void {
@@ -464,13 +480,14 @@ export class DungeonScene {
       }
       this.entityLayer.addChild(container);
       const combatInit = initEnemyCombatFields(species.behaviorId);
+      const maxHp = spawn.hp ?? species.maxHp;
       const enemy: LiveEnemy = {
         id: `enemy-${nextEnemyId++}`,
         speciesId: spawn.speciesId,
         roomIndex: spawn.roomIndex,
         isBoss: spawn.isBoss ?? false,
-        hp: species.maxHp,
-        maxHp: species.maxHp,
+        hp: maxHp,
+        maxHp,
         x: spawn.x,
         y: spawn.y,
         atk: species.atk,
@@ -598,8 +615,10 @@ export class DungeonScene {
 
     this.tryDodge(dt);
     this.tryWeaponHotbar();
-    this.updateBossFight(dt);
-    this.bossArenaFog.update(dt, this.bossFightPhase);
+    if (!this.tutorialRun) {
+      this.updateBossFight(dt);
+      this.bossArenaFog.update(dt, this.bossFightPhase);
+    }
     this.movePlayer(dt);
     this.updateStalactites(dt);
     this.updateTemporaryObstacles(dt);
@@ -896,6 +915,7 @@ export class DungeonScene {
   }
 
   private updateBiomeHazards(dt: number): void {
+    if (this.tutorialRun) return;
     if (this.invincibleTimer > 0) return;
     const biome = getBiomeDef(this.layout.biomeId);
     let damage = 0;
@@ -1158,6 +1178,10 @@ export class DungeonScene {
     if (afterShield <= 0) return;
     const finalDmg = calcDamage(afterShield, enemy.def);
     enemy.hp = Math.max(0, enemy.hp - finalDmg);
+    if (this.tutorialRun && finalDmg > 0 && !this.tutorialEnemyDamaged) {
+      this.tutorialEnemyDamaged = true;
+      this.callbacks.onTutorialEvent?.('enemy_damaged');
+    }
     drawDamageNumber(this.fxLayer, finalDmg, enemy.x, enemy.y - 20, this.fxRunner);
     playSfx('combat.hit');
     this.tryBossPhaseTransition(enemy);
@@ -1170,6 +1194,7 @@ export class DungeonScene {
   }
 
   private tryGrantBossKey(): void {
+    if (this.tutorialRun) return;
     if (this.bossFightPhase !== 'locked') return;
     if (hasBossGateKey(this.state, this.layout.biomeId)) return;
     if (countRemainingPhaseEnemies(this.enemies) > 0) return;
@@ -1228,6 +1253,9 @@ export class DungeonScene {
 
     if (!enemy.isBoss) {
       this.tryGrantBossKey();
+      if (this.tutorialRun && !enemy.isMinion) {
+        this.callbacks.onTutorialEvent?.('enemy_defeated');
+      }
     }
   }
 
@@ -1516,6 +1544,9 @@ export class DungeonScene {
 
     this.state.orbs -= 1;
     this.launchOrb(enemy);
+    if (this.tutorialRun) {
+      this.callbacks.onTutorialEvent?.('capture_attempted');
+    }
     playSfx('capture.throw');
     this.callbacks.onStateChange();
   }
@@ -1707,6 +1738,9 @@ export class DungeonScene {
       drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true, this.fxRunner);
       this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
       playSfx('capture.success');
+      if (this.tutorialRun) {
+        this.callbacks.onTutorialEvent?.('capture_success');
+      }
       this.callbacks.onStateChange();
       this.tryGrantBossKey();
     } else {
@@ -2376,6 +2410,13 @@ export class DungeonScene {
   }
 
   private updatePortalState(): void {
+    if (this.tutorialRun) {
+      const cleared = countRemainingPhaseEnemies(this.enemies) === 0;
+      this.portalActive = cleared;
+      this.portalSprite.visible = cleared;
+      this.portalSprite.alpha = cleared ? 1 : 0;
+      return;
+    }
     this.portalActive = this.bossChestOpened;
     this.portalSprite.visible = this.bossChestOpened;
     this.portalSprite.alpha = this.bossChestOpened ? 1 : 0;

@@ -106,7 +106,7 @@ flowchart LR
 | **Base escavável** | Grid, escavação, baús, craft adjacente | **Feito (v0.4)** | Hub canvas + barra inferior; modo Construir; stamina para escavar |
 | **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
 | **Popularidade / reputação** | Níveis 1–3 | **Pendente** | — |
-| **Tutorial** | 15 min com Mira | **Pendente** | — |
+| **Tutorial** | 15 min com Mira | **Parcial (MVP)** | Base + masmorra scriptada + captura (Q); habitat/loja/orbes no PR 2 |
 
 ### Critérios de done
 
@@ -184,7 +184,7 @@ Pendente:
 | CI/CD GitHub Actions | Feito |
 | Save persiste entre sessões | Feito |
 | CHANGELOG.md | Feito |
-| Tutorial para novo jogador | Pendente |
+| Tutorial para novo jogador | Parcial (MVP) — Mira na base + masmorra + captura |
 | Open Graph / GIF no README | Pendente |
 | Console limpo (Chrome + Firefox) | Pendente |
 

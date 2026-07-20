@@ -102,12 +102,28 @@ npm run build
 | 5c.4 | Golpes do chefe mostram **auras/VFX** (windup, charge, heat wave) | ☐ | |
 | 5c.5 | **SFX** audíveis: ataque, hit, dodge, baú, portão, captura, fase 2 | ☐ | Som após Novo Jogo/Continuar |
 
-### 6. Loop completo (1 min)
+### 6. Tutorial com Mira — MVP (3 min)
+
+**Pré-requisito:** **Novo Jogo** (save limpo ou apagar save local).
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 6.1 | Reentrar na masmorra **sem travar** | ☐ | |
-| 6.2 | Segunda run: bolsa, habitat e ouro persistem | ☐ | |
+| 6.1 | Ao iniciar, overlay da **Mira** com boas-vindas | ☐ | |
+| 6.2 | **Continuar** → hint no portal; loja/cama bloqueados | ☐ | |
+| 6.3 | **[E]** no portal → modal Destino → entrar na masmorra | ☐ | Layout de **1 sala** (tutorial) |
+| 6.4 | Diálogo WASD; atacar esporo com **clique** | ☐ | |
+| 6.5 | **Q** para captura; highlight na tecla Q no HUD | ☐ | |
+| 6.6 | Portal de saída após captura ou derrota; **[E]** volta à base | ☐ | |
+| 6.7 | Diálogo final da Mira; **Continuar** encerra tutorial | ☐ | |
+| 6.8 | **Pular tutorial** em qualquer passo → toast e jogo livre | ☐ | |
+| 6.9 | **Continuar** após tutorial parcial salva progresso do passo | ☐ | F5 + Continuar |
+
+### 7. Loop completo (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 7.1 | Reentrar na masmorra **sem travar** | ☐ | |
+| 7.2 | Segunda run: bolsa, habitat e ouro persistem | ☐ | |
 
 ---
 

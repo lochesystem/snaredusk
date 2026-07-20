@@ -93,6 +93,20 @@ import {
   openHabitatPenModal,
   renderHabitatPenModal,
 } from './ui/habitatPenUI.ts';
+import {
+  advanceTutorial,
+  canEnterDungeonDuringTutorial,
+  isTutorialActive,
+  shouldBlockTutorialGameplay,
+  shouldUseTutorialDungeon,
+  type TutorialEvent,
+} from './systems/tutorial.ts';
+import {
+  bindTutorialUI,
+  hideTutorialDialog,
+  syncTutorialDialog,
+} from './ui/tutorialUI.ts';
+import { generateTutorialDungeon } from './world/tutorialDungeon.ts';
 
 type Screen = 'title' | 'base' | 'dungeon' | 'shop';
 
@@ -132,7 +146,62 @@ export class Game {
     bindInventoryModal();
     bindAbandonModal();
     bindAudioSettingsModal();
+    this.bindTutorial();
     this.bindBaseUI();
+  }
+
+  private bindTutorial(): void {
+    bindTutorialUI({
+      getState: () => this.state,
+      onContinue: (event) => this.handleTutorialEvent(event),
+      onSkip: () => this.handleTutorialEvent('skip'),
+    });
+  }
+
+  private handleTutorialEvent(event: TutorialEvent): void {
+    if (!isTutorialActive(this.state) && event !== 'skip') return;
+    const prev = this.state.tutorialStep;
+    const result = advanceTutorial(this.state, event);
+    saveGame(this.state);
+
+    if (event === 'skip') {
+      hideTutorialDialog();
+      this.showToast('Tutorial pulado.');
+      return;
+    }
+
+    if (result.nextStep === prev) {
+      hideTutorialDialog();
+    } else {
+      syncTutorialDialog(this.state);
+    }
+
+    if (result.completed || this.state.tutorialStep === 'done') {
+      hideTutorialDialog();
+    }
+
+    if (event === 'returned_to_base' || result.nextStep === 'return_home') {
+      syncTutorialDialog(this.state);
+    }
+  }
+
+  private onDungeonTutorialEvent(
+    event: 'dungeon_entered' | 'enemy_damaged' | 'capture_attempted' | 'capture_success' | 'enemy_defeated',
+  ): void {
+    if (!isTutorialActive(this.state)) return;
+    if (event === 'capture_attempted') {
+      hideTutorialDialog();
+      return;
+    }
+    this.handleTutorialEvent(event);
+    if (event === 'enemy_damaged' || event === 'capture_success' || event === 'enemy_defeated') {
+      syncTutorialDialog(this.state);
+    }
+  }
+
+  private maybeStartTutorial(): void {
+    if (!isTutorialActive(this.state)) return;
+    syncTutorialDialog(this.state);
   }
 
   private baseModalCallbacks() {
@@ -445,6 +514,7 @@ export class Game {
     this.setRenderLoop(true);
     this.showScreen('base');
     saveGame(this.state);
+    this.maybeStartTutorial();
   }
 
   private showScreen(screen: Screen): void {
@@ -567,10 +637,11 @@ export class Game {
       },
       onOpenWorkbench: (cellX, cellY) => openWorkshopModal(cellX, cellY, this.workshopCallbacks()),
       onOpenDungeon: () => {
-        if (!canEnterDungeonToday(this.state)) {
+        if (!canEnterDungeonToday(this.state) && !canEnterDungeonDuringTutorial(this.state)) {
           this.showToast('Você já foi à masmorra hoje — durma para um novo dia');
           return;
         }
+        this.handleTutorialEvent('portal_opened');
         openDungeonModal(this.baseModalCallbacks());
       },
       onOpenShop: () => this.tryOpenShop(),
@@ -593,6 +664,7 @@ export class Game {
     this.baseScene.enter();
     this.baseScene.syncCreatures(this.state.habitat);
     this.refreshBaseUI();
+    this.maybeStartTutorial();
   }
 
   private destroyBase(): void {
@@ -652,7 +724,8 @@ export class Game {
       this.showToast('Bioma ainda bloqueado');
       return;
     }
-    if (!canEnterDungeonToday(this.state)) {
+    const tutorialRun = shouldUseTutorialDungeon(this.state);
+    if (!tutorialRun && !canEnterDungeonToday(this.state)) {
       this.showToast('Você já foi à masmorra hoje — durma para um novo dia');
       return;
     }
@@ -672,6 +745,9 @@ export class Game {
     clearDungeonSpecial(this.state);
     syncWeaponHotbar(this.state);
     const seed = Date.now();
+    const layout = tutorialRun ? generateTutorialDungeon(this.state.activeBiome) : undefined;
+
+    hideTutorialDialog();
 
     this.dungeon = new DungeonScene(this.state, this.input, {
       onReturnToBase: (payload) => {
@@ -682,9 +758,12 @@ export class Game {
       onStateChange: () => saveGame(this.state),
       showToast: (m) => this.showToast(m),
       updateHud: () => this.updateHud(),
-    }, seed);
+      onTutorialEvent: (event) => this.onDungeonTutorialEvent(event),
+    }, { seed, layout, tutorialRun });
 
-    this.state.dungeonUsedToday = true;
+    if (!tutorialRun) {
+      this.state.dungeonUsedToday = true;
+    }
     saveGame(this.state);
 
     this.app.stage.addChild(this.dungeon.root);
@@ -706,6 +785,9 @@ export class Game {
 
   private update(dt: number): void {
     if (this.screen === 'base' && this.baseScene) {
+      if (shouldBlockTutorialGameplay(this.state)) {
+        return;
+      }
       if (this.input.consumeKey('i')) {
         if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
         else this.toggleBaseBagModal();
@@ -738,6 +820,9 @@ export class Game {
     }
 
     if (this.screen === 'dungeon' && this.dungeon) {
+      if (shouldBlockTutorialGameplay(this.state)) {
+        return;
+      }
       if (this.input.consumeKey('i')) {
         if (isInventoryModalOpen()) closeInventoryModal();
         else openInventoryModal(this.inventoryCallbacks());
@@ -784,6 +869,9 @@ export class Game {
 
     if (payload.reason === 'portal') {
       this.showToast('Retornou à base com a bolsa!');
+      if (isTutorialActive(this.state)) {
+        this.handleTutorialEvent('returned_to_base');
+      }
     } else if (payload.reason === 'death') {
       this.showToast('Você desmaiou — perdeu a bolsa!');
     }

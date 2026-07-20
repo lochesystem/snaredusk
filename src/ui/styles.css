@@ -1809,3 +1809,123 @@ button:hover {
       0 0 10px rgba(255, 40, 30, 0.35);
   }
 }
+
+/* Tutorial — Mira */
+.tutorial-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 20px 24px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.tutorial-overlay.visible {
+  opacity: 1;
+}
+
+.tutorial-overlay.hidden {
+  display: none;
+}
+
+.tutorial-panel {
+  pointer-events: all;
+  display: flex;
+  gap: 14px;
+  max-width: min(560px, 96%);
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(18, 14, 28, 0.94);
+  border: 1px solid rgba(140, 200, 140, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.tutorial-portrait {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1a2e1a;
+  background: linear-gradient(145deg, #8fd894, #5dbb63);
+  border: 2px solid rgba(196, 240, 130, 0.6);
+}
+
+.tutorial-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tutorial-name {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #c4f082;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tutorial-text {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #e8e4f0;
+}
+
+.tutorial-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.tutorial-continue,
+.tutorial-skip {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+}
+
+.tutorial-continue {
+  background: #5dbb63;
+  color: #142218;
+  border-color: #8fd894;
+  font-weight: 600;
+}
+
+.tutorial-continue:hover {
+  background: #8fd894;
+}
+
+.tutorial-skip {
+  background: transparent;
+  color: #a8a0b8;
+  border-color: rgba(168, 160, 184, 0.35);
+}
+
+.tutorial-skip:hover {
+  color: #e8e4f0;
+  border-color: rgba(168, 160, 184, 0.6);
+}
+
+.tutorial-highlight {
+  outline: 2px solid rgba(196, 240, 130, 0.85);
+  outline-offset: 3px;
+  border-radius: 4px;
+  animation: tutorial-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes tutorial-pulse {
+  from { box-shadow: 0 0 6px rgba(196, 240, 130, 0.25); }
+  to { box-shadow: 0 0 14px rgba(196, 240, 130, 0.55); }
+}
