@@ -7,6 +7,9 @@ import {
   canStartShopDayDuringTutorial,
   canUseBuildTool,
   completeTutorial,
+  ensureTutorialCreatureInBagForShop,
+  grantTutorialCreatureIfNeeded,
+  hasAnyCreature,
   isTutorialActive,
   shouldShowTutorialDialog,
   shouldBlockTutorialGameplay,
@@ -201,6 +204,29 @@ describe('tutorial system', () => {
 
     state.tutorialStep = 'done';
     expect(shouldShowTutorialDialog(state)).toBe(false);
+  });
+
+  it('grantTutorialCreatureIfNeeded adds esporo when bag and habitat are empty', () => {
+    const state = freshState();
+    state.tutorialStep = 'place_creature';
+    expect(hasAnyCreature(state)).toBe(false);
+    expect(grantTutorialCreatureIfNeeded(state)).toBe(true);
+    expect(state.bag.some((e) => e?.kind === 'creature' && e.speciesId === 'esporo_dorminhoco')).toBe(true);
+    expect(grantTutorialCreatureIfNeeded(state)).toBe(false);
+  });
+
+  it('ensureTutorialCreatureInBagForShop moves habitat creature to bag', () => {
+    const state = freshState();
+    state.tutorialStep = 'shop_stock';
+    state.habitat.push({
+      kind: 'creature',
+      speciesId: 'esporo_dorminhoco',
+      name: 'Esporo Dorminhoco',
+      baseValue: 45,
+    });
+    expect(ensureTutorialCreatureInBagForShop(state)).toBe(true);
+    expect(state.habitat).toHaveLength(0);
+    expect(state.bag.some((e) => e?.kind === 'creature')).toBe(true);
   });
 
   it('shouldBlockTutorialGameplay only on welcome and return_home', () => {

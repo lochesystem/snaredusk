@@ -27,7 +27,7 @@ export function isTutorialDialogOpen(): boolean {
 
 export function hideTutorialDialog(): void {
   visible = false;
-  overlay?.classList.remove('visible');
+  overlay?.classList.remove('visible', 'tutorial-overlay--pass-through', 'tutorial-overlay--dock-top');
   overlay?.classList.add('hidden');
   clearHighlights();
 }
@@ -100,6 +100,9 @@ function showTutorialDialog(content: {
     skipBtn.classList.toggle('hidden', !content.showSkip);
     skipBtn.textContent = content.skipLabel || 'Pular tutorial';
   }
+  const interactive = content.showContinue || content.showSkip;
+  root.classList.toggle('tutorial-overlay--pass-through', !interactive);
+  root.classList.toggle('tutorial-overlay--dock-top', !interactive);
   applyHighlight(content.highlight);
   root.classList.remove('hidden');
   requestAnimationFrame(() => {

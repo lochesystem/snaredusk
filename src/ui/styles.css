@@ -456,6 +456,11 @@ button:hover {
   z-index: 10;
 }
 
+.base-build-hotbar .hotbar-slot.tutorial-highlight {
+  position: relative;
+  z-index: 1;
+}
+
 .base-build-hotbar .hotbar-slot {
   cursor: pointer;
   border: 1px solid #3d5c3a;
@@ -1827,6 +1832,15 @@ button:hover {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.35s ease;
+}
+
+.tutorial-overlay--dock-top {
+  align-items: flex-start;
+  padding: 72px 20px 16px;
+}
+
+.tutorial-overlay--pass-through .tutorial-panel {
+  pointer-events: none;
 }
 
 .tutorial-overlay.visible {

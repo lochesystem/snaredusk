@@ -1,7 +1,12 @@
-import type { GameState, TutorialStepId } from '../types.ts';
+import type { GameState, TutorialStepId, CreatureItem } from '../types.ts';
 import type { StationId } from '../data/baseStations.ts';
+import { getSpecies } from '../data/creatures.ts';
+import { moveCreatureToBag } from './habitat.ts';
+import { addToBag } from './saveManager.ts';
 
 type BuildTool = StationId | 'move';
+
+export const TUTORIAL_CREATURE_SPECIES = 'esporo_dorminhoco';
 
 export type TutorialEvent =
   | 'dialog_next'
@@ -141,6 +146,36 @@ const STEP_COPY: Record<TutorialStepId, Omit<TutorialDialogContent, 'step'>> = {
 
 export function isTutorialActive(state: GameState): boolean {
   return !state.tutorialComplete && state.tutorialStep !== 'done';
+}
+
+export function hasAnyCreature(state: GameState): boolean {
+  if (state.bag.some((entry) => entry?.kind === 'creature')) return true;
+  return state.habitat.length > 0;
+}
+
+/** Garante o esporo do tutorial na bolsa se o jogador matou em vez de capturar. */
+export function grantTutorialCreatureIfNeeded(state: GameState): boolean {
+  if (!isTutorialActive(state)) return false;
+  if (hasAnyCreature(state)) return false;
+
+  const species = getSpecies(TUTORIAL_CREATURE_SPECIES);
+  const creature: CreatureItem = {
+    kind: 'creature',
+    speciesId: species.id,
+    name: species.name,
+    baseValue: species.baseValue,
+  };
+  return addToBag(state, creature);
+}
+
+/** Recoloca criatura do habitat na bolsa para expor na loja (passo shop_stock). */
+export function ensureTutorialCreatureInBagForShop(state: GameState): boolean {
+  if (!isTutorialActive(state) || state.tutorialStep !== 'shop_stock') return false;
+  if (state.bag.some((entry) => entry?.kind === 'creature')) return false;
+  if (state.habitat.length > 0) {
+    return moveCreatureToBag(state, 0) !== null;
+  }
+  return grantTutorialCreatureIfNeeded(state);
 }
 
 export function shouldUseTutorialDungeon(state: GameState): boolean {
@@ -303,6 +338,9 @@ export function advanceTutorial(state: GameState, event: TutorialEvent): Tutoria
 
   const advanced = next !== previousStep;
   state.tutorialStep = next;
+  if (next === 'return_home' || next === 'place_creature' || next === 'shop_stock') {
+    grantTutorialCreatureIfNeeded(state);
+  }
   return {
     advanced,
     completed: state.tutorialComplete,

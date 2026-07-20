@@ -82,6 +82,7 @@ import { shouldEnemyAggro } from '../systems/enemyAi.ts';
 import { initEnemyWanderFields, tickEnemyWander } from '../systems/enemyWander.ts';
 import { buyOrbPack } from '../systems/orbShop.ts';
 import { addToBag, bagCount } from '../systems/saveManager.ts';
+import { grantTutorialCreatureIfNeeded } from '../systems/tutorial.ts';
 import { losePartyCompanion } from '../systems/party.ts';
 import {
   buildCompanionRangedShot,
@@ -1282,7 +1283,16 @@ export class DungeonScene {
       }
     } else if (!enemy.isMinion && !options?.skipToast) {
       const species = getSpecies(enemy.speciesId);
-      this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
+      if (this.tutorialRun) {
+        if (grantTutorialCreatureIfNeeded(this.state)) {
+          this.callbacks.showToast(`${species.name} inconsciente — levado para a bolsa!`);
+          this.callbacks.onStateChange();
+        } else {
+          this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
+        }
+      } else {
+        this.callbacks.showToast(`${species.name} derrotado — baú deixado`);
+      }
     }
 
     if (!enemy.isBoss) {

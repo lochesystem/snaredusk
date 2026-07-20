@@ -102,6 +102,8 @@ import {
   canSleepDuringTutorial,
   canStartShopDayDuringTutorial,
   canUseBuildTool,
+  ensureTutorialCreatureInBagForShop,
+  grantTutorialCreatureIfNeeded,
   isTutorialActive,
   shouldBlockTutorialGameplay,
   shouldUseTutorialDungeon,
@@ -210,6 +212,10 @@ export class Game {
 
   private maybeStartTutorial(): void {
     if (!isTutorialActive(this.state)) return;
+    if (grantTutorialCreatureIfNeeded(this.state)) {
+      saveGame(this.state);
+      this.refreshBaseUI();
+    }
     syncTutorialDialog(this.state);
   }
 
@@ -456,6 +462,10 @@ export class Game {
     if (isTutorialActive(this.state) && !canOpenShopDuringTutorial(this.state)) {
       this.showToast('Siga a orientação da Mira primeiro.');
       return;
+    }
+    if (ensureTutorialCreatureInBagForShop(this.state)) {
+      saveGame(this.state);
+      this.refreshBaseUI();
     }
     if (this.state.shopDayUsed) {
       this.showToast('A loja já fechou hoje — durma na cama para um novo dia');
