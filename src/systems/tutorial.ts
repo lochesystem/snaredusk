@@ -152,6 +152,16 @@ export function shouldBlockBaseActions(state: GameState): boolean {
   return state.tutorialStep === 'welcome' || state.tutorialStep === 'return_home';
 }
 
+/** Bloqueia WASD/combate enquanto o jogador deve clicar em Continuar (não em passos de ação). */
+export function shouldBlockTutorialGameplay(state: GameState): boolean {
+  if (!isTutorialActive(state)) return false;
+  if (shouldBlockBaseActions(state)) return true;
+  if (state.tutorialStep === 'go_portal' || state.tutorialStep === 'dungeon_capture') return false;
+  if (!shouldShowTutorialDialog(state)) return false;
+  const dialog = getTutorialDialog(state);
+  return !!dialog?.showContinue;
+}
+
 export function getTutorialDialog(state: GameState): TutorialDialogContent | null {
   if (!isTutorialActive(state)) return null;
   const copy = STEP_COPY[state.tutorialStep];

@@ -97,14 +97,13 @@ import {
   advanceTutorial,
   canEnterDungeonDuringTutorial,
   isTutorialActive,
-  shouldBlockBaseActions,
+  shouldBlockTutorialGameplay,
   shouldUseTutorialDungeon,
   type TutorialEvent,
 } from './systems/tutorial.ts';
 import {
   bindTutorialUI,
   hideTutorialDialog,
-  isTutorialDialogOpen,
   syncTutorialDialog,
 } from './ui/tutorialUI.ts';
 import { generateTutorialDungeon } from './world/tutorialDungeon.ts';
@@ -786,7 +785,7 @@ export class Game {
 
   private update(dt: number): void {
     if (this.screen === 'base' && this.baseScene) {
-      if (isTutorialDialogOpen() || shouldBlockBaseActions(this.state)) {
+      if (shouldBlockTutorialGameplay(this.state)) {
         return;
       }
       if (this.input.consumeKey('i')) {
@@ -821,7 +820,7 @@ export class Game {
     }
 
     if (this.screen === 'dungeon' && this.dungeon) {
-      if (isTutorialDialogOpen()) {
+      if (shouldBlockTutorialGameplay(this.state)) {
         return;
       }
       if (this.input.consumeKey('i')) {

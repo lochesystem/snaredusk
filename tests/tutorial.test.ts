@@ -6,6 +6,7 @@ import {
   completeTutorial,
   isTutorialActive,
   shouldShowTutorialDialog,
+  shouldBlockTutorialGameplay,
   shouldUseTutorialDungeon,
 } from '../src/systems/tutorial.ts';
 import { defaultGameState } from '../src/types.ts';
@@ -132,6 +133,21 @@ describe('tutorial system', () => {
 
     state.tutorialStep = 'done';
     expect(shouldShowTutorialDialog(state)).toBe(false);
+  });
+
+  it('shouldBlockTutorialGameplay allows movement at go_portal and dungeon_capture', () => {
+    const state = freshState();
+    state.tutorialStep = 'go_portal';
+    expect(shouldBlockTutorialGameplay(state)).toBe(false);
+
+    state.tutorialStep = 'dungeon_capture';
+    expect(shouldBlockTutorialGameplay(state)).toBe(false);
+
+    state.tutorialStep = 'dungeon_move';
+    expect(shouldBlockTutorialGameplay(state)).toBe(true);
+
+    state.tutorialStep = 'welcome';
+    expect(shouldBlockTutorialGameplay(state)).toBe(true);
   });
 });
 
