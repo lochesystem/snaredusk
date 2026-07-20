@@ -149,6 +149,8 @@ export interface GameState {
   /** Tutorial com Mira concluído (MVP: base + masmorra + captura). */
   tutorialComplete: boolean;
   tutorialStep: TutorialStepId;
+  /** Ouro total vendido na loja (vida útil do save). */
+  shopGoldSold: number;
 }
 
 export interface Rect {
@@ -217,5 +219,6 @@ export function defaultGameState(): GameState {
     base: createDefaultBaseGrid(),
     tutorialComplete: false,
     tutorialStep: 'welcome',
+    shopGoldSold: 0,
   };
 }

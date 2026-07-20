@@ -52,9 +52,9 @@ function gridPositions(
   return out;
 }
 
-export function buildShopLayout(shopLevel: number): ShopLayout {
+export function buildShopLayout(shopLevel: number, shelfCountOverride?: number): ShopLayout {
   const def = getShopLevelDef(shopLevel);
-  const shelfCount = def.shelfCount;
+  const shelfCount = shelfCountOverride ?? def.shelfCount;
   const cageCount = def.cageCount;
 
   const shelfCols = shopLevel <= 2 ? 5 : shopLevel <= 3 ? 7 : shopLevel <= 4 ? 6 : 8;
