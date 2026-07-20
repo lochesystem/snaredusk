@@ -856,6 +856,11 @@ button:hover {
   color: #e8a84a;
 }
 
+.shop-reputation {
+  color: #b8a8e0;
+  margin-top: 2px;
+}
+
 .shop-panel-block {
   flex: 1 1 auto;
   min-height: 0;

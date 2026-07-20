@@ -25,14 +25,25 @@ export const CUSTOMER_ARCHETYPES: CustomerArchetype[] = [
   { id: 'viajante', label: 'Mercador viajante', weight: 5, emoji: '🎒' },
 ];
 
-export function rollCustomerArchetype(rng: () => number = Math.random): CustomerArchetype {
-  const total = CUSTOMER_ARCHETYPES.reduce((s, c) => s + c.weight, 0);
+export function rollCustomerArchetype(
+  rng: () => number = Math.random,
+  reputationLevel = 1,
+): CustomerArchetype {
+  const archetypes = archetypesForReputation(reputationLevel);
+  const total = archetypes.reduce((s, c) => s + c.weight, 0);
   let roll = rng() * total;
-  for (const archetype of CUSTOMER_ARCHETYPES) {
+  for (const archetype of archetypes) {
     roll -= archetype.weight;
     if (roll <= 0) return archetype;
   }
-  return CUSTOMER_ARCHETYPES[0]!;
+  return archetypes[0]!;
+}
+
+function archetypesForReputation(reputationLevel: number): CustomerArchetype[] {
+  if (reputationLevel < 3) return CUSTOMER_ARCHETYPES;
+  return CUSTOMER_ARCHETYPES.map((a) =>
+    a.id === 'colecionador' ? { ...a, weight: 20 } : a,
+  );
 }
 
 export function customerInterested(archetypeId: CustomerArchetypeId, entry: BagEntry): boolean {

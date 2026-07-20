@@ -7,6 +7,7 @@ import {
   type CustomerArchetype,
 } from './customers.ts';
 import { getPriceTier, getPriceTierLabel, type PriceTier } from './pricing.ts';
+import { getReputationLevel, recordShopGold, type ReputationLevelUp } from './reputation.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
 
 export interface ShopDayLogLine {
@@ -76,7 +77,7 @@ export function planShopDay(state: GameState, rng: () => number = Math.random): 
     });
     if (available.length === 0) break;
 
-    const archetype = rollCustomerArchetype(rng);
+    const archetype = rollCustomerArchetype(rng, getReputationLevel(state.shopGoldSold));
     const listing = pickListingForCustomer(archetype.id, available, rng);
     if (!listing) continue;
 
@@ -106,14 +107,16 @@ export function planShopDay(state: GameState, rng: () => number = Math.random): 
 export function applyShopSale(
   state: GameState,
   sale: Pick<ShopCustomerPlan, 'slotKind' | 'slotIndex' | 'paidPrice' | 'willBuy'>,
-): void {
-  if (!sale.willBuy) return;
+): ReputationLevelUp | null {
+  if (!sale.willBuy) return null;
   state.gold += sale.paidPrice;
+  const levelUp = recordShopGold(state, sale.paidPrice);
   if (sale.slotKind === 'cage') {
     state.shopCages[sale.slotIndex] = null;
   } else {
     state.shopShelves[sale.slotIndex] = null;
   }
+  return levelUp;
 }
 
 export function runShopDay(state: GameState, rng: () => number = Math.random): ShopDayResult {

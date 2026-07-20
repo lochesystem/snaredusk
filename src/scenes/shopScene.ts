@@ -13,6 +13,7 @@ import {
 } from '../systems/shopDay.ts';
 import type { BagEntry, GameState, ShopListing } from '../types.ts';
 import { moveWithCollision, PLAYER_RADIUS } from '../world/collision.ts';
+import { getShopShelfCapacity } from '../systems/reputation.ts';
 import {
   buildShopLayout,
   findSlotAt,
@@ -124,7 +125,7 @@ export class ShopScene {
     this.uiLayer = new Container();
     this.slotVisuals = [];
 
-    this.layout = buildShopLayout(state.shopLevel);
+    this.layout = buildShopLayout(state.shopLevel, getShopShelfCapacity(state));
     this.collisionRects = [...this.layout.walls, ...this.layout.obstacles];
 
     const floorGfx = new Graphics();
@@ -450,8 +451,12 @@ export class ShopScene {
 
       const state = this.cb.getState();
       if (c.plan.willBuy) {
-        applyShopSale(state, c.plan);
+        const levelUp = applyShopSale(state, c.plan);
         this.shopDayGold += c.plan.paidPrice;
+        if (levelUp) {
+          this.cb.showToast(`Reputação ${levelUp.level}: ${levelUp.label} — ${levelUp.benefit}`);
+          this.rebuildLayout();
+        }
         this.cb.onStateChange();
         this.syncFromState(state);
       }

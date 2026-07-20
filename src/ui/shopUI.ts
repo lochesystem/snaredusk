@@ -1,5 +1,6 @@
 import type { BagEntry, GameState } from '../types.ts';
 import { discardBagSlot, formatBagEntry } from '../systems/inventory.ts';
+import { formatReputationSummary } from '../systems/reputation.ts';
 import { getNextShopLevel, getShopLevelDef } from '../systems/shopUpgrade.ts';
 
 export interface ShopUICallbacks {
@@ -40,6 +41,11 @@ export class ShopUI {
     const levelEl = document.getElementById('shop-level');
     if (levelEl) {
       levelEl.textContent = `Nível ${def.level} — ${def.label}`;
+    }
+
+    const repEl = document.getElementById('shop-reputation');
+    if (repEl) {
+      repEl.textContent = formatReputationSummary(state.shopGoldSold);
     }
 
     const upgradeBtn = document.getElementById('btn-shop-upgrade') as HTMLButtonElement | null;

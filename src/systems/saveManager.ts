@@ -8,6 +8,7 @@ import {
   defaultGameState,
   type GameState,
 } from '../types.ts';
+import { getShopShelfCapacity, syncShopShelfCapacity } from './reputation.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
 import { defaultWeaponHotbar } from './weaponHotbar.ts';
 import { syncBiomeUnlocks } from './biomeProgress.ts';
@@ -136,6 +137,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     base: normalizeBaseGrid(partial.base),
     tutorialComplete: partial.tutorialComplete ?? true,
     tutorialStep: partial.tutorialStep ?? 'done',
+    shopGoldSold: partial.shopGoldSold ?? 0,
   };
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;
@@ -144,6 +146,7 @@ function normalizeState(partial: LegacyGameState): GameState {
   migrateLegacyHabitatCreatures(normalized);
   normalizeWeaponArmory(normalized);
   syncDungeonDayFlagsAtBase(normalized);
+  syncShopShelfCapacity(normalized);
   return normalized;
 }
 
@@ -234,8 +237,8 @@ export function bagCount(state: GameState): number {
 }
 
 export function resizeShopForLevel(state: GameState, level: number): void {
-  const def = getShopLevelDef(level);
   state.shopLevel = level;
-  state.shopShelves = padShelves(state.shopShelves, def.shelfCount);
+  const def = getShopLevelDef(level);
+  state.shopShelves = padShelves(state.shopShelves, getShopShelfCapacity(state));
   state.shopCages = padCages(state.shopCages, undefined, def.cageCount);
 }
