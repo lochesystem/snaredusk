@@ -62,7 +62,7 @@ export function generateTutorialDungeon(biomeId: BiomeId = 'floresta'): DungeonL
     obstacles: [],
     chests: [],
     connections: [],
-    bossRoomIndex: 0,
+    bossRoomIndex: -1,
     portalRoomIndex: 0,
     spawn,
     portal,

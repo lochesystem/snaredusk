@@ -152,14 +152,9 @@ export function shouldBlockBaseActions(state: GameState): boolean {
   return state.tutorialStep === 'welcome' || state.tutorialStep === 'return_home';
 }
 
-/** Bloqueia WASD/combate enquanto o jogador deve clicar em Continuar (não em passos de ação). */
+/** Bloqueia WASD/combate só enquanto o jogador deve ler e clicar em Continuar na base. */
 export function shouldBlockTutorialGameplay(state: GameState): boolean {
-  if (!isTutorialActive(state)) return false;
-  if (shouldBlockBaseActions(state)) return true;
-  if (state.tutorialStep === 'go_portal' || state.tutorialStep === 'dungeon_capture') return false;
-  if (!shouldShowTutorialDialog(state)) return false;
-  const dialog = getTutorialDialog(state);
-  return !!dialog?.showContinue;
+  return shouldBlockBaseActions(state);
 }
 
 export function getTutorialDialog(state: GameState): TutorialDialogContent | null {

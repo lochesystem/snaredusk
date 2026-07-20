@@ -135,18 +135,20 @@ describe('tutorial system', () => {
     expect(shouldShowTutorialDialog(state)).toBe(false);
   });
 
-  it('shouldBlockTutorialGameplay allows movement at go_portal and dungeon_capture', () => {
+  it('shouldBlockTutorialGameplay only on welcome and return_home', () => {
     const state = freshState();
+    expect(shouldBlockTutorialGameplay(state)).toBe(true);
+
     state.tutorialStep = 'go_portal';
+    expect(shouldBlockTutorialGameplay(state)).toBe(false);
+
+    state.tutorialStep = 'dungeon_attack';
     expect(shouldBlockTutorialGameplay(state)).toBe(false);
 
     state.tutorialStep = 'dungeon_capture';
     expect(shouldBlockTutorialGameplay(state)).toBe(false);
 
-    state.tutorialStep = 'dungeon_move';
-    expect(shouldBlockTutorialGameplay(state)).toBe(true);
-
-    state.tutorialStep = 'welcome';
+    state.tutorialStep = 'return_home';
     expect(shouldBlockTutorialGameplay(state)).toBe(true);
   });
 });
@@ -182,6 +184,7 @@ describe('generateTutorialDungeon', () => {
     expect(layout.enemySpawns[0]!.hp).toBe(TUTORIAL_ENEMY_MAX_HP);
     expect(layout.hazards).toHaveLength(0);
     expect(layout.bossGateWalls).toHaveLength(0);
+    expect(layout.bossRoomIndex).toBe(-1);
   });
 
   it('spawn and enemy positions are walkable', () => {

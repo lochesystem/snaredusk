@@ -403,9 +403,11 @@ export class DungeonScene {
     this.refreshBossGateGfx();
 
     this.bossArenaFog = new BossArenaFog();
-    const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
-    if (bossRoom) {
-      this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, config.seed);
+    if (!this.tutorialRun) {
+      const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
+      if (bossRoom) {
+        this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, config.seed);
+      }
     }
 
     this.playerX = this.layout.spawn.x;
@@ -613,8 +615,10 @@ export class DungeonScene {
 
     this.tryDodge(dt);
     this.tryWeaponHotbar();
-    this.updateBossFight(dt);
-    this.bossArenaFog.update(dt, this.bossFightPhase);
+    if (!this.tutorialRun) {
+      this.updateBossFight(dt);
+      this.bossArenaFog.update(dt, this.bossFightPhase);
+    }
     this.movePlayer(dt);
     this.updateStalactites(dt);
     this.updateTemporaryObstacles(dt);
