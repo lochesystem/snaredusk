@@ -237,7 +237,7 @@ export class ShopScene {
   private addShopTiles(): void {
     const floor = this.layout.floors[0];
     if (!floor) return;
-    const textures = ['floor_a']
+    const textures = ['floor_planks']
       .map((name) => getShopTileTexture(name))
       .filter((texture): texture is Texture => texture !== null);
     if (!textures.length) return;
@@ -249,15 +249,12 @@ export class ShopScene {
     layer.mask = mask;
     for (let y = floor.y; y < floor.y + floor.height; y += 32) {
       const ty = Math.floor((y - floor.y) / 32);
-      const rowOffset = ty % 2 === 0 ? 0 : 16;
-      for (let x = floor.x - rowOffset; x < floor.x + floor.width; x += 32) {
-        const tx = Math.floor((x - floor.x + rowOffset) / 32);
+      for (let x = floor.x; x < floor.x + floor.width; x += 64) {
+        const tx = Math.floor((x - floor.x) / 64);
         const texture = textures[(tx * 3 + ty * 5 + this.layout.decorSeed) % textures.length]!;
         const tile = new Sprite(texture);
         tile.x = x;
         tile.y = y;
-        const tintIndex = (tx * 3 + ty * 5 + this.layout.decorSeed) % 3;
-        tile.tint = tintIndex === 0 ? 0xffffff : tintIndex === 1 ? 0xf2e6dc : 0xe2d2c5;
         tile.roundPixels = true;
         layer.addChild(tile);
       }

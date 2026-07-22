@@ -1119,10 +1119,7 @@ button:hover {
 }
 
 #app.layout-shop {
-  --shop-sidebar-w: clamp(350px, 31vw, 410px);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--shop-sidebar-w);
-  grid-template-rows: 1fr;
+  display: flex;
   align-items: stretch;
   width: min(94vw, 1280px);
   height: min(90vh, 720px);
@@ -1133,18 +1130,17 @@ button:hover {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  position: relative;
 }
 
 #app.layout-shop #game-wrapper {
-  grid-column: 1;
-  grid-row: 1;
   position: relative;
   width: 100%;
   height: 100%;
   max-width: none;
+  flex: 1;
   border: none;
   border-radius: 0;
-  border-right: 1px solid #4a3a2a;
   overflow: hidden;
   background: #14101c;
 }
@@ -1158,33 +1154,39 @@ button:hover {
 }
 
 #app.layout-shop #shop-screen {
-  grid-column: 2;
-  grid-row: 1;
-  position: relative;
-  inset: unset;
-  z-index: 5;
+  position: absolute;
+  inset: 0;
+  z-index: 12;
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 16% 0%, rgba(174, 107, 50, 0.12), transparent 32%),
-    linear-gradient(180deg, #1b1718 0%, #121116 100%);
-  overflow: hidden;
+  max-width: none;
+  margin: 0;
+  display: block;
+  background: transparent;
+  overflow: visible;
   padding: 0;
+  pointer-events: none;
 }
 
 .shop-header {
-  flex: 0 0 auto;
-  padding: 24px 24px 18px;
-  border-bottom: 1px solid rgba(174, 124, 66, 0.25);
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 310px;
+  padding: 15px 16px 13px;
+  border: 1px solid rgba(174, 124, 66, 0.34);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(25, 21, 22, 0.93), rgba(15, 15, 19, 0.88));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
 }
 
 .shop-header h2 {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   color: #f2dcc1;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 27px;
+  font-size: 22px;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -1210,7 +1212,7 @@ button:hover {
 
 .shop-status-card {
   min-width: 0;
-  padding: 10px 11px;
+  padding: 7px 9px;
   border: 1px solid rgba(136, 107, 77, 0.3);
   border-radius: 7px;
   background: rgba(255, 246, 225, 0.035);
@@ -1240,19 +1242,30 @@ button:hover {
 }
 
 .shop-reputation {
-  margin-top: 12px;
+  margin-top: 8px;
   color: #ac9abf;
   font-size: 11px;
   line-height: 1.45;
 }
 
 .shop-panel-block {
-  flex: 1 1 auto;
+  position: absolute;
+  top: auto;
+  right: 14px;
+  bottom: 142px;
+  width: min(350px, calc(100% - 28px));
+  max-height: min(48vh, 420px);
   min-height: 0;
-  padding: 18px 24px 12px;
+  padding: 14px;
   overflow: auto;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(174, 124, 66, 0.3);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(25, 21, 22, 0.92), rgba(15, 15, 19, 0.86));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
 }
 
 .shop-section-heading {
@@ -1358,23 +1371,33 @@ button:hover {
 }
 
 .shop-hint {
-  flex: 0 0 auto;
-  margin: 0 24px 14px;
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  width: min(430px, calc(100% - 760px));
+  margin: 0;
   padding: 10px 12px;
   border-left: 2px solid #8d673d;
-  background: rgba(117, 82, 45, 0.08);
-  color: #92877b;
+  border-radius: 0 6px 6px 0;
+  background: rgba(20, 18, 20, 0.78);
+  color: #b4a89b;
   font-size: 10px;
   line-height: 1.45;
+  transform: translateX(-50%);
+  backdrop-filter: blur(4px);
 }
 
 .shop-actions {
-  flex: 0 0 auto;
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: min(350px, calc(100% - 28px));
   display: flex;
   flex-direction: column;
   gap: 9px;
-  padding: 16px 24px 22px;
-  border-top: 1px solid rgba(174, 124, 66, 0.18);
+  padding: 0;
+  border: 0;
+  pointer-events: auto;
 }
 
 .shop-actions button {
@@ -1411,6 +1434,21 @@ button:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+@media (max-width: 920px) {
+  .shop-header {
+    width: 270px;
+  }
+
+  .shop-panel-block,
+  .shop-actions {
+    width: 300px;
+  }
+
+  .shop-hint {
+    display: none;
+  }
 }
 
 #inventory-panel,

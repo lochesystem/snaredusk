@@ -7,14 +7,15 @@
     "wall": { "frame": { "x": 128, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
     "wall_trim": { "frame": { "x": 160, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
     "rug": { "frame": { "x": 192, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
-    "inlay": { "frame": { "x": 224, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } }
+    "inlay": { "frame": { "x": 224, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "floor_planks": { "frame": { "x": 256, "y": 0, "w": 64, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 32 }, "sourceSize": { "w": 64, "h": 32 } }
   },
   "meta": {
     "app": "Snaredusk",
     "version": "1.0",
     "image": "tileset-v1.png",
     "format": "RGBA8888",
-    "size": { "w": 256, "h": 32 },
+    "size": { "w": 320, "h": 32 },
     "scale": "1",
     "snaredusk": { "tileSize": 32, "kind": "shop-interior" }
   }
