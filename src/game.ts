@@ -396,14 +396,15 @@ export class Game {
     const canvas = this.app.canvas;
     const onBase = appEl?.classList.contains('layout-base');
     const onShop = appEl?.classList.contains('layout-shop');
+    const onDungeon = appEl?.classList.contains('layout-dungeon');
 
-    if (onBase || onShop) {
+    if (onBase || onShop || onDungeon) {
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       return;
     }
 
-    if (!onBase && !onShop) {
+    if (!onBase && !onShop && !onDungeon) {
       const scale = Math.max(1, Math.floor(Math.min(
         wrapper.clientWidth / GAME_WIDTH,
         wrapper.clientHeight / GAME_HEIGHT,
@@ -601,6 +602,7 @@ export class Game {
     document.getElementById('hud')?.classList.toggle('hidden', screen !== 'dungeon');
     document.getElementById('app')?.classList.toggle('layout-base', screen === 'base');
     document.getElementById('app')?.classList.toggle('layout-shop', screen === 'shop');
+    document.getElementById('app')?.classList.toggle('layout-dungeon', screen === 'dungeon');
 
     if (screen === 'base') {
       playMusic('base');
@@ -830,7 +832,8 @@ export class Game {
     this.destroyBase();
     showBaseHub(false);
     this.closeBaseModals();
-    document.getElementById('app')?.classList.remove('layout-base');
+    document.getElementById('app')?.classList.remove('layout-base', 'layout-shop');
+    document.getElementById('app')?.classList.add('layout-dungeon');
     this.destroyDungeon();
     this.state.playerHp = PLAYER_MAX_HP;
     this.state.playerStamina = PLAYER_MAX_STAMINA;
