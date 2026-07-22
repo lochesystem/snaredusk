@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import {
-  drawKnifeBlade,
+  drawKnifeSlashArc,
   drawKnifeSlashLine,
   drawPickaxeHead,
   drawSpearAlongX,
@@ -113,7 +113,7 @@ function buildKnifeFx(root: Container, range: number, color: number): {
 
   for (let i = 0; i < 3; i++) {
     const blade = new Graphics();
-    drawKnifeBlade(blade, bladeLen, color, trailAlphas[i]!);
+    drawKnifeSlashArc(blade, bladeLen - i * 3, color, trailAlphas[i]!);
     root.addChild(blade);
     blades.push(blade);
   }
@@ -244,6 +244,18 @@ function updatePickaxeFx(fx: WeaponAttackFxState, t: number): void {
         .moveTo(ix, iy)
         .lineTo(ix + Math.cos(rayA) * rayLen, iy + Math.sin(rayA) * rayLen)
         .stroke({ width: 2, color: 0xf0e6d3, alpha: 0.7 * (1 - impactT), cap: 'round' });
+    }
+    fx.sparks.circle(ix, iy, 3 + impactT * 5)
+      .stroke({ width: 2, color: fx.color, alpha: 0.55 * (1 - impactT) });
+    for (let i = 0; i < 3; i++) {
+      const chunkA = pickA - 0.8 + i * 0.8;
+      const chunkDist = 5 + impactT * (7 + i * 2);
+      fx.sparks.rect(
+        ix + Math.cos(chunkA) * chunkDist - 1,
+        iy + Math.sin(chunkA) * chunkDist - 1,
+        2,
+        2,
+      ).fill({ color: 0xc4a040, alpha: 0.8 * (1 - impactT) });
     }
   }
 }

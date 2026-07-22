@@ -154,6 +154,38 @@ export interface DoorJambCorner {
   corner: WallCornerId;
 }
 
+export interface CeilingBandSegment {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Faixa de teto da parede norte, interrompida no vão de uma porta norte. */
+export function ceilingBandSegments(room: {
+  rect: { x: number; y: number; width: number; height: number };
+  doors?: DoorDir[];
+}): CeilingBandSegment[] {
+  const r = room.rect;
+  const inset = 4;
+  const startX = r.x + inset;
+  const endX = r.x + r.width - inset;
+  const y = r.y + inset;
+
+  if (!room.doors?.includes('n')) {
+    return [{ x: startX, y, width: endX - startX, height: CEILING_BAND_VISIBLE_PX }];
+  }
+
+  const half = CORRIDOR_WIDTH / 2;
+  const centerX = r.x + r.width / 2;
+  const gapLeft = centerX - half;
+  const gapRight = centerX + half;
+  return [
+    { x: startX, y, width: gapLeft - startX, height: CEILING_BAND_VISIBLE_PX },
+    { x: gapRight, y, width: endX - gapRight, height: CEILING_BAND_VISIBLE_PX },
+  ].filter((segment) => segment.width > 0);
+}
+
 /** Quinas internas nas ombreiras das portas (corredor ↔ sala). */
 export function collectDoorJambCorners(
   rooms: { rect: { x: number; y: number; width: number; height: number }; doors?: DoorDir[] }[],
@@ -382,14 +414,15 @@ export function buildDungeonFloorLayer(
   }
 
   for (const room of layout.rooms) {
-    const r = room.rect;
-    if (ceilingTex) {
-      addTiledRect(root, ceilingTex, r.x + 4, r.y + 4, r.width - 8, CEILING_BAND_VISIBLE_PX);
-    } else {
-      const band = new Graphics();
-      band.rect(r.x + 4, r.y + 4, r.width - 8, CEILING_BAND_VISIBLE_PX);
-      band.fill({ color: theme.roomCeiling, alpha: 0.35 });
-      root.addChild(band);
+    for (const segment of ceilingBandSegments(room)) {
+      if (ceilingTex) {
+        addTiledRect(root, ceilingTex, segment.x, segment.y, segment.width, segment.height);
+      } else {
+        const band = new Graphics();
+        band.rect(segment.x, segment.y, segment.width, segment.height);
+        band.fill({ color: theme.roomCeiling, alpha: 0.35 });
+        root.addChild(band);
+      }
     }
   }
 

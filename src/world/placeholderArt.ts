@@ -4,11 +4,13 @@ import { LOOT_TABLE } from '../data/items.ts';
 import type { FxRunner } from '../engine/fxRunner.ts';
 import {
   CREATURE_ANIM_SPEED,
+  CREATURE_WALK_ANIM_SPEED,
   getCreatureSpriteLayout,
   getCreatureVisual,
 } from './creatureAssets.ts';
 import {
   getPlayerAnimations,
+  PLAYER_IDLE_ANIM_SPEED,
   PLAYER_WALK_ANIM_SPEED,
 } from './playerAssets.ts';
 import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
@@ -40,24 +42,32 @@ function applySpriteFacing(
   target: { scale: { x: number } },
   moveX: number,
   facing: { value: number },
+  nativeScale = 1,
 ): void {
   if (moveX < -0.01) facing.value = 1;
   else if (moveX > 0.01) facing.value = -1;
-  target.scale.x = facing.value;
+  target.scale.x = facing.value * nativeScale;
 }
 
 export interface PlayerSprite extends Container {
   zOffset: number;
   setLocomotion(moving: boolean, moveX?: number): void;
+  playAttack(weaponId: string, aimX: number, duration: number): void;
 }
 
 export function createPlayerSprite(): PlayerSprite {
   const root = new Container() as PlayerSprite;
   root.zOffset = 0.5;
+  // Os sprites v6 usam quadros 48×48 com arte em resolução final; escala 1:1
+  // evita ampliar pixels pequenos e preserva a nitidez do pixel art.
+  root.scale.set(1);
 
   const playerAnims = getPlayerAnimations();
   let anim: AnimatedSprite | null = null;
   const facing = { value: 1 };
+  let attacking = false;
+  let lastMoving = false;
+  let lastMoveX = 0;
 
   if (playerAnims) {
     const shadow = drawShadow(root, 20);
@@ -66,7 +76,7 @@ export function createPlayerSprite(): PlayerSprite {
     anim = new AnimatedSprite(playerAnims.idle);
     anim.anchor.set(playerAnims.layout.anchorX, playerAnims.layout.anchorY);
     anim.roundPixels = true;
-    anim.animationSpeed = CREATURE_ANIM_SPEED;
+    anim.animationSpeed = PLAYER_IDLE_ANIM_SPEED;
     anim.play();
     root.addChild(anim);
   } else {
@@ -89,14 +99,42 @@ export function createPlayerSprite(): PlayerSprite {
   root.setLocomotion = (moving: boolean, moveX = 0) => {
     if (!anim || !playerAnims) return;
 
+    lastMoving = moving;
+    if (Math.abs(moveX) > 0.01) lastMoveX = moveX;
+    if (attacking) return;
+
     if (anim) applySpriteFacing(anim, moveX, facing);
 
     const nextTextures = moving ? playerAnims.walk : playerAnims.idle;
     if (anim.textures !== nextTextures) {
       anim.textures = nextTextures;
-      anim.animationSpeed = moving ? PLAYER_WALK_ANIM_SPEED : CREATURE_ANIM_SPEED;
+      anim.animationSpeed = moving ? PLAYER_WALK_ANIM_SPEED : PLAYER_IDLE_ANIM_SPEED;
       anim.gotoAndPlay(0);
     }
+  };
+
+  root.playAttack = (weaponId: string, aimX: number, duration: number) => {
+    if (!anim || !playerAnims) return;
+    const textures = playerAnims.attacks[weaponId];
+    if (!textures?.length) return;
+
+    attacking = true;
+    applySpriteFacing(anim, aimX, facing);
+    anim.loop = false;
+    anim.textures = textures;
+    anim.animationSpeed = textures.length / Math.max(1, duration * 60);
+    anim.onComplete = () => {
+      if (!anim || !playerAnims) return;
+      attacking = false;
+      anim.loop = true;
+      anim.onComplete = undefined;
+      const nextTextures = lastMoving ? playerAnims.walk : playerAnims.idle;
+      anim.textures = nextTextures;
+      anim.animationSpeed = lastMoving ? PLAYER_WALK_ANIM_SPEED : PLAYER_IDLE_ANIM_SPEED;
+      applySpriteFacing(anim, lastMoveX, facing);
+      anim.gotoAndPlay(0);
+    };
+    anim.gotoAndPlay(0);
   };
 
   return root;
@@ -119,7 +157,7 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   let walkTextures: Texture[] | null = null;
   const facing = { value: 1 };
 
-  const shadow = drawShadow(root, 18);
+  const shadow = drawShadow(root, species.id === 'rei_esporas' ? 36 : 18);
   shadow.y = layout?.shadowY ?? 6;
 
   if (visual?.kind === 'animated') {
@@ -153,6 +191,10 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
     root.addChild(eyes);
   }
 
+  if (flipTarget && layout?.nativeFacing === 'right') {
+    flipTarget.scale.x = -1;
+  }
+
   if (capturableGlow) {
     const glow = new Graphics();
     glow.roundRect(-12, -12, 24, 20, 5);
@@ -162,7 +204,10 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
 
   root.zOffset = 0.5;
   root.setLocomotion = (moving: boolean, moveX = 0) => {
-    if (flipTarget) applySpriteFacing(flipTarget, moveX, facing);
+    if (flipTarget) {
+      const nativeScale = layout?.nativeFacing === 'right' ? -1 : 1;
+      applySpriteFacing(flipTarget, moveX, facing, nativeScale);
+    }
 
     if (!animSprite || !idleTextures) return;
 
@@ -170,10 +215,12 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
     const nextTextures = moving ? walk : idleTextures;
     if (animSprite.textures !== nextTextures) {
       animSprite.textures = nextTextures;
-      animSprite.animationSpeed = moving ? PLAYER_WALK_ANIM_SPEED : CREATURE_ANIM_SPEED;
+      animSprite.animationSpeed = moving && walkTextures
+        ? CREATURE_WALK_ANIM_SPEED
+        : CREATURE_ANIM_SPEED;
       animSprite.gotoAndPlay(0);
-    } else if (moving && !walkTextures) {
-      animSprite.animationSpeed = PLAYER_WALK_ANIM_SPEED;
+    } else if (moving && walkTextures) {
+      animSprite.animationSpeed = CREATURE_WALK_ANIM_SPEED;
     } else if (!moving) {
       animSprite.animationSpeed = CREATURE_ANIM_SPEED;
     }
@@ -991,4 +1038,3 @@ export function createEmojiBubble(emoji: string): Container {
   root.y = -32;
   return root;
 }
-

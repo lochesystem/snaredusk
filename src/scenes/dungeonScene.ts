@@ -1000,6 +1000,8 @@ export class DungeonScene {
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
     const angle = calcAimAngle(this.playerX, this.playerY, worldMouse.x, worldMouse.y, this.lastAimAngle);
     this.lastAimAngle = angle;
+    // Quatro frames a 12 FPS (art bible), sem ultrapassar o cooldown da arma.
+    this.playerSprite.playAttack(weapon.id, Math.cos(angle), Math.min(weapon.cooldown, 4 / 12));
 
     if (weapon.kind === 'melee') {
       const fxStyle = weapon.attackFx ?? 'knife';
@@ -1028,6 +1030,8 @@ export class DungeonScene {
       this.playAttackFx(weapon.attackFx ?? 'spear_thrust', angle, weapon.range, weapon.slashColor ?? 0xc4f082);
       playSfx('combat.attack.spear');
       const data = buildPlayerProjectile(this.playerX, this.playerY, angle, weapon);
+      data.x += Math.cos(angle) * 12;
+      data.y += Math.sin(angle) * 12;
       this.spawnProjectile(data, 'player', weapon.projectileStyle ?? 'orb');
     }
 

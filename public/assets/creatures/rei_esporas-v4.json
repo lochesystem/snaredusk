@@ -1,0 +1,18 @@
+{
+  "frames": {
+    "rei_esporas_v4_idle_0": { "frame": { "x": 0, "y": 0, "w": 64, "h": 64 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }, "sourceSize": { "w": 64, "h": 64 } },
+    "rei_esporas_v4_idle_1": { "frame": { "x": 64, "y": 0, "w": 64, "h": 64 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }, "sourceSize": { "w": 64, "h": 64 } },
+    "rei_esporas_v4_idle_2": { "frame": { "x": 0, "y": 64, "w": 64, "h": 64 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }, "sourceSize": { "w": 64, "h": 64 } },
+    "rei_esporas_v4_idle_3": { "frame": { "x": 64, "y": 64, "w": 64, "h": 64 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }, "sourceSize": { "w": 64, "h": 64 } }
+  },
+  "animations": { "idle": ["rei_esporas_v4_idle_0", "rei_esporas_v4_idle_1", "rei_esporas_v4_idle_2", "rei_esporas_v4_idle_3"] },
+  "meta": {
+    "app": "Snaredusk",
+    "version": "4.0",
+    "image": "rei_esporas-v4.png",
+    "format": "RGBA8888",
+    "size": { "w": 128, "h": 128 },
+    "scale": "1",
+    "snaredusk": { "anchorX": 0.5, "anchorY": 0.97, "shadowY": 0, "nativeFacing": "left" }
+  }
+}

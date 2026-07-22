@@ -1,0 +1,10 @@
+{
+  "frames": {
+    "idle_v4_0": { "frame": { "x": 0, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "idle_v4_1": { "frame": { "x": 32, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "idle_v4_2": { "frame": { "x": 0, "y": 32, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "idle_v4_3": { "frame": { "x": 32, "y": 32, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } }
+  },
+  "animations": { "idle": ["idle_v4_0", "idle_v4_1", "idle_v4_2", "idle_v4_3"] },
+  "meta": { "app": "Snaredusk", "version": "4.0", "image": "player-idle-v4.png", "format": "RGBA8888", "size": { "w": 64, "h": 64 }, "scale": "1", "snaredusk": { "anchorX": 0.5, "anchorY": 0.88, "shadowY": 0 } }
+}

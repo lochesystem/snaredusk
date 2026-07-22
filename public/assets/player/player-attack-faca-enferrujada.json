@@ -1,0 +1,10 @@
+{
+  "frames": {
+    "attack_faca_0": { "frame": { "x": 0, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "attack_faca_1": { "frame": { "x": 32, "y": 0, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "attack_faca_2": { "frame": { "x": 0, "y": 32, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } },
+    "attack_faca_3": { "frame": { "x": 32, "y": 32, "w": 32, "h": 32 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 32 }, "sourceSize": { "w": 32, "h": 32 } }
+  },
+  "animations": { "attack": ["attack_faca_0", "attack_faca_1", "attack_faca_2", "attack_faca_3"] },
+  "meta": { "app": "Snaredusk", "version": "2.0", "image": "player-attack-faca-enferrujada.png", "format": "RGBA8888", "size": { "w": 64, "h": 64 }, "scale": "1", "snaredusk": { "anchorX": 0.5, "anchorY": 0.88, "shadowY": 0 } }
+}

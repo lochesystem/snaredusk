@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resetEnvironmentCache } from '../src/world/environmentAssets.ts';
 import {
   buildDungeonFloorLayer,
+  ceilingBandSegments,
   collectDoorJambCorners,
   cornerIdAt,
   resolveWallOrientation,
@@ -58,6 +59,26 @@ describe('tileRenderer dungeon', () => {
     expect(jambs).toHaveLength(2);
     expect(jambs[0]?.corner).toBe('se');
     expect(jambs[1]?.corner).toBe('sw');
+  });
+
+  it('ceilingBandSegments interrompe teto no vão da porta norte', () => {
+    const segments = ceilingBandSegments({
+      rect: { x: 48, y: 48, width: 240, height: 180 },
+      doors: ['n'],
+    });
+    expect(segments).toEqual([
+      { x: 52, y: 52, width: 90, height: 22 },
+      { x: 194, y: 52, width: 90, height: 22 },
+    ]);
+  });
+
+  it('ceilingBandSegments mantém teto contínuo sem porta norte', () => {
+    expect(
+      ceilingBandSegments({
+        rect: { x: 48, y: 48, width: 240, height: 180 },
+        doors: ['e'],
+      }),
+    ).toEqual([{ x: 52, y: 52, width: 232, height: 22 }]);
   });
 
   it('rockPropFootY alinha pé da pedra ao fallback vetorial', () => {

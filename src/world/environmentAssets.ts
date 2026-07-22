@@ -59,11 +59,13 @@ function assetBase(): string {
 }
 
 function biomeTilesetUrl(biomeId: BiomeId): string {
-  return `${assetBase()}/biomes/${biomeId}/tileset.json`;
+  const atlas = biomeId === 'floresta' ? 'tileset-v3' : 'tileset';
+  return `${assetBase()}/biomes/${biomeId}/${atlas}.json`;
 }
 
 function biomePropsUrl(biomeId: BiomeId): string {
-  return `${assetBase()}/biomes/${biomeId}/props.json`;
+  const atlas = biomeId === 'floresta' ? 'props-v2' : 'props';
+  return `${assetBase()}/biomes/${biomeId}/${atlas}.json`;
 }
 
 function baseTilesetUrl(): string {
@@ -103,7 +105,7 @@ async function loadAtlas(
 
 async function loadBiomeTilesetInternal(biomeId: BiomeId): Promise<void> {
   if (biomeTilesets.has(biomeId) || missingBiomeTilesets.has(biomeId)) return;
-  const textures = await loadAtlas(biomeTilesetUrl(biomeId), `biome-tileset:${biomeId}`);
+  const textures = await loadAtlas(biomeTilesetUrl(biomeId), `biome-tileset:${biomeId}`, 'nearest');
   if (textures) {
     biomeTilesets.set(biomeId, textures);
   } else {
