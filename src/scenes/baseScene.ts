@@ -17,6 +17,8 @@ import {
 } from '../engine/constants.ts';
 
 import { Camera } from '../engine/camera.ts';
+import { playSfx } from '../engine/audioManager.ts';
+import { FxRunner } from '../engine/fxRunner.ts';
 
 import type { InputManager } from '../engine/input.ts';
 
@@ -67,7 +69,8 @@ import {
   worldToCell,
   findAdjacentRockCells,
 } from '../world/baseGrid.ts';
-import { getBaseStationTexture } from '../world/environmentAssets.ts';
+import { getBaseStationTexture, getBaseTileTexture } from '../world/environmentAssets.ts';
+import { baseCellTileFrameAt } from '../world/tileRenderer.ts';
 
 import {
 
@@ -158,6 +161,8 @@ export class BaseScene {
 
   private tileLayer = new Container();
 
+  private digFxLayer = new Container();
+
   private stationLayer = new Container();
 
   private landmarkLayer = new Container();
@@ -204,6 +209,8 @@ export class BaseScene {
 
   private lastCreatureSig = '';
 
+  private fxRunner = new FxRunner();
+
 
 
   constructor(input: InputManager, callbacks: BaseSceneCallbacks) {
@@ -215,6 +222,8 @@ export class BaseScene {
     this.root.addChild(this.world);
 
     this.world.addChild(this.tileLayer);
+
+    this.world.addChild(this.digFxLayer);
 
     this.world.addChild(this.stationLayer);
 
@@ -279,6 +288,8 @@ export class BaseScene {
     this.active = false;
 
     this.clearWanderers();
+
+    this.fxRunner.clear();
 
     this.selectedTool = null;
 
@@ -558,6 +569,8 @@ export class BaseScene {
     if (!this.active) return;
 
     const state = this.cb.getState();
+
+    this.fxRunner.update(dt);
 
 
 
@@ -883,6 +896,8 @@ export class BaseScene {
 
           this.rebuildWorld();
 
+          this.playRockBreakAnimation(target.x, target.y);
+
           this.cb.showToast('Rocha escavada!');
 
           return;
@@ -943,6 +958,75 @@ export class BaseScene {
 
     }
 
+  }
+
+  private playRockBreakAnimation(cellX: number, cellY: number): void {
+    const root = new Container();
+    root.x = cellX * BASE_CELL_SIZE;
+    root.y = cellY * BASE_CELL_SIZE;
+    root.zIndex = 100;
+
+    const rockFrame = baseCellTileFrameAt(2, cellX, cellY) ?? 'rock';
+    const rockTexture = getBaseTileTexture(rockFrame) ?? getBaseTileTexture('rock');
+    const rock = rockTexture ? new Sprite(rockTexture) : new Graphics();
+    if (rock instanceof Graphics) {
+      rock.rect(0, 0, BASE_CELL_SIZE, BASE_CELL_SIZE);
+      rock.fill(0x3f3440);
+    }
+    rock.roundPixels = true;
+    root.addChild(rock);
+
+    const crackTextures = [
+      getBaseTileTexture('rock_crack_1'),
+      getBaseTileTexture('rock_crack_2'),
+      getBaseTileTexture('rock_crack_3'),
+    ];
+    const crack = crackTextures[0] ? new Sprite(crackTextures[0]) : null;
+    if (crack) {
+      crack.roundPixels = true;
+      root.addChild(crack);
+    }
+
+    const rubbleTexture = getBaseTileTexture('rock_rubble');
+    const rubble = rubbleTexture ? new Sprite(rubbleTexture) : null;
+    if (rubble) {
+      rubble.visible = false;
+      rubble.roundPixels = true;
+      root.addChild(rubble);
+    }
+
+    this.digFxLayer.addChild(root);
+    playSfx('combat.attack.pickaxe', { volume: 0.72, speed: 0.82 });
+    let impactPlayed = false;
+
+    this.fxRunner.spawn(0.52, (progress) => {
+      const frame = Math.min(2, Math.floor(progress * 4));
+      if (crack && crackTextures[frame] && crack.texture !== crackTextures[frame]) {
+        crack.texture = crackTextures[frame]!;
+      }
+
+      if (progress < 0.68) {
+        const shake = progress < 0.18 ? 2 : 1;
+        root.x = cellX * BASE_CELL_SIZE + (Math.floor(progress * 48) % 2 === 0 ? -shake : shake);
+        root.y = cellY * BASE_CELL_SIZE;
+      } else {
+        if (!impactPlayed) {
+          impactPlayed = true;
+          playSfx('combat.hit', { volume: 0.48, speed: 0.72 });
+        }
+        root.x = cellX * BASE_CELL_SIZE;
+        if (crack) crack.visible = false;
+        rock.alpha = Math.max(0, 1 - (progress - 0.68) / 0.14);
+        if (rubble) {
+          rubble.visible = true;
+          rubble.alpha = Math.max(0, 1 - (progress - 0.72) / 0.28);
+          rubble.y = Math.round((progress - 0.72) * 8);
+        }
+      }
+    }, () => {
+      root.removeFromParent();
+      root.destroy({ children: true });
+    });
   }
 
 
@@ -1390,4 +1474,3 @@ export class BaseScene {
   }
 
 }
-

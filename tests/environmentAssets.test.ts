@@ -4,7 +4,7 @@ import {
   decorPropFrameName,
   resetEnvironmentCache,
 } from '../src/world/environmentAssets.ts';
-import { baseCellTileFrame } from '../src/world/tileRenderer.ts';
+import { baseCellTileFrame, baseCellTileFrameAt } from '../src/world/tileRenderer.ts';
 import { BaseCellKind } from '../src/world/baseGrid.ts';
 import { buildBaseTileLayer } from '../src/world/tileRenderer.ts';
 
@@ -34,6 +34,14 @@ describe('tileRenderer', () => {
     expect(baseCellTileFrame(BaseCellKind.Rock)).toBe('rock');
     expect(baseCellTileFrame(BaseCellKind.Wall)).toBe('wall');
     expect(baseCellTileFrame(BaseCellKind.Void)).toBeNull();
+  });
+
+  it('varia chão e rocha por coordenada sem mudar entre renders', () => {
+    const floor = baseCellTileFrameAt(BaseCellKind.Floor, 7, 11);
+    const rock = baseCellTileFrameAt(BaseCellKind.Rock, 7, 11);
+    expect(['floor', 'floor_b', 'floor_c']).toContain(floor);
+    expect(['rock', 'rock_b', 'rock_c']).toContain(rock);
+    expect(baseCellTileFrameAt(BaseCellKind.Floor, 7, 11)).toBe(floor);
   });
 
   it('buildBaseTileLayer usa fallback vector sem tileset', () => {

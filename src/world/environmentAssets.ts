@@ -71,7 +71,7 @@ function biomePropsUrl(biomeId: BiomeId): string {
 }
 
 function baseTilesetUrl(): string {
-  return `${assetBase()}/base/tileset.json`;
+  return `${assetBase()}/base/tileset-v2.json`;
 }
 
 function baseStationsUrl(): string {

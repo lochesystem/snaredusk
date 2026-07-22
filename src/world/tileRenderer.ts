@@ -551,6 +551,15 @@ export function baseCellTileFrame(kind: BaseCellKind): string | null {
   }
 }
 
+export function baseCellTileFrameAt(kind: BaseCellKind, x: number, y: number): string | null {
+  const base = baseCellTileFrame(kind);
+  if (base !== 'floor' && base !== 'rock') return base;
+  const variant = Math.abs((x * 73856093) ^ (y * 19349663)) % 3;
+  if (variant === 1) return `${base}_b`;
+  if (variant === 2) return `${base}_c`;
+  return base;
+}
+
 export function buildBaseTileLayer(
   width: number,
   height: number,
@@ -589,7 +598,7 @@ export function buildBaseTileLayer(
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const kind = cells[y * width + x];
-      const frame = baseCellTileFrame(kind as BaseCellKind);
+      const frame = baseCellTileFrameAt(kind as BaseCellKind, x, y);
       if (!frame) continue;
       const texture = getBaseTileTexture(frame);
       if (!texture) continue;
