@@ -207,20 +207,37 @@
 
     <div id="shop-screen" class="screen hidden">
       <header class="shop-header">
-        <h2>Loja na superfície</h2>
-        <p id="shop-gold"></p>
-        <p id="shop-level" class="panel-hint"></p>
-        <p id="shop-reputation" class="panel-hint shop-reputation"></p>
-        <p id="shop-hint" class="panel-hint">WASD para andar pela loja</p>
+        <p class="shop-eyebrow">Mercado de Brumavale</p>
+        <h2>Sua loja</h2>
+        <div class="shop-status-grid">
+          <div class="shop-status-card shop-status-gold">
+            <span>Caixa</span>
+            <strong id="shop-gold"></strong>
+          </div>
+          <div class="shop-status-card">
+            <span>Estrutura</span>
+            <strong id="shop-level"></strong>
+          </div>
+        </div>
+        <p id="shop-reputation" class="shop-reputation"></p>
       </header>
       <div class="shop-panel-block">
-        <h3 class="subheading">Bolsa</h3>
+        <div class="shop-section-heading">
+          <div>
+            <p class="shop-section-kicker">Estoque disponível</p>
+            <h3>Bolsa</h3>
+          </div>
+          <span>Selecione para expor</span>
+        </div>
         <div id="shop-bag-strip" class="shop-bag-strip"></div>
       </div>
+      <p id="shop-hint" class="shop-hint">WASD para andar pela loja</p>
       <div class="shop-actions">
-        <button id="btn-shop-open" type="button">Abrir loja ao público</button>
-        <button id="btn-shop-upgrade" type="button">Melhorar loja</button>
-        <button id="btn-shop-back" type="button">Voltar à base</button>
+        <button id="btn-shop-open" class="shop-open-button" type="button">Abrir loja ao público</button>
+        <div class="shop-secondary-actions">
+          <button id="btn-shop-upgrade" type="button">Melhorar loja</button>
+          <button id="btn-shop-back" type="button">Voltar à base</button>
+        </div>
       </div>
     </div>
 

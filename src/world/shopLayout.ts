@@ -2,14 +2,15 @@ import type { Rect } from '../types.ts';
 import { getShopLevelDef } from '../systems/shopUpgrade.ts';
 
 const WALL = 14;
-const SHELF_W = 52;
-const SHELF_H = 36;
-const CAGE_W = 58;
-const CAGE_H = 48;
-const GAP_X = 10;
-const GAP_Y = 12;
-const MARGIN_TOP = 28;
-const MARGIN_SIDE = 36;
+const SHELF_W = 72;
+const SHELF_H = 54;
+/** Cercado aberto: comporta inclusive os sprites 64×64 dos chefes. */
+const CAGE_W = 112;
+const CAGE_H = 72;
+const GAP_X = 16;
+const GAP_Y = 22;
+const MARGIN_TOP = 42;
+const MARGIN_SIDE = 42;
 
 export interface ShopSlotLayout {
   kind: 'shelf' | 'cage';
@@ -57,15 +58,15 @@ export function buildShopLayout(shopLevel: number, shelfCountOverride?: number):
   const shelfCount = shelfCountOverride ?? def.shelfCount;
   const cageCount = def.cageCount;
 
-  const shelfCols = shopLevel <= 2 ? 5 : shopLevel <= 3 ? 7 : shopLevel <= 4 ? 6 : 8;
+  const shelfCols = shopLevel <= 1 ? 3 : shopLevel <= 2 ? 5 : shopLevel <= 4 ? 6 : 8;
   const shelfRows = Math.ceil(shelfCount / shelfCols);
-  const cageColW = cageCount > 0 ? CAGE_W + 24 : 0;
+  const cageColW = cageCount > 0 ? CAGE_W + 34 : 0;
 
   const gridW = shelfCols * SHELF_W + (shelfCols - 1) * GAP_X;
   const width = Math.max(480, MARGIN_SIDE * 2 + gridW + cageColW);
   const height = Math.max(
     270,
-    MARGIN_TOP + shelfRows * (SHELF_H + GAP_Y) + 100,
+    MARGIN_TOP + Math.max(shelfRows * (SHELF_H + GAP_Y), cageCount * (CAGE_H + GAP_Y)) + 92,
   );
 
   const floor: Rect = { x: WALL, y: WALL, width: width - WALL * 2, height: height - WALL * 2 };
@@ -99,8 +100,8 @@ export function buildShopLayout(shopLevel: number, shelfCountOverride?: number):
     });
   });
 
-  const cageX = width - MARGIN_SIDE - CAGE_W / 2 - 8;
-  const cageStartY = MARGIN_TOP + 8;
+  const cageX = width - MARGIN_SIDE - CAGE_W / 2;
+  const cageStartY = MARGIN_TOP;
   for (let c = 0; c < cageCount; c++) {
     const y = cageStartY + c * (CAGE_H + GAP_Y);
     slots.push({
@@ -127,7 +128,7 @@ export function buildShopLayout(shopLevel: number, shelfCountOverride?: number):
     obstacles,
     slots,
     entrance: { x: width / 2, y: height - WALL - 28 },
-    counter: { x: width / 2, y: floor.y + floor.height * 0.55 },
+    counter: { x: floor.x + 76, y: height - WALL - 34 },
     decorSeed: 4200 + shopLevel * 131,
   };
 }

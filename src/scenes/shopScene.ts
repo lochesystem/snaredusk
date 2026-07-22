@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { getSpecies } from '../data/creatures.ts';
 import { PLAYER_SPEED } from '../engine/constants.ts';
 import { Camera } from '../engine/camera.ts';
@@ -22,12 +22,17 @@ import {
 } from '../world/shopLayout.ts';
 import {
   createCustomerSprite,
+  createCreatureSprite,
   createEmojiBubble,
+  createLootIcon,
   createPlayerSprite,
   createShelfStandSprite,
+  createShelfStandFrontSprite,
   createShopItemSprite,
-  drawShopLayout,
+  drawShopFixtures,
+  drawShopFloorBase,
 } from '../world/placeholderArt.ts';
+import { getShopTileTexture } from '../world/shopAssets.ts';
 
 const CUSTOMER_SPEED = 72;
 const LOOK_MIN = 1.1;
@@ -129,31 +134,41 @@ export class ShopScene {
     this.layout = buildShopLayout(state.shopLevel, getShopShelfCapacity(state));
     this.collisionRects = [...this.layout.walls, ...this.layout.obstacles];
 
-    const floorGfx = new Graphics();
-    drawShopLayout(
-      floorGfx,
+    const floorBase = new Graphics();
+    drawShopFloorBase(
+      floorBase,
+      this.layout.floors,
+      this.layout.width,
+      this.layout.height,
+    );
+    this.world.addChild(floorBase);
+    this.addShopTiles();
+
+    const fixtures = new Graphics();
+    drawShopFixtures(
+      fixtures,
       this.layout.floors,
       this.layout.walls,
       this.layout.counter,
       this.layout.decorSeed,
-      this.layout.width,
-      this.layout.height,
     );
-    this.world.addChild(floorGfx);
+    this.world.addChild(fixtures);
+    this.addShopDecorTiles();
 
     for (const slot of this.layout.slots) {
       const stand = createShelfStandSprite(slot.kind === 'cage');
       stand.x = slot.x;
-      stand.y = slot.y;
+      stand.y = slot.y + slot.h / 2;
 
       const highlight = new Graphics();
-      highlight.roundRect(-slot.w / 2 - 2, -slot.h / 2 - 2, slot.w + 4, slot.h + 4, 4);
+      highlight.roundRect(-slot.w / 2 - 3, -slot.h - 3, slot.w + 6, slot.h + 6, 5);
       highlight.stroke({ width: 2, color: 0xc4f082, alpha: 0 });
       stand.addChild(highlight);
 
       const itemLayer = new Container();
-      itemLayer.y = -8;
+      itemLayer.y = slot.kind === 'cage' ? -24 : -20;
       stand.addChild(itemLayer);
+      stand.addChild(createShelfStandFrontSprite(slot.kind === 'cage'));
 
       this.world.addChild(stand);
       this.slotVisuals.push({ layout: slot, stand, itemLayer, highlight });
@@ -176,26 +191,111 @@ export class ShopScene {
       const listing = this.getListing(state, visual.layout);
       if (!listing) continue;
 
-      const color =
-        listing.entry.kind === 'creature'
-          ? getSpecies(listing.entry.speciesId).color
-          : 0x8a6a30;
-      const item = createShopItemSprite(
-        listing.entry.name,
-        color,
-        listing.entry.kind === 'creature',
-      );
+      let item: Container;
+      let itemName: Text | null = null;
+      let labelY = -18;
+      if (listing.entry.kind === 'creature') {
+        const species = getSpecies(listing.entry.speciesId);
+        const creature = createCreatureSprite(species);
+        creature.setLocomotion(false);
+        const isBoss = species.behaviorId.startsWith('boss_');
+        if (isBoss) creature.scale.set(0.9);
+        item = creature;
+        labelY = isBoss ? -64 : -39;
+        itemName = new Text({
+          text: species.name,
+          style: { fontFamily: 'monospace', fontSize: 7, fill: 0xf0e6d3 },
+        });
+        itemName.anchor.set(0.5);
+        itemName.y = labelY;
+      } else {
+        item = createLootIcon(listing.entry.id);
+        const shortName = listing.entry.name.length > 15
+          ? `${listing.entry.name.slice(0, 14)}…`
+          : listing.entry.name;
+        itemName = new Text({
+          text: shortName,
+          style: { fontFamily: 'monospace', fontSize: 6, fill: 0xf0e6d3 },
+        });
+        itemName.anchor.set(0.5);
+        itemName.y = -24;
+      }
       visual.itemLayer.addChild(item);
+      if (itemName) visual.itemLayer.addChild(itemName);
 
       const priceTag = new Text({
         text: `${listing.price}g`,
         style: { fontFamily: 'monospace', fontSize: 7, fill: 0xe8c868 },
       });
       priceTag.anchor.set(0.5);
-      priceTag.y = 10;
+      priceTag.y = listing.entry.kind === 'creature' ? 10 : 12;
       visual.itemLayer.addChild(priceTag);
     }
     this.updateCarriedVisual(state);
+  }
+
+  private addShopTiles(): void {
+    const floor = this.layout.floors[0];
+    if (!floor) return;
+    const textures = ['floor_a']
+      .map((name) => getShopTileTexture(name))
+      .filter((texture): texture is Texture => texture !== null);
+    if (!textures.length) return;
+
+    const layer = new Container();
+    const mask = new Graphics();
+    mask.rect(floor.x, floor.y, floor.width, floor.height);
+    mask.fill(0xffffff);
+    layer.mask = mask;
+    for (let y = floor.y; y < floor.y + floor.height; y += 32) {
+      const ty = Math.floor((y - floor.y) / 32);
+      const rowOffset = ty % 2 === 0 ? 0 : 16;
+      for (let x = floor.x - rowOffset; x < floor.x + floor.width; x += 32) {
+        const tx = Math.floor((x - floor.x + rowOffset) / 32);
+        const texture = textures[(tx * 3 + ty * 5 + this.layout.decorSeed) % textures.length]!;
+        const tile = new Sprite(texture);
+        tile.x = x;
+        tile.y = y;
+        const tintIndex = (tx * 3 + ty * 5 + this.layout.decorSeed) % 3;
+        tile.tint = tintIndex === 0 ? 0xffffff : tintIndex === 1 ? 0xf2e6dc : 0xe2d2c5;
+        tile.roundPixels = true;
+        layer.addChild(tile);
+      }
+    }
+    this.world.addChild(layer);
+    this.world.addChild(mask);
+  }
+
+  private addShopDecorTiles(): void {
+    const floor = this.layout.floors[0];
+    if (!floor) return;
+    const wallTexture = getShopTileTexture('wall');
+    if (wallTexture) {
+      for (let x = 0; x < this.layout.width; x += 32) {
+        const wall = new Sprite(wallTexture);
+        wall.x = x;
+        wall.y = 0;
+        wall.roundPixels = true;
+        this.world.addChild(wall);
+      }
+    }
+    const rugTexture = getShopTileTexture('rug');
+    if (rugTexture) {
+      const rug = new Sprite(rugTexture);
+      rug.anchor.set(0.5);
+      rug.position.set(this.layout.entrance.x, this.layout.entrance.y - 24);
+      rug.scale.set(2, 1.45);
+      rug.roundPixels = true;
+      this.world.addChild(rug);
+    }
+    const thresholdTexture = getShopTileTexture('threshold');
+    if (thresholdTexture) {
+      const threshold = new Sprite(thresholdTexture);
+      threshold.anchor.set(0.5);
+      threshold.position.set(this.layout.entrance.x, floor.y + floor.height - 15);
+      threshold.roundPixels = true;
+      this.world.addChild(threshold);
+    }
   }
 
   setSelectedBag(index: number): void {

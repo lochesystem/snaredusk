@@ -21,6 +21,7 @@ import {
   getBasePortalTextures,
   getBiomePropTexture,
 } from './environmentAssets.ts';
+import { getShopPropTexture } from './shopAssets.ts';
 import {
   drawEnergyOrb,
   drawKnifeBlade,
@@ -957,6 +958,16 @@ export function drawShopLayout(
   worldWidth: number,
   worldHeight: number,
 ): void {
+  drawShopFloorBase(g, floors, worldWidth, worldHeight);
+  drawShopFixtures(g, floors, walls, counter, decorSeed);
+}
+
+export function drawShopFloorBase(
+  g: Graphics,
+  floors: { x: number; y: number; width: number; height: number }[],
+  worldWidth: number,
+  worldHeight: number,
+): void {
   g.rect(0, 0, worldWidth, worldHeight);
   g.fill(0x14101c);
 
@@ -966,7 +977,15 @@ export function drawShopLayout(
     g.rect(floor.x + 4, floor.y + 4, floor.width - 8, floor.height - 8);
     g.fill(0x4a3d32);
   }
+}
 
+export function drawShopFixtures(
+  g: Graphics,
+  floors: { x: number; y: number; width: number; height: number }[],
+  walls: { x: number; y: number; width: number; height: number }[],
+  counter: { x: number; y: number },
+  decorSeed: number,
+): void {
   for (const wall of walls) {
     g.rect(wall.x, wall.y, wall.width, wall.height);
     g.fill(0x2a2420);
@@ -976,10 +995,20 @@ export function drawShopLayout(
 
   const cx = counter.x;
   const cy = counter.y;
-  g.roundRect(cx - 56, cy - 14, 112, 28, 4);
-  g.fill(0x6a5a48);
-  g.roundRect(cx - 56, cy - 14, 112, 28, 4);
-  g.stroke({ width: 2, color: 0x8a7a60 });
+  g.roundRect(cx - 58, cy - 15, 116, 31, 4);
+  g.fill(0x3a2419);
+  g.roundRect(cx - 58, cy - 15, 116, 9, 4);
+  g.fill(0x80502e);
+  g.rect(cx - 53, cy - 4, 106, 16);
+  g.fill(0x573522);
+  for (let x = cx - 35; x <= cx + 35; x += 35) {
+    g.rect(x - 1, cy - 3, 2, 14);
+    g.fill({ color: 0x2b1b14, alpha: 0.75 });
+  }
+  g.roundRect(cx - 58, cy - 15, 116, 31, 4);
+  g.stroke({ width: 2, color: 0xa46f3c });
+  g.circle(cx, cy + 4, 2);
+  g.fill(0xd5a551);
 
   const floor = floors[0];
   if (floor) {
@@ -999,6 +1028,15 @@ export function drawShopLayout(
 
 export function createShelfStandSprite(isCage: boolean): Container {
   const root = new Container();
+  const texture = getShopPropTexture(isCage ? 'creature_pen' : 'display_case');
+  if (texture) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5, 1);
+    sprite.roundPixels = true;
+    root.addChild(sprite);
+    return root;
+  }
+
   const g = new Graphics();
   if (isCage) {
     g.roundRect(-26, -20, 52, 40, 3);
@@ -1020,6 +1058,42 @@ export function createShelfStandSprite(isCage: boolean): Container {
     g.fill(0x7a6a58);
   }
   root.addChild(g);
+  return root;
+}
+
+/** Camada frontal fica acima do item/criatura para integrá-lo ao expositor. */
+export function createShelfStandFrontSprite(isCage: boolean): Container {
+  const root = new Container();
+  if (isCage) {
+    const texture = getShopPropTexture('creature_pen_front');
+    if (texture) {
+      const sprite = new Sprite(texture);
+      sprite.anchor.set(0.5, 1);
+      sprite.roundPixels = true;
+      root.addChild(sprite);
+      return root;
+    }
+    const bars = new Graphics();
+    bars.rect(-26, -11, 52, 3);
+    bars.fill(0x25252a);
+    for (let x = -22; x <= 22; x += 9) {
+      bars.rect(x, -11, 2, 16);
+      bars.fill(0x34343a);
+    }
+    root.addChild(bars);
+    return root;
+  }
+
+  // Brilho sutil sobre o item: o móvel continua legível como vidro, não como caixa opaca.
+  const glass = new Graphics({ roundPixels: true });
+  glass.roundRect(-34, -54, 68, 38, 3);
+  glass.fill({ color: 0x9edce8, alpha: 0.08 });
+  glass.moveTo(-27, -49);
+  glass.lineTo(-13, -35);
+  glass.moveTo(8, -50);
+  glass.lineTo(24, -34);
+  glass.stroke({ width: 2, color: 0xd8f4ff, alpha: 0.28 });
+  root.addChild(glass);
   return root;
 }
 

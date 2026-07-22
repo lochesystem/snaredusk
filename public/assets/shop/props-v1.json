@@ -1,0 +1,16 @@
+{
+  "frames": {
+    "display_case": { "frame": { "x": 0, "y": 0, "w": 80, "h": 72 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 72 }, "sourceSize": { "w": 80, "h": 72 } },
+    "creature_pen": { "frame": { "x": 80, "y": 0, "w": 112, "h": 72 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 112, "h": 72 }, "sourceSize": { "w": 112, "h": 72 } },
+    "creature_pen_front": { "frame": { "x": 192, "y": 0, "w": 112, "h": 72 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 112, "h": 72 }, "sourceSize": { "w": 112, "h": 72 } }
+  },
+  "meta": {
+    "app": "Snaredusk",
+    "version": "1.0",
+    "image": "props-v1.png",
+    "format": "RGBA8888",
+    "size": { "w": 304, "h": 72 },
+    "scale": "1",
+    "snaredusk": { "kind": "shop-props" }
+  }
+}

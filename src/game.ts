@@ -16,6 +16,7 @@ import { ShopUI } from './ui/shopUI.ts';
 import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
+import { ensureShopAssetsPreloaded } from './world/shopAssets.ts';
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
@@ -357,6 +358,7 @@ export class Game {
       ensureCreatureSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
       ensureBaseTilesetPreloaded(),
+      ensureShopAssetsPreloaded(),
     ]);
 
     if (hasSave()) {
@@ -618,7 +620,7 @@ export class Game {
       showBaseHub(false);
       clearBuildTool();
       document.getElementById('shop-screen')?.classList.remove('hidden');
-      this.showShopView();
+      void this.showShopView();
       this.shopUI.render();
       requestAnimationFrame(() => this.fitCanvas());
     } else {
@@ -646,7 +648,12 @@ export class Game {
     });
   }
 
-  private showShopView(): void {
+  private async showShopView(): Promise<void> {
+    await Promise.all([
+      ensureShopAssetsPreloaded(),
+      ensureCreatureSpritesPreloaded(),
+      ensurePlayerSpritesPreloaded(),
+    ]);
     this.destroyBase();
     this.destroyShop();
 

@@ -36,7 +36,7 @@ export class ShopUI {
     const next = getNextShopLevel(state.shopLevel);
 
     const goldEl = document.getElementById('shop-gold');
-    if (goldEl) goldEl.textContent = `Ouro: ${state.gold}`;
+    if (goldEl) goldEl.textContent = `${state.gold} ouro`;
 
     const levelEl = document.getElementById('shop-level');
     if (levelEl) {
@@ -125,7 +125,16 @@ export class ShopUI {
       btn.type = 'button';
       btn.className = 'bag-chip';
       if (index === selected) btn.classList.add('selected');
-      btn.textContent = formatEntry(entry);
+      const kind = document.createElement('span');
+      kind.className = 'bag-chip-kind';
+      kind.textContent = entry.kind === 'creature' ? 'Criatura' : 'Item';
+      const name = document.createElement('strong');
+      name.className = 'bag-chip-name';
+      name.textContent = formatEntry(entry);
+      const value = document.createElement('span');
+      value.className = 'bag-chip-value';
+      value.textContent = `${entry.baseValue}g base`;
+      btn.append(kind, name, value);
       btn.title = 'Selecionar para colocar na loja';
       btn.addEventListener('click', () => {
         const next = index === selected ? -1 : index;
