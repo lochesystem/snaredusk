@@ -407,6 +407,8 @@ export class BaseScene {
 
       if (placement.stationId === 'habitat_pen') continue;
 
+      if (placement.stationId === 'dungeon_portal' || placement.stationId === 'shop_ladder') continue;
+
       const def = getStation(placement.stationId);
 
       const frameByStation: Partial<Record<StationId, string>> = {
@@ -469,6 +471,10 @@ export class BaseScene {
 
     this.portalSprite.y = portal.y;
 
+    this.portalSprite.visible = !state.base.placements.some(
+      (p) => p.id === this.heldPlacementId && p.stationId === 'dungeon_portal',
+    );
+
 
 
     const stairs = getShopStaircaseWorld(state.base);
@@ -476,6 +482,10 @@ export class BaseScene {
     this.staircaseSprite.x = stairs.x;
 
     this.staircaseSprite.y = stairs.y;
+
+    this.staircaseSprite.visible = !state.base.placements.some(
+      (p) => p.id === this.heldPlacementId && p.stationId === 'shop_ladder',
+    );
 
 
 
@@ -1374,11 +1384,12 @@ export class BaseScene {
 
 
     if (this.selectedTool === 'move') {
-
+      const held = this.heldPlacementId ? findPlacementById(state, this.heldPlacementId) : null;
+      const permanentLandmark = held?.stationId === 'dungeon_portal' || held?.stationId === 'shop_ladder';
       hint = this.heldPlacementId
-
-        ? 'Mover: clique para colocar · [E] remover estação · Esc cancelar'
-
+        ? permanentLandmark
+          ? 'Mover: clique para colocar · Esc cancelar'
+          : 'Mover: clique para colocar · [E] remover estação · Esc cancelar'
         : 'Mover: clique numa estação para levantar · Esc cancelar';
 
       this.cb.setHint(hint);

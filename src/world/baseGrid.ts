@@ -41,6 +41,8 @@ export function createDefaultBaseGrid(): BaseGridState {
     { id: 'bench_default', stationId: 'workbench', cellX: startX + 4, cellY: startY + 5, rotation: 0 },
     { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 6, cellY: startY + 5, rotation: 0 },
     { id: 'bed_default', stationId: 'bed', cellX: startX + 2, cellY: startY + 2, rotation: 0 },
+    { id: 'portal_default', stationId: 'dungeon_portal', cellX: startX + 3, cellY: startY, rotation: 0 },
+    { id: 'ladder_default', stationId: 'shop_ladder', cellX: startX + 9, cellY: startY, rotation: 0 },
   ];
 
   const chests = [createChestState('chest_default', startX + 6, startY + 5)];
@@ -111,19 +113,33 @@ export function getSpawnPosition(base: BaseGridState): { x: number; y: number } 
   return cellToWorld(startX + Math.floor(INITIAL_OPEN / 2), startY + 2);
 }
 
-/** Escada para a loja na superfície (entrada do corredor norte). */
+/** Escada para a loja na superfície, separada do portal no canto superior da base. */
 export function getShopStaircaseWorld(base: BaseGridState): { x: number; y: number } {
+  const placement = base.placements.find((p) => p.stationId === 'shop_ladder');
+  if (placement) {
+    const def = getStation(placement.stationId);
+    return {
+      x: (placement.cellX + def.width / 2) * BASE_CELL_SIZE,
+      y: (placement.cellY + def.height / 2) * BASE_CELL_SIZE,
+    };
+  }
   const { startX, startY } = getInitialRoomOrigin(base);
-  const cx = startX + Math.floor(INITIAL_OPEN / 2);
-  return cellToWorld(cx, startY - 1);
+  return cellToWorld(startX + INITIAL_OPEN - 3, startY + 1);
 }
 
-/** Portal para escolher destino da masmorra (fim do corredor norte). */
+/** Portal para escolher destino da masmorra, na parede superior central da base. */
 export function getDungeonPortalWorld(base: BaseGridState): { x: number; y: number } {
+  const placement = base.placements.find((p) => p.stationId === 'dungeon_portal');
+  if (placement) {
+    const def = getStation(placement.stationId);
+    return {
+      x: (placement.cellX + def.width / 2) * BASE_CELL_SIZE,
+      y: (placement.cellY + def.height / 2) * BASE_CELL_SIZE,
+    };
+  }
   const { startX, startY } = getInitialRoomOrigin(base);
-  const cx = startX + Math.floor(INITIAL_OPEN / 2);
-  const corridorEndY = Math.max(0, startY - 3);
-  return cellToWorld(cx, corridorEndY);
+  const cx = startX + Math.floor(INITIAL_OPEN / 2) - 2;
+  return cellToWorld(cx, startY + 1);
 }
 
 export function getFloorsForCollision(base: BaseGridState): { x: number; y: number; width: number; height: number }[] {
@@ -170,6 +186,7 @@ export function getStationWallsForCollision(
   for (const placement of base.placements) {
     if (excludePlacementId && placement.id === excludePlacementId) continue;
     if (placement.stationId === 'habitat_pen') continue;
+    if (placement.stationId === 'dungeon_portal' || placement.stationId === 'shop_ladder') continue;
 
     const def = getStation(placement.stationId);
     for (let dy = 0; dy < def.height; dy++) {
@@ -223,7 +240,7 @@ export function normalizeBaseGrid(partial: BaseGridState | undefined): BaseGridS
     ? [...partial.cells]
     : [...def.cells];
 
-  const placements = migrateStationFootprints(ensureDefaultBed(partial.placements ?? def.placements));
+  const placements = migrateStationFootprints(ensureRequiredBasePlacements(partial.placements ?? def.placements));
   const chests = (partial.chests ?? def.chests).map((chest) => {
     const placement = placements.find((p) => p.id === chest.id && p.stationId === 'chest_wood');
     return placement ? { ...chest, cellX: placement.cellX, cellY: placement.cellY } : chest;
@@ -249,10 +266,12 @@ function migrateStationFootprints(placements: BasePlacement[]): BasePlacement[] 
   return placements.map((p) => p.id === chest.id ? { ...p, cellX: bench.cellX + 2 } : p);
 }
 
-function ensureDefaultBed(placements: BasePlacement[]): BasePlacement[] {
-  if (placements.some((p) => p.stationId === 'bed')) return placements;
+function ensureRequiredBasePlacements(placements: BasePlacement[]): BasePlacement[] {
   const def = createDefaultBaseGrid();
-  const bed = def.placements.find((p) => p.stationId === 'bed');
-  if (!bed) return placements;
-  return [...placements, bed];
+  const required = ['bed', 'dungeon_portal', 'shop_ladder'] as const;
+  const missing = required
+    .filter((stationId) => !placements.some((p) => p.stationId === stationId))
+    .map((stationId) => def.placements.find((p) => p.stationId === stationId))
+    .filter((placement): placement is BasePlacement => placement !== undefined);
+  return missing.length > 0 ? [...placements, ...missing] : placements;
 }

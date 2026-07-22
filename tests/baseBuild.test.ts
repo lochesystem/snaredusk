@@ -60,4 +60,28 @@ describe('baseBuild', () => {
     const removed = removePlacement(state, placement.id);
     expect(removed.ok).toBe(false);
   });
+
+  it.each(['dungeon_portal', 'shop_ladder'] as const)(
+    'move %s como os demais elementos da base, mas não permite remover',
+    (stationId) => {
+      const state = defaultGameState();
+      const placement = state.base.placements.find((p) => p.stationId === stationId)!;
+      let spot = { x: -1, y: -1 };
+      outer: for (let y = 0; y < state.base.height; y++) {
+        for (let x = 0; x < state.base.width; x++) {
+          if (canPlaceStation(state, stationId, x, y, placement.id).ok
+            && (x !== placement.cellX || y !== placement.cellY)) {
+            spot = { x, y };
+            break outer;
+          }
+        }
+      }
+
+      expect(spot.x).toBeGreaterThanOrEqual(0);
+      expect(relocatePlacement(state, placement.id, spot.x, spot.y).ok).toBe(true);
+      expect(placement.cellX).toBe(spot.x);
+      expect(placement.cellY).toBe(spot.y);
+      expect(removePlacement(state, placement.id).ok).toBe(false);
+    },
+  );
 });

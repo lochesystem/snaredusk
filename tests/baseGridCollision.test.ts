@@ -5,7 +5,7 @@ import { canPlaceHabitatPen, placeHabitatPen } from '../src/systems/baseBuild.ts
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 
 describe('baseGrid station collision', () => {
-  it('includes workbench, chest and bed but not habitat pen', () => {
+  it('includes furniture but not habitat pen or movable landmarks', () => {
     const state = defaultGameState();
     const walls = getStationWallsForCollision(state.base);
 
@@ -16,6 +16,11 @@ describe('baseGrid station collision', () => {
     expect(walls.some((w) => w.x === bench.cellX * 32 && w.y === bench.cellY * 32)).toBe(true);
     expect(walls.some((w) => w.x === chest.cellX * 32 && w.y === chest.cellY * 32)).toBe(true);
     expect(walls.some((w) => w.x === bed.cellX * 32 && w.y === bed.cellY * 32)).toBe(true);
+
+    for (const stationId of ['dungeon_portal', 'shop_ladder'] as const) {
+      const landmark = state.base.placements.find((p) => p.stationId === stationId)!;
+      expect(walls.some((w) => w.x === landmark.cellX * 32 && w.y === landmark.cellY * 32)).toBe(false);
+    }
 
     let zone = { cellX: 0, cellY: 0, width: 2, height: 2 };
     outer: for (let y = 0; y < state.base.height; y++) {

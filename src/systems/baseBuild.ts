@@ -293,6 +293,10 @@ export function removePlacement(state: GameState, placementId: string): PlaceRes
   const placement = state.base.placements[idx];
   const def = getStation(placement.stationId);
 
+  if (placement.stationId === 'dungeon_portal' || placement.stationId === 'shop_ladder') {
+    return { ok: false, message: `${def.name} pode ser movido, mas não removido` };
+  }
+
   if (placement.stationId === 'habitat_pen') {
     if (countCreaturesInPen(state, placement.id) > 0) {
       return { ok: false, message: 'Retire as criaturas do cercado antes de remover' };

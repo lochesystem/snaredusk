@@ -27,8 +27,10 @@ const missingBiomeProps = new Set<BiomeId>();
 
 let baseTileset: TileFrameMap | null = null;
 let baseStations: TileFrameMap | null = null;
+let baseLandmarks: TileFrameMap | null = null;
 let baseTilesetMissing = false;
 let baseStationsMissing = false;
+let baseLandmarksMissing = false;
 let basePreloadPromise: Promise<void> | null = null;
 const biomePreloadPromises = new Map<BiomeId, Promise<void>>();
 const wallStripCache = new Map<string, Texture>();
@@ -76,6 +78,10 @@ function baseTilesetUrl(): string {
 
 function baseStationsUrl(): string {
   return `${assetBase()}/base/stations-v2.json`;
+}
+
+function baseLandmarksUrl(): string {
+  return `${assetBase()}/base/landmarks-v3.json`;
 }
 
 function texturesFromSheet(
@@ -149,6 +155,16 @@ async function loadBaseStationsInternal(): Promise<void> {
   }
 }
 
+async function loadBaseLandmarksInternal(): Promise<void> {
+  if (baseLandmarks || baseLandmarksMissing) return;
+  const textures = await loadAtlas(baseLandmarksUrl(), 'base-landmarks-v3', 'nearest');
+  if (textures) {
+    baseLandmarks = textures;
+  } else {
+    baseLandmarksMissing = true;
+  }
+}
+
 export function ensureEnvironmentPreloaded(biomeId: BiomeId): Promise<void> {
   let promise = biomePreloadPromises.get(biomeId);
   if (!promise) {
@@ -166,6 +182,7 @@ export function ensureBaseTilesetPreloaded(): Promise<void> {
     basePreloadPromise = Promise.all([
       loadBaseTilesetInternal(),
       loadBaseStationsInternal(),
+      loadBaseLandmarksInternal(),
     ]).then(() => undefined);
   }
   return basePreloadPromise;
@@ -197,6 +214,16 @@ export function getBaseTileTexture(frame: string): Texture | null {
 
 export function getBaseStationTexture(frame: string): Texture | null {
   return baseStations?.get(frame) ?? null;
+}
+
+export function getBaseLandmarkTexture(frame: string): Texture | null {
+  return baseLandmarks?.get(frame) ?? null;
+}
+
+export function getBasePortalTextures(): Texture[] {
+  if (!baseLandmarks) return [];
+  return Array.from({ length: 8 }, (_, i) => baseLandmarks!.get(`portal_${i}`))
+    .filter((texture): texture is Texture => texture !== undefined);
 }
 
 /** Faixa horizontal 32×14 para paredes N/S. */
@@ -255,8 +282,10 @@ export function resetEnvironmentCache(): void {
   missingBiomeProps.clear();
   baseTileset = null;
   baseStations = null;
+  baseLandmarks = null;
   baseTilesetMissing = false;
   baseStationsMissing = false;
+  baseLandmarksMissing = false;
   basePreloadPromise = null;
   biomePreloadPromises.clear();
   wallStripCache.clear();

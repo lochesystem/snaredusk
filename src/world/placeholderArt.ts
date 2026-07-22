@@ -17,6 +17,8 @@ import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
 import { createPixelText } from './pixelText.ts';
 import {
   chestPropFrameName,
+  getBaseLandmarkTexture,
+  getBasePortalTextures,
   getBiomePropTexture,
 } from './environmentAssets.ts';
 import {
@@ -233,6 +235,24 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
 
 export function createPortalSprite(): Container {
   const root = new Container();
+  const textures = getBasePortalTextures();
+  if (textures.length > 0) {
+    const portal = new AnimatedSprite(textures);
+    portal.anchor.set(0.5, 1);
+    portal.y = 42;
+    portal.animationSpeed = 8 / 60;
+    portal.loop = true;
+    portal.roundPixels = true;
+    portal.play();
+    root.addChild(portal);
+
+    const label = createPixelText('Portal', 9, 0xc7e7df);
+    label.anchor.set(0.5);
+    label.y = -52;
+    root.addChild(label);
+    return root;
+  }
+
   const ring = new Graphics();
   ring.circle(0, 0, 18);
   ring.stroke({ width: 3, color: 0xc4f082 });
@@ -248,6 +268,21 @@ export function createPortalSprite(): Container {
 
 export function createStaircaseSprite(): Container {
   const root = new Container();
+  const texture = getBaseLandmarkTexture('shop_ladder');
+  if (texture) {
+    const ladder = new Sprite(texture);
+    ladder.anchor.set(0.5, 1);
+    ladder.y = 29;
+    ladder.roundPixels = true;
+    root.addChild(ladder);
+
+    const label = createPixelText('Loja', 9, 0xd8c8a8);
+    label.anchor.set(0.5);
+    label.y = 32;
+    root.addChild(label);
+    return root;
+  }
+
   const steps = new Graphics();
   for (let i = 0; i < 4; i++) {
     const w = 28 - i * 4;
