@@ -39,11 +39,11 @@ export function createDefaultBaseGrid(): BaseGridState {
 
   const placements: BasePlacement[] = [
     { id: 'bench_default', stationId: 'workbench', cellX: startX + 4, cellY: startY + 5, rotation: 0 },
-    { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 5, cellY: startY + 5, rotation: 0 },
+    { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 6, cellY: startY + 5, rotation: 0 },
     { id: 'bed_default', stationId: 'bed', cellX: startX + 2, cellY: startY + 2, rotation: 0 },
   ];
 
-  const chests = [createChestState('chest_default', startX + 5, startY + 5)];
+  const chests = [createChestState('chest_default', startX + 6, startY + 5)];
 
   return {
     width: BASE_MAP_WIDTH,
@@ -223,15 +223,30 @@ export function normalizeBaseGrid(partial: BaseGridState | undefined): BaseGridS
     ? [...partial.cells]
     : [...def.cells];
 
+  const placements = migrateStationFootprints(ensureDefaultBed(partial.placements ?? def.placements));
+  const chests = (partial.chests ?? def.chests).map((chest) => {
+    const placement = placements.find((p) => p.id === chest.id && p.stationId === 'chest_wood');
+    return placement ? { ...chest, cellX: placement.cellX, cellY: placement.cellY } : chest;
+  });
+
   return {
     width: partial.width ?? def.width,
     height: partial.height ?? def.height,
     cells,
-    placements: ensureDefaultBed(partial.placements ?? def.placements),
-    chests: partial.chests ?? def.chests,
+    placements,
+    chests,
     freeBuildsUsed: partial.freeBuildsUsed ?? 0,
     nextPlacementId: partial.nextPlacementId ?? 1,
   };
+}
+
+function migrateStationFootprints(placements: BasePlacement[]): BasePlacement[] {
+  const bench = placements.find((p) => p.id === 'bench_default' && p.stationId === 'workbench');
+  const chest = placements.find((p) => p.id === 'chest_default' && p.stationId === 'chest_wood');
+  if (!bench || !chest || chest.cellY !== bench.cellY || chest.cellX !== bench.cellX + 1) {
+    return placements;
+  }
+  return placements.map((p) => p.id === chest.id ? { ...p, cellX: bench.cellX + 2 } : p);
 }
 
 function ensureDefaultBed(placements: BasePlacement[]): BasePlacement[] {

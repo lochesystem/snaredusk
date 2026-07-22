@@ -16,7 +16,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
   workbench: {
     id: 'workbench',
     name: 'Bancada',
-    width: 1,
+    width: 2,
     height: 1,
     goldCost: 0,
     color: 0x5a4a38,
@@ -46,8 +46,8 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
   bed: {
     id: 'bed',
     name: 'Cama',
-    width: 1,
-    height: 1,
+    width: 2,
+    height: 2,
     goldCost: 0,
     color: 0x4a3d5c,
     accent: 0x8a6a9a,

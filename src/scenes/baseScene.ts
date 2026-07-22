@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 
 import { getSpecies } from '../data/creatures.ts';
 
@@ -67,6 +67,7 @@ import {
   worldToCell,
   findAdjacentRockCells,
 } from '../world/baseGrid.ts';
+import { getBaseStationTexture } from '../world/environmentAssets.ts';
 
 import {
 
@@ -396,6 +397,22 @@ export class BaseScene {
       if (placement.stationId === 'habitat_pen') continue;
 
       const def = getStation(placement.stationId);
+
+      const frameByStation: Partial<Record<StationId, string>> = {
+        chest_wood: 'base_chest',
+        workbench: 'base_workbench',
+        bed: 'base_bed',
+      };
+      const texture = getBaseStationTexture(frameByStation[placement.stationId] ?? '');
+      if (texture) {
+        const sprite = new Sprite(texture);
+        sprite.anchor.set(0.5, 1);
+        sprite.x = (placement.cellX + def.width / 2) * BASE_CELL_SIZE;
+        sprite.y = (placement.cellY + def.height) * BASE_CELL_SIZE - 1;
+        sprite.roundPixels = true;
+        this.stationLayer.addChild(sprite);
+        continue;
+      }
 
       const gfx = new Graphics();
 
@@ -1373,5 +1390,4 @@ export class BaseScene {
   }
 
 }
-
 

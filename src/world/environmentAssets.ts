@@ -26,7 +26,9 @@ const missingBiomeTilesets = new Set<BiomeId>();
 const missingBiomeProps = new Set<BiomeId>();
 
 let baseTileset: TileFrameMap | null = null;
+let baseStations: TileFrameMap | null = null;
 let baseTilesetMissing = false;
+let baseStationsMissing = false;
 let basePreloadPromise: Promise<void> | null = null;
 const biomePreloadPromises = new Map<BiomeId, Promise<void>>();
 const wallStripCache = new Map<string, Texture>();
@@ -70,6 +72,10 @@ function biomePropsUrl(biomeId: BiomeId): string {
 
 function baseTilesetUrl(): string {
   return `${assetBase()}/base/tileset.json`;
+}
+
+function baseStationsUrl(): string {
+  return `${assetBase()}/base/stations-v2.json`;
 }
 
 function texturesFromSheet(
@@ -133,6 +139,16 @@ async function loadBaseTilesetInternal(): Promise<void> {
   }
 }
 
+async function loadBaseStationsInternal(): Promise<void> {
+  if (baseStations || baseStationsMissing) return;
+  const textures = await loadAtlas(baseStationsUrl(), 'base-stations-v2', 'nearest');
+  if (textures) {
+    baseStations = textures;
+  } else {
+    baseStationsMissing = true;
+  }
+}
+
 export function ensureEnvironmentPreloaded(biomeId: BiomeId): Promise<void> {
   let promise = biomePreloadPromises.get(biomeId);
   if (!promise) {
@@ -147,7 +163,10 @@ export function ensureEnvironmentPreloaded(biomeId: BiomeId): Promise<void> {
 
 export function ensureBaseTilesetPreloaded(): Promise<void> {
   if (!basePreloadPromise) {
-    basePreloadPromise = loadBaseTilesetInternal();
+    basePreloadPromise = Promise.all([
+      loadBaseTilesetInternal(),
+      loadBaseStationsInternal(),
+    ]).then(() => undefined);
   }
   return basePreloadPromise;
 }
@@ -174,6 +193,10 @@ export function getBiomePropTexture(biomeId: BiomeId, frame: string): Texture | 
 
 export function getBaseTileTexture(frame: string): Texture | null {
   return baseTileset?.get(frame) ?? null;
+}
+
+export function getBaseStationTexture(frame: string): Texture | null {
+  return baseStations?.get(frame) ?? null;
 }
 
 /** Faixa horizontal 32×14 para paredes N/S. */
@@ -231,7 +254,9 @@ export function resetEnvironmentCache(): void {
   missingBiomeTilesets.clear();
   missingBiomeProps.clear();
   baseTileset = null;
+  baseStations = null;
   baseTilesetMissing = false;
+  baseStationsMissing = false;
   basePreloadPromise = null;
   biomePreloadPromises.clear();
   wallStripCache.clear();

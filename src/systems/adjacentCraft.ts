@@ -15,26 +15,23 @@ export interface AdjacentChest {
 
 const DIR_ORDER: ChestDirection[] = ['north', 'east', 'south', 'west'];
 
-const DIR_OFFSETS: Record<ChestDirection, { dx: number; dy: number }> = {
-  north: { dx: 0, dy: -1 },
-  east: { dx: 1, dy: 0 },
-  south: { dx: 0, dy: 1 },
-  west: { dx: -1, dy: 0 },
-};
-
 export function getAdjacentChestsForWorkbench(
   state: GameState,
   benchCellX: number,
   benchCellY: number,
 ): AdjacentChest[] {
+  const bench = getStation('workbench');
+  const cellsByDirection: Record<ChestDirection, { x: number; y: number }[]> = {
+    north: Array.from({ length: bench.width }, (_, dx) => ({ x: benchCellX + dx, y: benchCellY - 1 })),
+    east: Array.from({ length: bench.height }, (_, dy) => ({ x: benchCellX + bench.width, y: benchCellY + dy })),
+    south: Array.from({ length: bench.width }, (_, dx) => ({ x: benchCellX + dx, y: benchCellY + bench.height })),
+    west: Array.from({ length: bench.height }, (_, dy) => ({ x: benchCellX - 1, y: benchCellY + dy })),
+  };
   const result: AdjacentChest[] = [];
   for (const dir of DIR_ORDER) {
-    const off = DIR_OFFSETS[dir];
-    const cx = benchCellX + off.dx;
-    const cy = benchCellY + off.dy;
-    const placement = state.base.placements.find(
-      (p) => p.stationId === 'chest_wood' && p.cellX === cx && p.cellY === cy,
-    );
+    const placement = state.base.placements.find((p) =>
+      p.stationId === 'chest_wood'
+      && cellsByDirection[dir].some((cell) => p.cellX === cell.x && p.cellY === cell.y));
     if (!placement) continue;
     const chest = state.base.chests.find((c) => c.id === placement.id);
     if (chest) result.push({ chest, direction: dir });
