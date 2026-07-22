@@ -73,11 +73,23 @@
     </div>
 
     <div id="title-screen">
-      <h1>Snaredusk</h1>
-      <p class="subtitle">Caça ao crepúsculo. Venda ao amanhecer.</p>
-      <button id="btn-continue" class="hidden">Continuar</button>
-      <button id="btn-new-game">Novo Jogo</button>
-      <button id="btn-options" type="button" class="title-secondary">Opções</button>
+      <div class="title-backdrop" aria-hidden="true"></div>
+      <div class="title-fog title-fog-back" aria-hidden="true"></div>
+      <div class="title-fog title-fog-front" aria-hidden="true"></div>
+      <div class="title-motes" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <main class="title-menu" aria-label="Menu principal">
+        <p class="title-eyebrow"><span></span>Crônicas de Brumavale<span></span></p>
+        <h1><span>Snaredusk</span></h1>
+        <div class="title-divider" aria-hidden="true"><i></i><b>◆</b><i></i></div>
+        <div class="title-actions">
+          <button id="btn-continue" class="title-primary hidden"><span>Continuar</span></button>
+          <button id="btn-new-game" class="title-primary"><span>Novo Jogo</span></button>
+          <button id="btn-options" type="button" class="title-secondary"><span>Opções</span></button>
+        </div>
+      </main>
+      <p class="title-footer">Uma jornada entre raízes, sombras e vínculos</p>
     </div>
 
     <div id="audio-settings-modal" class="modal hidden" aria-hidden="true">
