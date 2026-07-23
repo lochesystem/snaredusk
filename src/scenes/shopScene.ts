@@ -31,6 +31,7 @@ import {
   createShopItemSprite,
   drawShopFixtures,
   drawShopFloorBase,
+  type CustomerSprite,
 } from '../world/placeholderArt.ts';
 import { getShopTileTexture } from '../world/shopAssets.ts';
 
@@ -38,6 +39,9 @@ const CUSTOMER_SPEED = 72;
 const LOOK_MIN = 1.1;
 const LOOK_MAX = 2.2;
 const SPAWN_GAP = 2.4;
+const CUSTOMER_SEPARATION = 22;
+/** Ultrapassa a profundidade dos expositores para permitir interação pelo corredor frontal. */
+const SHOP_INTERACT_RADIUS = 60;
 
 const CUSTOMER_COLORS: Record<string, number> = {
   morador: 0x6a8ab8,
@@ -59,7 +63,7 @@ interface LiveCustomer {
   targetY: number;
   lookTimer: number;
   bubble: Container | null;
-  container: Container;
+  container: CustomerSprite;
 }
 
 interface SlotVisual {
@@ -166,7 +170,7 @@ export class ShopScene {
       stand.addChild(highlight);
 
       const itemLayer = new Container();
-      itemLayer.y = slot.kind === 'cage' ? -24 : -20;
+      itemLayer.y = slot.kind === 'cage' ? -34 : -32;
       stand.addChild(itemLayer);
       stand.addChild(createShelfStandFrontSprite(slot.kind === 'cage'));
 
@@ -201,7 +205,7 @@ export class ShopScene {
         const isBoss = species.behaviorId.startsWith('boss_');
         if (isBoss) creature.scale.set(0.9);
         item = creature;
-        labelY = isBoss ? -64 : -39;
+        labelY = isBoss ? -54 : -29;
         itemName = new Text({
           text: species.name,
           style: { fontFamily: 'monospace', fontSize: 7, fill: 0xf0e6d3 },
@@ -218,7 +222,7 @@ export class ShopScene {
           style: { fontFamily: 'monospace', fontSize: 6, fill: 0xf0e6d3 },
         });
         itemName.anchor.set(0.5);
-        itemName.y = -24;
+        itemName.y = -12;
       }
       visual.itemLayer.addChild(item);
       if (itemName) visual.itemLayer.addChild(itemName);
@@ -228,7 +232,7 @@ export class ShopScene {
         style: { fontFamily: 'monospace', fontSize: 7, fill: 0xe8c868 },
       });
       priceTag.anchor.set(0.5);
-      priceTag.y = listing.entry.kind === 'creature' ? 10 : 12;
+      priceTag.y = listing.entry.kind === 'creature' ? 20 : 24;
       visual.itemLayer.addChild(priceTag);
     }
     this.updateCarriedVisual(state);
@@ -340,6 +344,8 @@ export class ShopScene {
 
     this.updatePlayer(dt);
     this.updateCustomers(dt);
+    this.separateCustomers();
+    this.entityLayer.resort();
     this.updateCamera();
     this.world.x = -this.camera.x;
     this.world.y = -this.camera.y;
@@ -375,7 +381,12 @@ export class ShopScene {
       this.carriedGfx.y = this.playerY - 22;
     }
 
-    const nearSlot = findSlotAt(this.layout, this.playerX, this.playerY, 30);
+    const nearSlot = findSlotAt(
+      this.layout,
+      this.playerX,
+      this.playerY,
+      SHOP_INTERACT_RADIUS,
+    );
     for (const v of this.slotVisuals) {
       const on = nearSlot === v.layout;
       v.highlight.alpha = on ? 1 : 0;
@@ -500,7 +511,7 @@ export class ShopScene {
     if (!slot) return;
 
     const color = CUSTOMER_COLORS[plan.archetype.id] ?? 0x888888;
-    const container = createCustomerSprite(color);
+    const container = createCustomerSprite(plan.archetype.id, color);
     container.x = this.layout.entrance.x;
     container.y = this.layout.entrance.y;
     this.entityLayer.addChild(container);
@@ -524,6 +535,7 @@ export class ShopScene {
       const dy = c.targetY - c.y;
       const dist = Math.hypot(dx, dy);
       if (dist < 4) {
+        c.container.setLocomotion(false);
         if (c.phase === 'walk_slot') {
           c.phase = 'look';
           c.lookTimer = LOOK_MIN + Math.random() * (LOOK_MAX - LOOK_MIN);
@@ -535,6 +547,7 @@ export class ShopScene {
           return;
         }
       } else {
+        c.container.setLocomotion(true, dx);
         const step = CUSTOMER_SPEED * dt;
         c.x += (dx / dist) * step;
         c.y += (dy / dist) * step;
@@ -545,6 +558,7 @@ export class ShopScene {
     }
 
     if (c.phase === 'look') {
+      c.container.setLocomotion(false);
       c.lookTimer -= dt;
       if (!c.bubble) {
         c.bubble = createEmojiBubble(planEmoji(c.plan));
@@ -573,6 +587,42 @@ export class ShopScene {
       c.phase = 'leave';
       c.targetX = this.layout.entrance.x;
       c.targetY = this.layout.entrance.y + 20;
+    }
+  }
+
+  /** Evita clientes empilhados e mantém cabeça/corpo visíveis nas filas. */
+  private separateCustomers(): void {
+    const active = this.customers.filter((customer) => customer.phase !== 'done');
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < active.length; i++) {
+        const a = active[i]!;
+        for (let j = i + 1; j < active.length; j++) {
+          const b = active[j]!;
+          let dx = b.x - a.x;
+          let dy = b.y - a.y;
+          let distance = Math.hypot(dx, dy);
+          if (distance >= CUSTOMER_SEPARATION) continue;
+          if (distance < 0.001) {
+            dx = 1;
+            dy = 0;
+            distance = 1;
+          }
+          const correction = (CUSTOMER_SEPARATION - distance) / 2;
+          const pushX = (dx / distance) * correction;
+          const pushY = (dy / distance) * correction;
+          a.x -= pushX;
+          a.y -= pushY;
+          b.x += pushX;
+          b.y += pushY;
+        }
+      }
+    }
+
+    for (const customer of active) {
+      customer.x = Math.max(20, Math.min(this.layout.width - 20, customer.x));
+      customer.y = Math.max(20, Math.min(this.layout.height - 20, customer.y));
+      customer.container.x = customer.x;
+      customer.container.y = customer.y;
     }
   }
 

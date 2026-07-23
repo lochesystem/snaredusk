@@ -1,0 +1,45 @@
+{
+  "frames": {
+    "morador_walk_0": { "frame": { "x": 0, "y": 0, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "morador_walk_1": { "frame": { "x": 48, "y": 0, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "morador_walk_2": { "frame": { "x": 96, "y": 0, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "morador_walk_3": { "frame": { "x": 144, "y": 0, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "minerador_walk_0": { "frame": { "x": 0, "y": 48, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "minerador_walk_1": { "frame": { "x": 48, "y": 48, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "minerador_walk_2": { "frame": { "x": 96, "y": 48, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "minerador_walk_3": { "frame": { "x": 144, "y": 48, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "colecionador_walk_0": { "frame": { "x": 0, "y": 96, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "colecionador_walk_1": { "frame": { "x": 48, "y": 96, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "colecionador_walk_2": { "frame": { "x": 96, "y": 96, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "colecionador_walk_3": { "frame": { "x": 144, "y": 96, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "crianca_walk_0": { "frame": { "x": 0, "y": 144, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "crianca_walk_1": { "frame": { "x": 48, "y": 144, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "crianca_walk_2": { "frame": { "x": 96, "y": 144, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "crianca_walk_3": { "frame": { "x": 144, "y": 144, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "rico_walk_0": { "frame": { "x": 0, "y": 192, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "rico_walk_1": { "frame": { "x": 48, "y": 192, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "rico_walk_2": { "frame": { "x": 96, "y": 192, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "rico_walk_3": { "frame": { "x": 144, "y": 192, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "viajante_walk_0": { "frame": { "x": 0, "y": 240, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "viajante_walk_1": { "frame": { "x": 48, "y": 240, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "viajante_walk_2": { "frame": { "x": 96, "y": 240, "w": 48, "h": 48 }, "rotated": false, "trimmed": false },
+    "viajante_walk_3": { "frame": { "x": 144, "y": 240, "w": 48, "h": 48 }, "rotated": false, "trimmed": false }
+  },
+  "animations": {
+    "morador": ["morador_walk_0", "morador_walk_1", "morador_walk_2", "morador_walk_3"],
+    "minerador": ["minerador_walk_0", "minerador_walk_1", "minerador_walk_2", "minerador_walk_3"],
+    "colecionador": ["colecionador_walk_0", "colecionador_walk_1", "colecionador_walk_2", "colecionador_walk_3"],
+    "crianca": ["crianca_walk_0", "crianca_walk_1", "crianca_walk_2", "crianca_walk_3"],
+    "rico": ["rico_walk_0", "rico_walk_1", "rico_walk_2", "rico_walk_3"],
+    "viajante": ["viajante_walk_0", "viajante_walk_1", "viajante_walk_2", "viajante_walk_3"]
+  },
+  "meta": {
+    "app": "Snaredusk",
+    "version": "1.0",
+    "image": "customers-v1.png",
+    "format": "RGBA8888",
+    "size": { "w": 192, "h": 288 },
+    "scale": "1",
+    "snaredusk": { "frameSize": 48, "anchorX": 0.5, "anchorY": 0.958, "shadowY": 0, "nativeFacing": "left" }
+  }
+}

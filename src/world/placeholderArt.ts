@@ -14,6 +14,7 @@ import {
   PLAYER_WALK_ANIM_SPEED,
 } from './playerAssets.ts';
 import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
+import type { CustomerArchetypeId } from '../systems/customers.ts';
 import { createPixelText } from './pixelText.ts';
 import {
   chestPropFrameName,
@@ -22,6 +23,7 @@ import {
   getBiomePropTexture,
 } from './environmentAssets.ts';
 import { getShopPropTexture } from './shopAssets.ts';
+import { CUSTOMER_WALK_ANIM_SPEED, getCustomerWalkFrames } from './customerAssets.ts';
 import {
   drawEnergyOrb,
   drawKnifeBlade,
@@ -1115,19 +1117,56 @@ export function createShopItemSprite(name: string, color: number, isCreature: bo
   return root;
 }
 
-export function createCustomerSprite(bodyColor: number): Container {
-  const root = new Container();
+export interface CustomerSprite extends Container {
+  setLocomotion(moving: boolean, moveX?: number): void;
+}
+
+export function createCustomerSprite(
+  archetypeId: CustomerArchetypeId,
+  bodyColor: number,
+): CustomerSprite {
+  const root = new Container() as CustomerSprite;
   const shadow = drawShadow(root, 16);
-  shadow.y = 6;
-  const body = new Graphics();
-  body.roundRect(-7, -12, 14, 18, 3);
-  body.fill(bodyColor);
-  body.stroke({ width: 1, color: 0x1a1520 });
-  root.addChild(body);
-  const head = new Graphics();
-  head.circle(0, -16, 6);
-  head.fill(0xf0d8b8);
-  root.addChild(head);
+  shadow.y = 0;
+  const frames = getCustomerWalkFrames(archetypeId);
+  const facing = { value: 1 };
+
+  if (frames?.length) {
+    const anim = new AnimatedSprite(frames);
+    anim.anchor.set(0.5, 0.958);
+    // A criança ocupa menos altura dentro da célula; aproxima pés e sombra do piso.
+    const groundOffset = archetypeId === 'crianca' ? 2 : 0;
+    anim.y = groundOffset;
+    shadow.y = groundOffset;
+    anim.roundPixels = true;
+    anim.animationSpeed = CUSTOMER_WALK_ANIM_SPEED;
+    anim.gotoAndStop(0);
+    root.addChild(anim);
+    root.setLocomotion = (moving: boolean, moveX = 0) => {
+      applySpriteFacing(anim, moveX, facing);
+      if (moving) {
+        if (!anim.playing) anim.play();
+      } else {
+        anim.gotoAndStop(0);
+      }
+    };
+  } else {
+    const visual = new Container();
+    const body = new Graphics();
+    body.roundRect(-7, -12, 14, 18, 3);
+    body.fill(bodyColor);
+    body.stroke({ width: 1, color: 0x1a1520 });
+    visual.addChild(body);
+    const head = new Graphics();
+    head.circle(0, -16, 6);
+    head.fill(0xf0d8b8);
+    visual.addChild(head);
+    root.addChild(visual);
+    root.setLocomotion = (_moving: boolean, moveX = 0) => {
+      applySpriteFacing(visual, moveX, facing);
+    };
+  }
+
   (root as Container & { zOffset?: number }).zOffset = 0.5;
   return root;
 }

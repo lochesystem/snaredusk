@@ -1,8 +1,10 @@
 import type { GameState, ShopListing } from '../types.ts';
 import {
+  customerArchetypesForReputation,
   customerBuysListing,
+  customerInterested,
   pickListingForCustomer,
-  rollCustomerArchetype,
+  rollCustomerFromPool,
   salePriceForCustomer,
   type CustomerArchetype,
 } from './customers.ts';
@@ -68,6 +70,8 @@ export function planShopDay(state: GameState, rng: () => number = Math.random): 
   const levelDef = getShopLevelDef(state.shopLevel);
   const customerCount = 3 + levelDef.level;
   const taken = new Set<string>();
+  const visitCounts = new Map<string, number>();
+  const archetypes = customerArchetypesForReputation(getReputationLevel(state.shopGoldSold));
 
   for (let i = 0; i < customerCount; i++) {
     const available = listings.filter((l) => {
@@ -77,9 +81,18 @@ export function planShopDay(state: GameState, rng: () => number = Math.random): 
     });
     if (available.length === 0) break;
 
-    const archetype = rollCustomerArchetype(rng, getReputationLevel(state.shopGoldSold));
+    const compatible = archetypes.filter((candidate) =>
+      (visitCounts.get(candidate.id) ?? 0) < 2
+      && available.some((listing) => customerInterested(candidate.id, listing.entry)),
+    );
+    if (compatible.length === 0) break;
+
+    // Todos os tipos compatíveis visitam a loja antes de qualquer repetição.
+    const unseen = compatible.filter((candidate) => !visitCounts.has(candidate.id));
+    const archetype = rollCustomerFromPool(unseen.length > 0 ? unseen : compatible, rng);
     const listing = pickListingForCustomer(archetype.id, available, rng);
     if (!listing) continue;
+    visitCounts.set(archetype.id, (visitCounts.get(archetype.id) ?? 0) + 1);
 
     const paidPrice = salePriceForCustomer(archetype.id, listing.price);
     const tier = getPriceTier(paidPrice, listing.entry.baseValue);

@@ -17,6 +17,7 @@ import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import { ensureShopAssetsPreloaded } from './world/shopAssets.ts';
+import { ensureCustomerSpritesPreloaded } from './world/customerAssets.ts';
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
@@ -359,6 +360,7 @@ export class Game {
       ensurePlayerSpritesPreloaded(),
       ensureBaseTilesetPreloaded(),
       ensureShopAssetsPreloaded(),
+      ensureCustomerSpritesPreloaded(),
     ]);
 
     if (hasSave()) {
@@ -653,6 +655,7 @@ export class Game {
       ensureShopAssetsPreloaded(),
       ensureCreatureSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
+      ensureCustomerSpritesPreloaded(),
     ]);
     this.destroyBase();
     this.destroyShop();

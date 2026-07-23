@@ -29,7 +29,14 @@ export function rollCustomerArchetype(
   rng: () => number = Math.random,
   reputationLevel = 1,
 ): CustomerArchetype {
-  const archetypes = archetypesForReputation(reputationLevel);
+  return rollCustomerFromPool(customerArchetypesForReputation(reputationLevel), rng);
+}
+
+export function rollCustomerFromPool(
+  archetypes: CustomerArchetype[],
+  rng: () => number = Math.random,
+): CustomerArchetype {
+  if (archetypes.length === 0) return CUSTOMER_ARCHETYPES[0]!;
   const total = archetypes.reduce((s, c) => s + c.weight, 0);
   let roll = rng() * total;
   for (const archetype of archetypes) {
@@ -39,7 +46,7 @@ export function rollCustomerArchetype(
   return archetypes[0]!;
 }
 
-function archetypesForReputation(reputationLevel: number): CustomerArchetype[] {
+export function customerArchetypesForReputation(reputationLevel: number): CustomerArchetype[] {
   if (reputationLevel < 3) return CUSTOMER_ARCHETYPES;
   return CUSTOMER_ARCHETYPES.map((a) =>
     a.id === 'colecionador' ? { ...a, weight: 20 } : a,
