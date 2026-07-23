@@ -40,31 +40,38 @@ Controles planejados (fase 2+): Espaço, Tab, I, B, M, Esc — ver [UX-UI](docs/
 
 ## O que está no jogo hoje
 
+**Versão:** `v0.5.0` — ver [CHANGELOG.md](CHANGELOG.md) e [ROADMAP.md](docs/ROADMAP.md).
+
 | Sistema | Estado |
 |---------|--------|
-| **Masmorra procedural** | 7–9 salas em grafo (N/S/E/W), decor de cogumelos, rochas e buracos |
+| **3 biomas** | Floresta Fúngica, Caverna de Cristal, Pântano Termal — desbloqueio em cadeia |
+| **Masmorra procedural** | 8–11 salas, 6 tipos (combate, tesouro, evento, descanso, mercador, chefe) |
+| **Boss fights** | Arena, portão + chave, intro, 3 mecânicas de chefe, hazards por bioma |
 | **Minimapa** | Canto superior direito; salas exploradas, portal em verde |
-| **Baús** | ~28% das salas (máx. 2 por run); abrir com **E** |
-| **Captura** | Orbe de Vínculo; taxa sobe conforme HP cai |
-| **3 criaturas** | Lumimorcego, Esporo Dorminhoco, Carapaça de Musgo |
-| **Loja** | 3 prateleiras, 1 gaiola, precificação por reação do cliente |
-| **Habitat** | Cercados na base; criaturas vagam; **produção passiva** ao dormir |
-| **Ciclo dia** | 1 masmorra/dia; dormir na cama (após voltar) ou fechar loja avança o dia |
+| **Combate** | 3 armas craftáveis, projéteis, esquiva (R), stamina, mira de alcance |
+| **Captura** | Orbe de Vínculo (Q); taxa sobe conforme HP cai |
+| **Party** | 1 companheiro com IA na masmorra |
+| **Base escavável** | Grid, escavação, construir estações (rotação com R), portal/escada movíveis |
+| **Habitat** | Cercados; criaturas vagam; produção passiva ao dormir |
+| **Ciclo dia** | 1 masmorra/dia; dormir na cama ou fechar loja avança o dia |
+| **Loja** | Tileset visual, clientes animados, 5 níveis, reputação 1–3, painel bolsa recolhível |
+| **Tutorial Mira** | Novo jogo: masmorra → habitat → vender → comprar orbes |
 | **Mercador de orbes** | Na base: ×1 por 25 ouro, ×3 por 70 ouro |
-| **Save** | localStorage v6 entre sessões |
+| **Save** | localStorage v7+ entre sessões |
 | **Deploy** | GitHub Actions → GitHub Pages |
 
 ## Conteúdo MVP (meta do GDD)
 
 | Categoria | Meta | No build atual |
 |-----------|------|----------------|
-| Biomas | 3 | 1 (Floresta Fúngica) |
-| Monstros capturáveis | 18 | 3 |
-| Itens de loot | 30 | Subconjunto |
-| Receitas | 20 | — |
-| Upgrades de loja | 5 níveis | Básico |
-| Estruturas de base | 8 | Habitat |
-| Arquétipos de cliente | 6 | Simulado (faixas de preço) |
+| Biomas | 3 | **3** |
+| Monstros capturáveis | 18 | **9** (+ 3 chefes) |
+| Itens de loot | 30 | **17** |
+| Receitas | 20 | **2** |
+| Upgrades de loja | 5 níveis | **5** |
+| Estruturas de base | 8 | Baú, bancada, cama, cercado (+ escavação) |
+| Arquétipos de cliente | 6 | **6** (sprites animados) |
+| Reputação loja | 3 níveis | **3** |
 
 ## Stack
 
@@ -112,7 +119,7 @@ npm run build
 
 ## Status
 
-**Fase 1 — vertical slice jogável e publicado.** Masmorra procedural, minimapa, captura, loja, habitat visual, mercador de orbes, save local e deploy automático no GitHub Pages.
+**Fase 2 em progresso (~75%).** Vertical slice publicado; core loop com 3 biomas, base escavável, tutorial Mira completo, loja visual e pass de arte v2. Ver [ROADMAP](docs/ROADMAP.md).
 
 ---
 

@@ -78,11 +78,13 @@ npm run build
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 5.1 | **Abrir Loja**; colocar loot/criatura nas prateleiras/gaiola | ☐ | |
-| 5.2 | Ajustar preço (**sem** dica caro/barato — reação só pelos clientes) | ☐ | |
-| 5.3 | **Abrir loja ao público**; clientes com emoji na loja | ☐ | |
-| 5.4 | Ouro sobe após vendas | ☐ | |
-| 5.5 | Tentar abrir loja de novo no mesmo dia → deve bloquear | ☐ | |
+| 5.1 | **Abrir Loja**; chão com tábuas/tileset visual | ☐ | Layout fullscreen |
+| 5.2 | Colocar loot/criatura nas prateleiras/gaiola (**E** perto do slot) | ☐ | Painel da bolsa recolhível no canto |
+| 5.3 | Ajustar preço (clique no item exposto) | ☐ | Reação só pelos emojis dos clientes |
+| 5.4 | **Abrir loja ao público**; clientes animados com emoji | ☐ | Fila mais natural |
+| 5.5 | Ouro sobe após vendas; reputação sobe no HUD | ☐ | Nível 2 = +1 prateleira |
+| 5.6 | Tentar abrir loja de novo no mesmo dia → deve bloquear | ☐ | |
+| 5.7 | **[E]** em gaiola ocupada retira item para a bolsa | ☐ | Mesmo com item selecionado na bolsa |
 
 ### 5b. Combate e craft (v0.3 — 2 min)
 
@@ -102,28 +104,40 @@ npm run build
 | 5c.4 | Golpes do chefe mostram **auras/VFX** (windup, charge, heat wave) | ☐ | |
 | 5c.5 | **SFX** audíveis: ataque, hit, dodge, baú, portão, captura, fase 2 | ☐ | Som após Novo Jogo/Continuar |
 
-### 6. Tutorial com Mira — MVP (3 min)
+### 6. Tutorial com Mira (5 min)
 
 **Pré-requisito:** **Novo Jogo** (save limpo ou apagar save local).
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 6.1 | Ao iniciar, overlay da **Mira** com boas-vindas | ☐ | |
+| 6.1 | Overlay da **Mira** com boas-vindas | ☐ | |
 | 6.2 | **Continuar** → hint no portal; loja/cama bloqueados | ☐ | |
-| 6.3 | **[E]** no portal → modal Destino → entrar na masmorra | ☐ | Layout de **1 sala** (tutorial) |
-| 6.4 | Diálogo WASD; atacar esporo com **clique** | ☐ | |
-| 6.5 | **Q** para captura; highlight na tecla Q no HUD | ☐ | |
-| 6.6 | Portal de saída após captura ou derrota; **[E]** volta à base | ☐ | |
-| 6.7 | **Continuar** → cercado (tecla 3), colocar criatura, vender na loja, comprar orbes | ☐ | Tutorial completo ao comprar orbes |
-| 6.8 | **Pular tutorial** em qualquer passo → toast e jogo livre | ☐ | |
-| 6.9 | **Continuar** após tutorial parcial salva progresso do passo | ☐ | F5 + Continuar |
+| 6.3 | **[E]** no portal → modal Destino → masmorra tutorial (1 sala) | ☐ | |
+| 6.4 | WASD + atacar esporo; **Q** para captura (ou matar → criatura vai para bolsa) | ☐ | |
+| 6.5 | Portal de saída; **[E]** volta à base | ☐ | |
+| 6.6 | **Tecla 3** → arrastar cercado; hotbar não bloqueada pelo diálogo | ☐ | |
+| 6.7 | **[I]** ou **[E]** no cercado → colocar criatura | ☐ | |
+| 6.8 | **[E]** na loja → expor na gaiola → **Abrir loja ao público** | ☐ | Balão Mira transparente |
+| 6.9 | Voltar à base → **Orbes** → comprar → toast "Tutorial completo!" | ☐ | |
+| 6.10 | **Pular tutorial** em qualquer passo → jogo livre | ☐ | |
+| 6.11 | Progresso parcial persiste (F5 + Continuar) | ☐ | |
 
-### 7. Loop completo (1 min)
+### 7. Arte e UI v0.5 (2 min)
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 7.1 | Reentrar na masmorra **sem travar** | ☐ | |
-| 7.2 | Segunda run: bolsa, habitat e ouro persistem | ☐ | |
+| 7.1 | Tela de título com arte de fundo | ☐ | |
+| 7.2 | Jogador com sprites v2 (idle/walk/ataque) | ☐ | |
+| 7.3 | Base com tileset v2 e estações pintadas | ☐ | **R** rotaciona estação |
+| 7.4 | Masmorra fullscreen (sem borda estreita) | ☐ | |
+| 7.5 | Biomas Cristal e Termal com tileset próprio | ☐ | |
+
+### 8. Loop completo (1 min)
+
+| # | Ação | OK? | Notas |
+|---|------|-----|-------|
+| 8.1 | Reentrar na masmorra **sem travar** | ☐ | |
+| 8.2 | Segunda run: bolsa, habitat e ouro persistem | ☐ | |
 
 ---
 
@@ -158,4 +172,4 @@ npm run build
 
 **Notas da sessão manual:** loop completo (masmorra → captura → habitat → loja → trava diária). Emojis dos clientes visíveis; precificação por tentativa funcionou; nenhum softlock. *Atualização:* ciclo dia com cama + 1 masmorra/dia — validar em playtest.*
 
-*Após preencher, marcar playtest no [ROADMAP.md](ROADMAP.md) e registrar achados no [CHANGELOG.md](../CHANGELOG.md) se houver fixes.*
+*Roteiro atualizado para v0.5.0 — 2026-07-23. Após preencher, registrar achados no [CHANGELOG.md](../CHANGELOG.md).*

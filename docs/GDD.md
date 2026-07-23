@@ -1,6 +1,6 @@
 # GDD — Snaredusk
 
-Documento mestre de design. Versão 0.1 — pré-produção.
+Documento mestre de design. Versão 0.2 — alinhado ao build `v0.5.0`.
 
 > **Build jogável:** [lochesystem.github.io/snaredusk/](https://lochesystem.github.io/snaredusk/) — ver [CHANGELOG.md](../CHANGELOG.md).
 
@@ -8,28 +8,31 @@ Documento mestre de design. Versão 0.1 — pré-produção.
 
 ## 0. Estado da implementação (build atual)
 
-Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GDD descreve como **meta MVP**. Detalhes de release em [ROADMAP.md](ROADMAP.md).
+Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GDD descreve como **meta MVP**. Detalhes de release em [ROADMAP.md](ROADMAP.md) e [CHANGELOG.md](../CHANGELOG.md).
 
-| Área | Implementado (v0.1) | Meta GDD (MVP) |
-|------|---------------------|----------------|
-| **Biomas** | 1 — Floresta Fúngica | 3 com chefes |
-| **Masmorra** | 7–9 salas procedural, grafo ramificado | 8–14 salas + tipos (combate, tesouro, evento, descanso, loja, chefe) |
-| **Obstáculos / decor** | Rochas, buracos, cogumelos | Hazards por bioma (esporos, cristal, termal) |
+**Versão:** `v0.5.0` (2026-07-23)
+
+| Área | Implementado (v0.5) | Meta GDD (MVP) |
+|------|------------------------|----------------|
+| **Biomas** | 3 — Floresta, Cristal, Termal + chefes | 3 com chefes |
+| **Masmorra** | 8–11 salas procedural, 6 tipos de sala, layout fullscreen | 8–14 salas + tipos |
+| **Obstáculos / decor** | Rochas, buracos, props por bioma, hazards | Hazards por bioma |
 | **Baús** | Raros na masmorra, tecla E | Salas tesouro + armadilhas |
-| **Portal** | Ativa após limpar inimigos; sem custo em ouro | Custo escalonado por uso na run |
+| **Portal** | Ativa após limpar inimigos; landmarks movíveis na base | Custo escalonado por uso na run |
 | **Minimapa** | Sim (explorado + portal) | Sim (+ salas secretas com sentinela) |
-| **Criaturas** | 3 espécies capturáveis | 18 catalogadas |
-| **Captura** | Orbe Q, taxa por HP | Igual + upgrades e tipos |
-| **Party / sentinelas** | — | 2 companheiros + 1 sentinela/bioma |
-| **Loja** | Prateleiras, gaiola, 2 faixas de preço | 5 níveis, 6 arquétipos, 4 faixas GDD (parcial) |
-| **Base** | Habitat visual (4 slots), mercador de orbes | Escavação, oficina, craft, baús |
-| **Ciclo dia/noite** | — | Dormir, loja diurna, evento entardecer |
-| **Craft / economia** | Compra de orbes | 20 receitas, sinks de ouro, reputação |
-| **Save** | localStorage | Igual + progresso por bioma |
-| **Áudio** | — | SFX procedural + 4 tracks |
-| **Arte** | Placeholder vetorial Pixi | Sprites pintados + normal maps (fase 3) |
+| **Criaturas** | 12 espécies (9 capturáveis + 3 chefes); sprites v1+ | 18 catalogadas |
+| **Captura** | Orbe Q, taxa por HP, mira de alcance | Igual + upgrades e tipos |
+| **Party / sentinelas** | 1 companheiro com IA | 2 companheiros + 1 sentinela/bioma |
+| **Loja** | 5 níveis, 6 arquétipos, 4 faixas, reputação 1–3, tileset visual, clientes animados | 5 níveis, 6 arquétipos, 4 faixas |
+| **Base** | Grid escavável, estações rotacionáveis (R), craft adjacente, habitat com cercados | Escavação, oficina, craft, baús |
+| **Ciclo dia/noite** | Cama, 1 masmorra/dia, produção habitat ao dormir | Dormir, loja diurna, evento entardecer |
+| **Craft / economia** | 2 receitas, compra de orbes, reputação | 20 receitas, sinks de ouro |
+| **Tutorial** | Mira: masmorra → habitat → loja → orbes (skippável) | 15 min guiado |
+| **Save** | localStorage v7+ (tutorial, reputação, biomas) | Igual + progresso por bioma |
+| **Áudio** | SFX Web Audio + música por bioma | SFX + 4 tracks finais |
+| **Arte** | Sprites v2 player/base/loja; tilesets bioma 1–3 | Sprites pintados + normal maps |
 
-**Regra:** seções abaixo descrevem o **design alvo**. Onde não houver nota, assuma “ainda não implementado”.
+**Regra:** seções abaixo descrevem o **design alvo**. Onde não houver nota, assuma “ainda não implementado” ou ver tabela acima.
 
 ---
 
