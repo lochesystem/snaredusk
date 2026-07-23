@@ -188,7 +188,7 @@
     "snaredusk": {
       "frameSize": 64,
       "anchorX": 0.5,
-      "anchorY": 1,
+      "anchorY": 0.875,
       "shadowY": 0,
       "nativeFacing": "left"
     }
