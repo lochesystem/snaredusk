@@ -67,6 +67,23 @@ function addTiledRect(
   parent.addChild(tile);
 }
 
+/** Repete somente no eixo X; a fase Y fixa evita faixas de teto virarem blocos de void. */
+function addHorizontalTiledBand(
+  parent: Container,
+  texture: import('pixi.js').Texture,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const tile = new TilingSprite({ texture, width, height });
+  tile.x = x;
+  tile.y = y;
+  tile.tilePosition.set(-x, 0);
+  tile.roundPixels = true;
+  parent.addChild(tile);
+}
+
 /** Infere orientação quando metadados ausentes (ex.: layouts legados). */
 export function resolveWallOrientation(wall: {
   width: number;
@@ -420,15 +437,20 @@ export function buildDungeonFloorLayer(
     }
   }
 
-  for (const room of layout.rooms) {
-    for (const segment of ceilingBandSegments(room)) {
-      if (ceilingTex) {
-        addTiledRect(root, ceilingTex, segment.x, segment.y, segment.width, segment.height);
-      } else {
-        const band = new Graphics();
-        band.rect(segment.x, segment.y, segment.width, segment.height);
-        band.fill({ color: theme.roomCeiling, alpha: 0.35 });
-        root.addChild(band);
+  // Na floresta, as bordas norte/sul já são o mesmo strip espelhado. A faixa
+  // de teto avançava sobre o piso apenas no lado norte e criava um retângulo
+  // assimétrico. Outros biomas ainda podem usar a profundidade de teto.
+  if (biomeId !== 'floresta') {
+    for (const room of layout.rooms) {
+      for (const segment of ceilingBandSegments(room)) {
+        if (ceilingTex) {
+          addHorizontalTiledBand(root, ceilingTex, segment.x, segment.y, segment.width, segment.height);
+        } else {
+          const band = new Graphics();
+          band.rect(segment.x, segment.y, segment.width, segment.height);
+          band.fill({ color: theme.roomCeiling, alpha: 0.35 });
+          root.addChild(band);
+        }
       }
     }
   }

@@ -33,7 +33,9 @@ const missingSprites = new Set<string>();
 let preloadPromise: Promise<void> | null = null;
 
 const CREATURE_ASSET_IDS: Partial<Record<string, string>> = {
-  esporo_dorminhoco: 'esporo_dorminhoco-v3',
+  esporo_dorminhoco: 'esporo_dorminhoco-v4',
+  lumimorcego: 'lumimorcego-v2',
+  carapaca_musgo: 'carapaca_musgo-v2',
   rei_esporas: 'rei_esporas-v4',
   prismarin: 'prismarin-v1',
   lumicascalho: 'lumicascalho-v1',

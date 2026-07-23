@@ -17,6 +17,9 @@ const DEFAULT_ENEMY_HITBOX: EnemyHitboxProfile = {
 };
 
 const ENEMY_HITBOXES: Record<string, EnemyHitboxProfile> = {
+  esporo_dorminhoco: { hitRadius: 21, hitOffsetY: -18, collisionRadius: 14, statusBarY: -42 },
+  lumimorcego: { hitRadius: 25, hitOffsetY: -25, collisionRadius: 14, statusBarY: -52 },
+  carapaca_musgo: { hitRadius: 29, hitOffsetY: -25, collisionRadius: 22, statusBarY: -53 },
   prismarin: { hitRadius: 25, hitOffsetY: -34, collisionRadius: 14, statusBarY: -50 },
   lumicascalho: { hitRadius: 26, hitOffsetY: -29, collisionRadius: 19, statusBarY: -49 },
   eco_quartzo: { hitRadius: 28, hitOffsetY: -36, collisionRadius: 20, statusBarY: -53 },

@@ -158,6 +158,9 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   const usesTexture = visual !== null;
   const layout = usesTexture ? getCreatureSpriteLayout(species.id) : null;
   const isDetailedCreature = species.id === 'prismarin'
+    || species.id === 'esporo_dorminhoco'
+    || species.id === 'lumimorcego'
+    || species.id === 'carapaca_musgo'
     || species.id === 'lumicascalho'
     || species.id === 'eco_quartzo'
     || species.id === 'matriarca_prismatica'
@@ -532,14 +535,27 @@ export function drawDungeonLayoutVector(
       continue;
     }
     if (hazard.kind === 'spore') {
-      g.circle(hazard.x, hazard.y, hazard.radius);
-      g.fill({ color: 0x2a4a2a, alpha: 0.35 });
-      g.circle(hazard.x, hazard.y, hazard.radius * 0.6);
-      g.fill({ color: 0x5dbb63, alpha: 0.2 });
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2;
-        g.circle(hazard.x + Math.cos(a) * hazard.radius * 0.7, hazard.y + Math.sin(a) * hazard.radius * 0.5, 4);
-        g.fill({ color: 0x8fd894, alpha: 0.35 });
+      const mist = poisonPuddlePoints(hazard.x, hazard.y, hazard.radius, 1);
+      g.poly(mist);
+      g.fill({ color: 0x3b6138, alpha: 0.12 });
+
+      const seed = hazard.x * 0.019 + hazard.y * 0.027;
+      for (let i = 0; i < 15; i++) {
+        const angle = i * 2.31 + seed;
+        const distance = hazard.radius * (0.18 + ((i * 37) % 73) / 100);
+        const px = hazard.x + Math.cos(angle) * distance;
+        const py = hazard.y + Math.sin(angle) * distance * 0.62;
+        const size = 0.7 + (i % 3) * 0.35;
+        g.circle(px, py, size);
+        g.fill({ color: i % 4 === 0 ? 0xc0e878 : 0x8fcf73, alpha: 0.28 + (i % 2) * 0.08 });
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const x = hazard.x - hazard.radius * 0.45 + i * hazard.radius * 0.42;
+        const y = hazard.y + hazard.radius * (i % 2 === 0 ? 0.12 : -0.08);
+        g.moveTo(x, y + 5);
+        g.bezierCurveTo(x - 3, y, x + 4, y - 5, x + 1, y - 10);
+        g.stroke({ width: 1, color: 0xb2df85, alpha: 0.16 });
       }
     }
   }

@@ -64,7 +64,7 @@ function assetBase(): string {
 
 function biomeTilesetUrl(biomeId: BiomeId): string {
   const atlas = biomeId === 'floresta'
-    ? 'tileset-v3'
+    ? 'tileset-v4'
     : biomeId === 'termal'
       ? 'tileset-v4'
       : biomeId === 'cristal'

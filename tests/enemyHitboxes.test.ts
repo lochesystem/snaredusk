@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { getEnemyHitbox } from '../src/data/enemyHitboxes.ts';
 
 describe('enemyHitboxes', () => {
-  it('keeps legacy enemies on the original compact hitbox', () => {
-    expect(getEnemyHitbox('lumimorcego')).toEqual({
-      hitRadius: 10,
-      hitOffsetY: 0,
-      collisionRadius: 9,
-      statusBarY: -22,
+  it('matches forest enemies to their new 64px silhouettes', () => {
+    expect(getEnemyHitbox('esporo_dorminhoco')).toMatchObject({ hitRadius: 21, hitOffsetY: -18 });
+    expect(getEnemyHitbox('lumimorcego')).toMatchObject({ hitRadius: 25, hitOffsetY: -25 });
+    expect(getEnemyHitbox('carapaca_musgo')).toMatchObject({
+      hitRadius: 29,
+      hitOffsetY: -25,
+      collisionRadius: 22,
     });
   });
 
