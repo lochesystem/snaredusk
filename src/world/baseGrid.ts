@@ -1,6 +1,6 @@
 import type { BaseGridState, BasePlacement } from '../types.ts';
 import { BASE_CELL_SIZE, BASE_MAP_HEIGHT, BASE_MAP_WIDTH } from '../engine/constants.ts';
-import { getStation } from '../data/baseStations.ts';
+import { canRotateStation, getStationFootprint } from '../data/baseStations.ts';
 import { createChestState } from '../systems/baseChest.ts';
 
 export const BaseCellKind = {
@@ -117,10 +117,10 @@ export function getSpawnPosition(base: BaseGridState): { x: number; y: number } 
 export function getShopStaircaseWorld(base: BaseGridState): { x: number; y: number } {
   const placement = base.placements.find((p) => p.stationId === 'shop_ladder');
   if (placement) {
-    const def = getStation(placement.stationId);
+    const footprint = getStationFootprint(placement.stationId, placement.rotation);
     return {
-      x: (placement.cellX + def.width / 2) * BASE_CELL_SIZE,
-      y: (placement.cellY + def.height / 2) * BASE_CELL_SIZE,
+      x: (placement.cellX + footprint.width / 2) * BASE_CELL_SIZE,
+      y: (placement.cellY + footprint.height / 2) * BASE_CELL_SIZE,
     };
   }
   const { startX, startY } = getInitialRoomOrigin(base);
@@ -131,10 +131,10 @@ export function getShopStaircaseWorld(base: BaseGridState): { x: number; y: numb
 export function getDungeonPortalWorld(base: BaseGridState): { x: number; y: number } {
   const placement = base.placements.find((p) => p.stationId === 'dungeon_portal');
   if (placement) {
-    const def = getStation(placement.stationId);
+    const footprint = getStationFootprint(placement.stationId, placement.rotation);
     return {
-      x: (placement.cellX + def.width / 2) * BASE_CELL_SIZE,
-      y: (placement.cellY + def.height / 2) * BASE_CELL_SIZE,
+      x: (placement.cellX + footprint.width / 2) * BASE_CELL_SIZE,
+      y: (placement.cellY + footprint.height / 2) * BASE_CELL_SIZE,
     };
   }
   const { startX, startY } = getInitialRoomOrigin(base);
@@ -188,9 +188,9 @@ export function getStationWallsForCollision(
     if (placement.stationId === 'habitat_pen') continue;
     if (placement.stationId === 'dungeon_portal' || placement.stationId === 'shop_ladder') continue;
 
-    const def = getStation(placement.stationId);
-    for (let dy = 0; dy < def.height; dy++) {
-      for (let dx = 0; dx < def.width; dx++) {
+    const footprint = getStationFootprint(placement.stationId, placement.rotation);
+    for (let dy = 0; dy < footprint.height; dy++) {
+      for (let dx = 0; dx < footprint.width; dx++) {
         const cx = placement.cellX + dx;
         const cy = placement.cellY + dy;
         walls.push({
@@ -240,7 +240,13 @@ export function normalizeBaseGrid(partial: BaseGridState | undefined): BaseGridS
     ? [...partial.cells]
     : [...def.cells];
 
-  const placements = migrateStationFootprints(ensureRequiredBasePlacements(partial.placements ?? def.placements));
+  const placements = migrateStationFootprints(ensureRequiredBasePlacements(partial.placements ?? def.placements))
+    .map((placement) => ({
+      ...placement,
+      rotation: canRotateStation(placement.stationId) && Number.isInteger(placement.rotation)
+        ? placement.rotation
+        : 0,
+    }));
   const chests = (partial.chests ?? def.chests).map((chest) => {
     const placement = placements.find((p) => p.id === chest.id && p.stationId === 'chest_wood');
     return placement ? { ...chest, cellX: placement.cellX, cellY: placement.cellY } : chest;

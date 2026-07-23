@@ -2,7 +2,12 @@ import { Container, Graphics, Sprite, Text } from 'pixi.js';
 
 import { getSpecies } from '../data/creatures.ts';
 
-import { getStation, type StationId } from '../data/baseStations.ts';
+import {
+  canRotateStation,
+  getStation,
+  getStationFootprint,
+  type StationId,
+} from '../data/baseStations.ts';
 
 import {
 
@@ -410,18 +415,22 @@ export class BaseScene {
       if (placement.stationId === 'dungeon_portal' || placement.stationId === 'shop_ladder') continue;
 
       const def = getStation(placement.stationId);
+      const footprint = getStationFootprint(placement.stationId, placement.rotation);
 
       const frameByStation: Partial<Record<StationId, string>> = {
         chest_wood: 'base_chest',
         workbench: 'base_workbench',
         bed: 'base_bed',
       };
-      const texture = getBaseStationTexture(frameByStation[placement.stationId] ?? '');
+      const frameBase = frameByStation[placement.stationId];
+      const texture = frameBase
+        ? getBaseStationTexture(`${frameBase}_${placement.rotation}`)
+        : null;
       if (texture) {
         const sprite = new Sprite(texture);
         sprite.anchor.set(0.5, 1);
-        sprite.x = (placement.cellX + def.width / 2) * BASE_CELL_SIZE;
-        sprite.y = (placement.cellY + def.height) * BASE_CELL_SIZE - 1;
+        sprite.x = (placement.cellX + footprint.width / 2) * BASE_CELL_SIZE;
+        sprite.y = (placement.cellY + footprint.height) * BASE_CELL_SIZE - 1;
         sprite.roundPixels = true;
         this.stationLayer.addChild(sprite);
         continue;
@@ -429,9 +438,9 @@ export class BaseScene {
 
       const gfx = new Graphics();
 
-      const w = def.width * BASE_CELL_SIZE - 4;
+      const w = footprint.width * BASE_CELL_SIZE - 4;
 
-      const h = def.height * BASE_CELL_SIZE - 4;
+      const h = footprint.height * BASE_CELL_SIZE - 4;
 
       const px = placement.cellX * BASE_CELL_SIZE + 2;
 
@@ -476,6 +485,13 @@ export class BaseScene {
     );
 
 
+
+    const ladderPlacement = state.base.placements.find((p) => p.stationId === 'shop_ladder');
+    const ladderRotation = ladderPlacement?.rotation ?? 0;
+    this.staircaseSprite.removeFromParent();
+    this.staircaseSprite.destroy({ children: true });
+    this.staircaseSprite = createStaircaseSprite(ladderRotation);
+    this.landmarkLayer.addChild(this.staircaseSprite);
 
     const stairs = getShopStaircaseWorld(state.base);
 
@@ -751,10 +767,15 @@ export class BaseScene {
 
   private handleInput(state: GameState): void {
 
-    if (this.input.consumeKey('r') && this.selectedTool && this.selectedTool !== 'move') {
-
-      this.rotateBuildGhost();
-
+    if (this.input.consumeKey('r') && this.selectedTool) {
+      const held = this.heldPlacementId ? findPlacementById(state, this.heldPlacementId) : null;
+      const stationId = this.selectedTool === 'move' ? held?.stationId : this.selectedTool;
+      if (stationId && canRotateStation(stationId)) {
+        this.rotateBuildGhost();
+        this.updateHint();
+      } else if (held?.stationId === 'dungeon_portal') {
+        this.cb.showToast('O portal mantém a orientação fixa');
+      }
     }
 
 
@@ -1080,10 +1101,15 @@ export class BaseScene {
       }
 
       this.heldPlacementId = placement.id;
+      this.buildRotation = placement.rotation;
 
       this.rebuildWorld();
 
-      this.cb.showToast('Clique onde reposicionar · [E] remover');
+      this.cb.showToast(
+        placement.stationId === 'dungeon_portal'
+          ? 'Clique onde reposicionar'
+          : 'Clique onde reposicionar · [R] girar · [E] remover',
+      );
 
       return;
 
@@ -1091,7 +1117,7 @@ export class BaseScene {
 
 
 
-    const result = relocatePlacement(state, this.heldPlacementId, cellX, cellY);
+    const result = relocatePlacement(state, this.heldPlacementId, cellX, cellY, this.buildRotation);
 
     if (result.ok) {
 
@@ -1183,11 +1209,11 @@ export class BaseScene {
 
     for (const p of state.base.placements) {
 
-      const def = getStation(p.stationId);
+      const footprint = getStationFootprint(p.stationId, p.rotation);
 
-      const cx = (p.cellX + def.width / 2) * BASE_CELL_SIZE;
+      const cx = (p.cellX + footprint.width / 2) * BASE_CELL_SIZE;
 
-      const cy = (p.cellY + def.height / 2) * BASE_CELL_SIZE;
+      const cy = (p.cellY + footprint.height / 2) * BASE_CELL_SIZE;
 
       const dist = distance(this.playerX, this.playerY, cx, cy);
 
@@ -1309,6 +1335,26 @@ export class BaseScene {
 
       excludeId = held.id;
 
+      if (held.stationId === 'habitat_pen' && held.habitatZone) {
+        const swap = this.buildRotation % 2 !== held.rotation % 2;
+        const zone = {
+          cellX: cell.x,
+          cellY: cell.y,
+          width: swap ? held.habitatZone.height : held.habitatZone.width,
+          height: swap ? held.habitatZone.width : held.habitatZone.height,
+        };
+        const check = canPlaceHabitatPen(state, zone, held.id);
+        const px = zone.cellX * BASE_CELL_SIZE - this.camera.x;
+        const py = zone.cellY * BASE_CELL_SIZE - this.camera.y;
+        const w = zone.width * BASE_CELL_SIZE;
+        const h = zone.height * BASE_CELL_SIZE;
+        this.ghostGfx.clear();
+        this.ghostGfx.rect(px, py, w, h);
+        this.ghostGfx.fill({ color: check.ok ? 0x5dbb63 : 0xcc4444, alpha: 0.35 });
+        this.ghostGfx.stroke({ width: 2, color: check.ok ? 0xc4f082 : 0xff6666, alpha: 0.8 });
+        return;
+      }
+
     } else if (this.selectedTool === 'habitat_pen' && this.penDragStart) {
 
       const preview = previewDragZone(this.penDragStart.x, this.penDragStart.y, cell.x, cell.y);
@@ -1347,9 +1393,16 @@ export class BaseScene {
 
 
 
-    const def = getStation(stationId);
+    const footprint = getStationFootprint(stationId, this.buildRotation);
 
-    const check = canPlaceStation(state, stationId, cell.x, cell.y, excludeId);
+    const check = canPlaceStation(
+      state,
+      stationId,
+      cell.x,
+      cell.y,
+      excludeId,
+      this.buildRotation,
+    );
 
 
 
@@ -1357,9 +1410,9 @@ export class BaseScene {
 
     const py = cell.y * BASE_CELL_SIZE - this.camera.y;
 
-    const w = def.width * BASE_CELL_SIZE;
+    const w = footprint.width * BASE_CELL_SIZE;
 
-    const h = def.height * BASE_CELL_SIZE;
+    const h = footprint.height * BASE_CELL_SIZE;
 
 
 
@@ -1388,8 +1441,10 @@ export class BaseScene {
       const permanentLandmark = held?.stationId === 'dungeon_portal' || held?.stationId === 'shop_ladder';
       hint = this.heldPlacementId
         ? permanentLandmark
-          ? 'Mover: clique para colocar · Esc cancelar'
-          : 'Mover: clique para colocar · [E] remover estação · Esc cancelar'
+          ? held?.stationId === 'dungeon_portal'
+            ? 'Mover: clique para colocar · portal com orientação fixa · Esc cancelar'
+            : 'Mover: clique para colocar · [R] girar 90° · Esc cancelar'
+          : 'Mover: clique para colocar · [R] girar 90° · [E] remover estação · Esc cancelar'
         : 'Mover: clique numa estação para levantar · Esc cancelar';
 
       this.cb.setHint(hint);
@@ -1414,7 +1469,7 @@ export class BaseScene {
 
       const def = getStation(this.selectedTool);
 
-      hint = `${def.name}: clique para colocar · Esc cancelar`;
+      hint = `${def.name}: clique para colocar · [R] girar 90° · Esc cancelar`;
 
       this.cb.setHint(hint);
 

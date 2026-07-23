@@ -23,6 +23,23 @@ describe('weaponAttack', () => {
     expect(isTargetInMeleeSweep(0, -4, 0, -20, 0, 'knife', 34, 10)).toBe(false);
   });
 
+  it('hits the visible edge of a large crystal enemy', () => {
+    const weapon = WEAPONS.faca_enferrujada!;
+    const hits = findMeleeHits(0, 0, 0, weapon, [
+      {
+        id: 'prismarin',
+        x: 55,
+        y: 0,
+        def: 0,
+        dead: false,
+        fled: false,
+        captureLocked: false,
+        hitRadius: 25,
+      },
+    ]);
+    expect(hits.map((hit) => hit.id)).toContain('prismarin');
+  });
+
   it('knife misses targets behind the player', () => {
     expect(isTargetInMeleeSweep(0, -4, 0, -8, -22, 'knife', 34, 10)).toBe(false);
   });

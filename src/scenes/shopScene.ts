@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { getSpecies } from '../data/creatures.ts';
+import { getEnemyHitbox } from '../data/enemyHitboxes.ts';
 import { PLAYER_SPEED } from '../engine/constants.ts';
 import { Camera } from '../engine/camera.ts';
 import type { InputManager } from '../engine/input.ts';
@@ -42,6 +43,17 @@ const SPAWN_GAP = 2.4;
 const CUSTOMER_SEPARATION = 22;
 /** Ultrapassa a profundidade dos expositores para permitir interação pelo corredor frontal. */
 const SHOP_INTERACT_RADIUS = 60;
+
+/**
+ * Os atlas térmicos já usam o ponto dos pés perto da base do frame. O lift
+ * global do cercado, necessário para os sprites antigos, os deixava altos.
+ */
+const THERMAL_CAGE_Y_OFFSET: Partial<Record<string, number>> = {
+  salamandra: 8,
+  vaporoso: 4,
+  caranguejo_termal: 10,
+  salamandra_ancia: 6,
+};
 
 const CUSTOMER_COLORS: Record<string, number> = {
   morador: 0x6a8ab8,
@@ -204,8 +216,14 @@ export class ShopScene {
         creature.setLocomotion(false);
         const isBoss = species.behaviorId.startsWith('boss_');
         if (isBoss) creature.scale.set(0.9);
+        const creatureYOffset = THERMAL_CAGE_Y_OFFSET[species.id] ?? 0;
+        creature.y = creatureYOffset;
         item = creature;
-        labelY = isBoss ? -54 : -29;
+        const hitbox = getEnemyHitbox(species.id);
+        labelY = Math.min(
+          isBoss ? -54 : -29,
+          hitbox.statusBarY + creatureYOffset - 4,
+        );
         itemName = new Text({
           text: species.name,
           style: { fontFamily: 'monospace', fontSize: 7, fill: 0xf0e6d3 },

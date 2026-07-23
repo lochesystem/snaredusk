@@ -35,6 +35,14 @@ let preloadPromise: Promise<void> | null = null;
 const CREATURE_ASSET_IDS: Partial<Record<string, string>> = {
   esporo_dorminhoco: 'esporo_dorminhoco-v3',
   rei_esporas: 'rei_esporas-v4',
+  prismarin: 'prismarin-v1',
+  lumicascalho: 'lumicascalho-v1',
+  eco_quartzo: 'eco_quartzo-v1',
+  matriarca_prismatica: 'matriarca_prismatica-v1',
+  salamandra: 'salamandra-v1',
+  vaporoso: 'vaporoso-v1',
+  caranguejo_termal: 'caranguejo_termal-v1',
+  salamandra_ancia: 'salamandra_ancia-v1',
 };
 
 function creatureAssetBase(): string {

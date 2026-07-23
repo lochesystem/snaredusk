@@ -46,6 +46,33 @@ describe('baseBuild', () => {
     expect(bench.cellY).toBe(spot.y);
   });
 
+  it('gira bancada em 90 graus e troca a área ocupada de 2x1 para 1x2', () => {
+    const state = defaultGameState();
+    const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
+    let spot = { x: -1, y: -1 };
+    outer: for (let y = 0; y < state.base.height; y++) {
+      for (let x = 0; x < state.base.width; x++) {
+        if (canPlaceStation(state, 'workbench', x, y, bench.id, 1).ok
+          && canPlaceStation(state, 'chest_wood', x + 1, y, bench.id).ok) {
+          spot = { x, y };
+          break outer;
+        }
+      }
+    }
+
+    expect(relocatePlacement(state, bench.id, spot.x, spot.y, 1).ok).toBe(true);
+    expect(bench.rotation).toBe(1);
+    expect(canPlaceStation(state, 'chest_wood', spot.x, spot.y + 1).ok).toBe(false);
+    expect(canPlaceStation(state, 'chest_wood', spot.x + 1, spot.y).ok).toBe(true);
+  });
+
+  it('mantém o portal na orientação fixa ao reposicionar', () => {
+    const state = defaultGameState();
+    const portal = state.base.placements.find((p) => p.stationId === 'dungeon_portal')!;
+    expect(relocatePlacement(state, portal.id, portal.cellX, portal.cellY, 1).ok).toBe(true);
+    expect(portal.rotation).toBe(0);
+  });
+
   it('não remove baú com itens', () => {
     const state = defaultGameState();
     const chest = state.base.chests[0];

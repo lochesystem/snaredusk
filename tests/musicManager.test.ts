@@ -5,6 +5,7 @@ class MockAudioElement {
   preload = '';
   volume = 1;
   currentTime = 0;
+  duration = 104.760979;
   paused = true;
   src = '';
   private listeners = new Map<string, Set<() => void>>();
@@ -35,6 +36,10 @@ class MockAudioElement {
       this.listeners.get(type)!.delete(listener);
       this.listeners.get(type)!.add(wrapped);
     }
+  }
+
+  dispatch(type: string): void {
+    for (const listener of this.listeners.get(type) ?? []) listener();
   }
 }
 
@@ -109,5 +114,20 @@ describe('musicManager', () => {
     await Promise.resolve();
     const playing = createdAudios.find((audio) => audio.src.includes('shop.mp3'));
     expect(playing?.volume).toBe(0.4);
+  });
+
+  it('crossfades the crystal biome ending into a fresh playback slot', async () => {
+    setMusicUnlocked(true);
+    playMusic('biome_cristal');
+    await Promise.resolve();
+
+    const first = createdAudios.find((audio) => audio.src.includes('biome_cristal.mp3'))!;
+    expect(first.loop).toBe(false);
+    first.currentTime = first.duration - 1;
+    first.dispatch('timeupdate');
+    await Promise.resolve();
+
+    expect(createdAudios.filter((audio) => audio.src.includes('biome_cristal.mp3'))).toHaveLength(2);
+    expect(createdAudios.every((audio) => audio.loop === false)).toBe(true);
   });
 });

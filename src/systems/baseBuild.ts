@@ -1,4 +1,11 @@
-import { FREE_BUILD_COUNT, getStation, type StationId } from '../data/baseStations.ts';
+import {
+  canRotateStation,
+  FREE_BUILD_COUNT,
+  getStation,
+  getStationFootprint,
+  type StationId,
+  type StationRotation,
+} from '../data/baseStations.ts';
 import type { BaseHabitatZone, BasePlacement, GameState } from '../types.ts';
 import { BaseCellKind, getCell, isWalkableCell } from '../world/baseGrid.ts';
 import { createChestState, findChestAt } from './baseChest.ts';
@@ -12,8 +19,8 @@ export interface PlaceResult {
 
 function getPlacementFootprint(p: BasePlacement): BaseHabitatZone {
   if (p.stationId === 'habitat_pen' && p.habitatZone) return p.habitatZone;
-  const def = getStation(p.stationId);
-  return { cellX: p.cellX, cellY: p.cellY, width: def.width, height: def.height };
+  const footprint = getStationFootprint(p.stationId, p.rotation);
+  return { cellX: p.cellX, cellY: p.cellY, ...footprint };
 }
 
 function zoneOccupiedByPlacements(
@@ -71,12 +78,14 @@ export function canPlaceStation(
   cellX: number,
   cellY: number,
   excludePlacementId?: string,
+  rotation: StationRotation = 0,
 ): PlaceResult {
   const def = getStation(stationId);
+  const footprint = getStationFootprint(stationId, rotation);
   const base = state.base;
 
-  for (let dy = 0; dy < def.height; dy++) {
-    for (let dx = 0; dx < def.width; dx++) {
+  for (let dy = 0; dy < footprint.height; dy++) {
+    for (let dx = 0; dx < footprint.width; dx++) {
       const cx = cellX + dx;
       const cy = cellY + dy;
       if (!isWalkableCell(base, cx, cy)) {
@@ -88,7 +97,7 @@ export function canPlaceStation(
     }
   }
 
-  if (occupiesCells(base.placements, cellX, cellY, def.width, def.height, excludePlacementId)) {
+  if (occupiesCells(base.placements, cellX, cellY, footprint.width, footprint.height, excludePlacementId)) {
     return { ok: false, message: 'Espaço ocupado' };
   }
 
@@ -160,7 +169,8 @@ export function placeStation(
     return { ok: false, message: 'Arraste no mapa para criar o cercado' };
   }
 
-  const check = canPlaceStation(state, stationId, cellX, cellY);
+  const normalizedRotation = canRotateStation(stationId) ? rotation : 0;
+  const check = canPlaceStation(state, stationId, cellX, cellY, undefined, normalizedRotation);
   if (!check.ok) return check;
 
   const def = getStation(stationId);
@@ -178,7 +188,7 @@ export function placeStation(
     stationId,
     cellX,
     cellY,
-    rotation,
+    rotation: normalizedRotation,
   };
   state.base.placements.push(placement);
 
@@ -198,38 +208,45 @@ export function relocatePlacement(
   placementId: string,
   cellX: number,
   cellY: number,
+  rotation?: StationRotation,
 ): PlaceResult {
   const placement = findPlacementById(state, placementId);
   if (!placement) return { ok: false, message: 'Não encontrado' };
+  const targetRotation = rotation ?? placement.rotation;
 
   if (placement.stationId === 'habitat_pen' && placement.habitatZone) {
     const dx = cellX - placement.cellX;
     const dy = cellY - placement.cellY;
+    const shouldSwap = targetRotation % 2 !== placement.rotation % 2;
     const newZone: BaseHabitatZone = {
       cellX: placement.habitatZone.cellX + dx,
       cellY: placement.habitatZone.cellY + dy,
-      width: placement.habitatZone.width,
-      height: placement.habitatZone.height,
+      width: shouldSwap ? placement.habitatZone.height : placement.habitatZone.width,
+      height: shouldSwap ? placement.habitatZone.width : placement.habitatZone.height,
     };
     const check = canPlaceHabitatPen(state, newZone, placementId);
     if (!check.ok) return check;
     placement.habitatZone = newZone;
     placement.cellX = newZone.cellX;
     placement.cellY = newZone.cellY;
+    placement.rotation = targetRotation;
     return { ok: true, message: 'Cercado movido!' };
   }
 
+  const normalizedRotation = canRotateStation(placement.stationId) ? targetRotation : 0;
   const check = canPlaceStation(
     state,
     placement.stationId,
     cellX,
     cellY,
     placementId,
+    normalizedRotation,
   );
   if (!check.ok) return check;
 
   placement.cellX = cellX;
   placement.cellY = cellY;
+  placement.rotation = normalizedRotation;
 
   if (placement.stationId === 'chest_wood') {
     const chest = state.base.chests.find((c) => c.id === placement.id);

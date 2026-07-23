@@ -60,6 +60,9 @@ function addTiledRect(
   const tile = new TilingSprite({ texture, width, height });
   tile.x = x;
   tile.y = y;
+  // Mantém a fase da textura nas coordenadas do mundo. Salas e corredores são
+  // retângulos separados, mas precisam parecer um único piso contínuo.
+  tile.tilePosition.set(-x, -y);
   tile.roundPixels = true;
   parent.addChild(tile);
 }
@@ -387,9 +390,13 @@ export function buildDungeonFloorLayer(
   for (const room of layout.rooms) {
     const r = room.rect;
     const tint = roomTypeTint(room.type);
+    const alpha = biomeId === 'termal'
+      ? room.type === 'combat' ? 0 : 0.07
+      : 0.22;
+    if (alpha <= 0) continue;
     const overlay = new Graphics();
     overlay.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
-    overlay.fill({ color: tint, alpha: 0.22 });
+    overlay.fill({ color: tint, alpha });
     root.addChild(overlay);
   }
 

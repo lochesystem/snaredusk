@@ -49,6 +49,7 @@ import {
 } from '../world/weaponAttackFx.ts';
 import { getEquippedWeapon } from '../data/weapons.ts';
 import { getEnemyBehavior } from '../data/enemyBehaviors.ts';
+import { getEnemyHitbox } from '../data/enemyHitboxes.ts';
 import { calcDamage, circlesOverlap, distance, normalize } from '../systems/combat.ts';
 import {
   applyShieldDamage,
@@ -1020,6 +1021,8 @@ export class DungeonScene {
           dead: e.dead,
           fled: e.fled,
           captureLocked: e.captureLocked,
+          hitRadius: getEnemyHitbox(e.speciesId).hitRadius,
+          hitOffsetY: getEnemyHitbox(e.speciesId).hitOffsetY,
         })),
       );
       for (const hit of hits) {
@@ -1112,7 +1115,14 @@ export class DungeonScene {
       if (p.owner === 'player' || p.owner === 'companion') {
         for (const enemy of this.enemies) {
           if (enemy.dead || enemy.fled) continue;
-          if (!projectileHitEnemy(p, enemy.id, enemy.x, enemy.y)) continue;
+          const hitbox = getEnemyHitbox(enemy.speciesId);
+          if (!projectileHitEnemy(
+            p,
+            enemy.id,
+            enemy.x,
+            enemy.y + hitbox.hitOffsetY,
+            hitbox.hitRadius,
+          )) continue;
 
           const behavior = getEnemyBehavior(enemy.behaviorId);
           const phaseMods = getBossPhaseModifiers(enemy, behavior);
@@ -1310,6 +1320,9 @@ export class DungeonScene {
   private attachEnemyStatusBars(enemy: LiveEnemy): void {
     enemy.statusBars?.root.parent?.removeChild(enemy.statusBars.root);
     const bars = createEnemyStatusBars(enemy.shieldMax > 0, enemy.isBoss);
+    if (!enemy.isBoss || enemy.speciesId === 'matriarca_prismatica') {
+      bars.root.y = getEnemyHitbox(enemy.speciesId).statusBarY;
+    }
     enemy.statusBars = bars;
     enemy.container.addChild(bars.root);
     this.updateEnemyStatusBars(enemy);
@@ -1409,6 +1422,7 @@ export class DungeonScene {
           walls,
           floors: this.layout.floors,
           obstacles: this.layout.obstacles,
+          collisionRadius: getEnemyHitbox(enemy.speciesId).collisionRadius,
         });
         enemy.x = wander.x;
         enemy.y = wander.y;
@@ -1474,7 +1488,7 @@ export class DungeonScene {
           enemy.y,
           result.moveX - enemy.x,
           result.moveY - enemy.y,
-          9,
+          getEnemyHitbox(enemy.speciesId).collisionRadius,
           walls,
           this.layout.floors,
           this.layout.obstacles,
@@ -1535,7 +1549,12 @@ export class DungeonScene {
       const species = getSpecies(enemy.speciesId);
       if (!species.capturable) continue;
       if (!canTargetForCapture(enemy.hp, enemy.maxHp)) continue;
-      const d = distance(this.playerX, this.playerY, enemy.x, enemy.y);
+      const hitbox = getEnemyHitbox(enemy.speciesId);
+      const d = Math.max(
+        0,
+        distance(this.playerX, this.playerY, enemy.x, enemy.y + hitbox.hitOffsetY)
+          - hitbox.hitRadius,
+      );
       if (d < CAPTURE_RANGE && d < bestDist) {
         best = enemy;
         bestDist = d;

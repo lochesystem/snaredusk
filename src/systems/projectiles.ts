@@ -102,9 +102,15 @@ export function advanceProjectile(
   return true;
 }
 
-export function projectileHitEnemy(p: Projectile, enemyId: string, ex: number, ey: number): boolean {
+export function projectileHitEnemy(
+  p: Projectile,
+  enemyId: string,
+  ex: number,
+  ey: number,
+  enemyRadius = 10,
+): boolean {
   if (p.hitIds.has(enemyId)) return false;
-  return circlesOverlap(p.x, p.y, p.radius, ex, ey, 10);
+  return circlesOverlap(p.x, p.y, p.radius, ex, ey, enemyRadius);
 }
 
 export function markProjectileHit(p: Projectile, enemyId: string): boolean {

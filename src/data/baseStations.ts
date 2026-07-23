@@ -52,7 +52,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
   bed: {
     id: 'bed',
     name: 'Cama',
-    width: 2,
+    width: 1,
     height: 2,
     goldCost: 0,
     color: 0x4a3d5c,
@@ -84,6 +84,26 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
 export const BUILDABLE_STATIONS: StationId[] = ['workbench', 'chest_wood', 'habitat_pen'];
 
 export const FREE_BUILD_COUNT = 3;
+
+export type StationRotation = 0 | 1 | 2 | 3;
+
+/**
+ * Área real ocupada pela estação. Vistas laterais trocam os eixos da grade;
+ * o portal é o único marco que permanece sempre na orientação original.
+ */
+export function getStationFootprint(
+  id: StationId,
+  rotation: StationRotation = 0,
+): { width: number; height: number } {
+  const def = getStation(id);
+  const normalized = id === 'dungeon_portal' ? 0 : rotation;
+  if (normalized % 2 === 1) return { width: def.height, height: def.width };
+  return { width: def.width, height: def.height };
+}
+
+export function canRotateStation(id: StationId): boolean {
+  return id !== 'dungeon_portal';
+}
 
 export function getStation(id: StationId): StationDef {
   return BASE_STATIONS[id];

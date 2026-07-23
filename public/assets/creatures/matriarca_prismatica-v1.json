@@ -1,0 +1,196 @@
+{
+  "frames": {
+    "matriarca_prismatica_idle_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_idle_1": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_idle_2": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_idle_3": {
+      "frame": {
+        "x": 288,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_walk_0": {
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_walk_1": {
+      "frame": {
+        "x": 96,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_walk_2": {
+      "frame": {
+        "x": 192,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    },
+    "matriarca_prismatica_walk_3": {
+      "frame": {
+        "x": 288,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      }
+    }
+  },
+  "animations": {
+    "idle": [
+      "matriarca_prismatica_idle_0",
+      "matriarca_prismatica_idle_1",
+      "matriarca_prismatica_idle_2",
+      "matriarca_prismatica_idle_3"
+    ],
+    "walk": [
+      "matriarca_prismatica_walk_0",
+      "matriarca_prismatica_walk_1",
+      "matriarca_prismatica_walk_2",
+      "matriarca_prismatica_walk_3"
+    ]
+  },
+  "meta": {
+    "app": "Snaredusk",
+    "version": "1.0",
+    "image": "matriarca_prismatica-v1.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 384,
+      "h": 192
+    },
+    "scale": "1",
+    "snaredusk": {
+      "frameSize": 96,
+      "anchorX": 0.5,
+      "anchorY": 1,
+      "shadowY": 0,
+      "nativeFacing": "left"
+    }
+  }
+}

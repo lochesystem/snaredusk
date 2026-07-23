@@ -63,12 +63,20 @@ function assetBase(): string {
 }
 
 function biomeTilesetUrl(biomeId: BiomeId): string {
-  const atlas = biomeId === 'floresta' ? 'tileset-v3' : 'tileset';
+  const atlas = biomeId === 'floresta'
+    ? 'tileset-v3'
+    : biomeId === 'termal'
+      ? 'tileset-v4'
+      : biomeId === 'cristal'
+      ? 'tileset-v2'
+      : 'tileset';
   return `${assetBase()}/biomes/${biomeId}/${atlas}.json`;
 }
 
 function biomePropsUrl(biomeId: BiomeId): string {
-  const atlas = biomeId === 'floresta' ? 'props-v2' : 'props';
+  const atlas = biomeId === 'floresta' || biomeId === 'cristal' || biomeId === 'termal'
+    ? 'props-v2'
+    : 'props';
   return `${assetBase()}/biomes/${biomeId}/${atlas}.json`;
 }
 
@@ -77,7 +85,7 @@ function baseTilesetUrl(): string {
 }
 
 function baseStationsUrl(): string {
-  return `${assetBase()}/base/stations-v2.json`;
+  return `${assetBase()}/base/stations-v3.json`;
 }
 
 function baseLandmarksUrl(): string {
@@ -147,7 +155,7 @@ async function loadBaseTilesetInternal(): Promise<void> {
 
 async function loadBaseStationsInternal(): Promise<void> {
   if (baseStations || baseStationsMissing) return;
-  const textures = await loadAtlas(baseStationsUrl(), 'base-stations-v2', 'nearest');
+  const textures = await loadAtlas(baseStationsUrl(), 'base-stations-v3', 'nearest');
   if (textures) {
     baseStations = textures;
   } else {

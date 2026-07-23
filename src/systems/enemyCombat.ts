@@ -3,6 +3,7 @@ import { getEnemyBehavior, isBossBehaviorKind, isRangedBossKind } from '../data/
 import { getBossPhaseModifiers, type BossCombatPhase } from './bossPhase.ts';
 import { calcDamage, distance, normalize } from './combat.ts';
 import { createProjectileData } from './projectiles.ts';
+import { getEnemyHitbox } from '../data/enemyHitboxes.ts';
 
 export type EnemyCombatPhase = 'idle' | 'windup' | 'burst' | 'charge' | 'leap';
 
@@ -140,7 +141,10 @@ export function tickEnemyCombat(
 
   const behavior = getEffectiveBehavior(enemy, getEnemyBehavior(enemy.behaviorId));
   const baseBehavior = getEnemyBehavior(enemy.behaviorId);
-  const dist = distance(enemy.x, enemy.y, ctx.playerX, ctx.playerY);
+  const centerDist = distance(enemy.x, enemy.y, ctx.playerX, ctx.playerY);
+  // Compara a distância até a borda visível sem alterar o balanço dos sprites antigos.
+  const reachPadding = Math.max(0, getEnemyHitbox(enemy.speciesId).hitRadius - 10);
+  const dist = Math.max(0, centerDist - reachPadding);
 
   if (enemy.combatPhase === 'charge') {
     enemy.phaseTimer -= ctx.dt;

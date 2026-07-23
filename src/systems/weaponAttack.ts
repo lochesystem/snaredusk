@@ -10,6 +10,8 @@ export interface MeleeTarget {
   dead: boolean;
   fled: boolean;
   captureLocked: boolean;
+  hitRadius?: number;
+  hitOffsetY?: number;
 }
 
 export function findMeleeHits(
@@ -25,7 +27,16 @@ export function findMeleeHits(
 
   for (const t of targets) {
     if (t.dead || t.fled || t.captureLocked) continue;
-    if (!isTargetInMeleeSweep(playerX, playerY - 4, aimAngle, t.x, t.y, style, weapon.range)) {
+    if (!isTargetInMeleeSweep(
+      playerX,
+      playerY - 4,
+      aimAngle,
+      t.x,
+      t.y + (t.hitOffsetY ?? 0),
+      style,
+      weapon.range,
+      t.hitRadius,
+    )) {
       continue;
     }
     hits.push({ id: t.id, damage: weapon.atk });

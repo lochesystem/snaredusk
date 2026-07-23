@@ -4,7 +4,6 @@ import { normalize } from './combat.ts';
 import { moveWithCollision } from '../world/collision.ts';
 
 export const ENEMY_WANDER_SPEED = 42;
-const ENEMY_RADIUS = 9;
 const ROOM_MARGIN = 28;
 
 export interface EnemyWanderFields {
@@ -35,6 +34,7 @@ export interface EnemyWanderContext {
   walls: Rect[];
   floors: Rect[];
   obstacles: DungeonObstacle[];
+  collisionRadius?: number;
   /** Opcional — usa Math.random quando omitido (testes passam rng). */
   rng?: () => number;
 }
@@ -47,12 +47,13 @@ export interface EnemyWanderResult {
   bobOffset: number;
 }
 
-function roomBounds(roomRect: Rect) {
+function roomBounds(roomRect: Rect, collisionRadius: number) {
+  const margin = Math.max(ROOM_MARGIN, collisionRadius + 6);
   return {
-    minX: roomRect.x + ROOM_MARGIN,
-    minY: roomRect.y + ROOM_MARGIN,
-    maxX: roomRect.x + roomRect.width - ROOM_MARGIN,
-    maxY: roomRect.y + roomRect.height - ROOM_MARGIN,
+    minX: roomRect.x + margin,
+    minY: roomRect.y + margin,
+    maxX: roomRect.x + roomRect.width - margin,
+    maxY: roomRect.y + roomRect.height - margin,
   };
 }
 
@@ -70,7 +71,8 @@ export function tickEnemyWander(
   ctx: EnemyWanderContext,
 ): EnemyWanderResult {
   const rng = ctx.rng ?? Math.random;
-  const bounds = roomBounds(ctx.roomRect);
+  const collisionRadius = ctx.collisionRadius ?? 9;
+  const bounds = roomBounds(ctx.roomRect, collisionRadius);
 
   fields.wanderTimer -= ctx.dt;
   fields.wanderPauseTimer -= ctx.dt;
@@ -109,7 +111,7 @@ export function tickEnemyWander(
       y,
       dir.x * step,
       dir.y * step,
-      ENEMY_RADIUS,
+      collisionRadius,
       ctx.walls,
       ctx.floors,
       ctx.obstacles,

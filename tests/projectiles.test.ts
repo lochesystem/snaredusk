@@ -21,6 +21,13 @@ describe('projectiles', () => {
     expect(projectileHitEnemy(p, 'e1', 12, 10)).toBe(false);
   });
 
+  it('uses a larger radius for large enemy sprites', () => {
+    const data = createProjectileData(0, 0, 0, 0, 5, 'player', 50, 0, 6);
+    const p = { ...data, container: null as never, hitIds: new Set<string>() };
+    expect(projectileHitEnemy(p, 'crystal', 28, 0)).toBe(false);
+    expect(projectileHitEnemy(p, 'crystal', 28, 0, 23)).toBe(true);
+  });
+
   it('detects player hit', () => {
     const data = createProjectileData(0, 0, 0, 0, 5, 'enemy', 50, 0, 6);
     const p = { ...data, container: null as never, hitIds: new Set<string>() };

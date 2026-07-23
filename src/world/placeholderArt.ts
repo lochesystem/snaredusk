@@ -20,6 +20,7 @@ import {
   chestPropFrameName,
   getBaseLandmarkTexture,
   getBasePortalTextures,
+  getBaseStationTexture,
   getBiomePropTexture,
 } from './environmentAssets.ts';
 import { getShopPropTexture } from './shopAssets.ts';
@@ -156,13 +157,31 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   const visual = getCreatureVisual(species.id);
   const usesTexture = visual !== null;
   const layout = usesTexture ? getCreatureSpriteLayout(species.id) : null;
+  const isDetailedCreature = species.id === 'prismarin'
+    || species.id === 'lumicascalho'
+    || species.id === 'eco_quartzo'
+    || species.id === 'matriarca_prismatica'
+    || species.id === 'salamandra'
+    || species.id === 'vaporoso'
+    || species.id === 'caranguejo_termal'
+    || species.id === 'salamandra_ancia';
   let flipTarget: Sprite | AnimatedSprite | null = null;
   let animSprite: AnimatedSprite | null = null;
   let idleTextures: Texture[] | null = null;
   let walkTextures: Texture[] | null = null;
   const facing = { value: 1 };
 
-  const shadow = drawShadow(root, species.id === 'rei_esporas' ? 36 : 18);
+  const isBoss = species.behaviorId.startsWith('boss_');
+  const shadowRadius = species.id === 'matriarca_prismatica'
+    ? 42
+    : species.id === 'salamandra_ancia'
+      ? 44
+      : species.id === 'rei_esporas'
+        ? 36
+        : isDetailedCreature
+          ? 22
+          : 18;
+  const shadow = drawShadow(root, shadowRadius);
   shadow.y = layout?.shadowY ?? 6;
 
   if (visual?.kind === 'animated') {
@@ -202,7 +221,17 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
 
   if (capturableGlow) {
     const glow = new Graphics();
-    glow.roundRect(-12, -12, 24, 20, 5);
+    const glowW = species.id === 'matriarca_prismatica'
+      ? 82
+      : species.id === 'salamandra_ancia'
+        ? 88
+        : isDetailedCreature ? 46 : 24;
+    const glowH = species.id === 'matriarca_prismatica'
+      ? 72
+      : species.id === 'salamandra_ancia'
+        ? 68
+        : isDetailedCreature ? 42 : 20;
+    glow.roundRect(-glowW / 2, -glowH, glowW, glowH, isBoss ? 12 : 5);
     glow.stroke({ width: 2, color: 0xc4f082, alpha: 0.9 });
     root.addChildAt(glow, 0);
   }
@@ -269,19 +298,20 @@ export function createPortalSprite(): Container {
   return root;
 }
 
-export function createStaircaseSprite(): Container {
+export function createStaircaseSprite(rotation: 0 | 1 | 2 | 3 = 0): Container {
   const root = new Container();
-  const texture = getBaseLandmarkTexture('shop_ladder');
+  const texture = getBaseStationTexture(`shop_ladder_${rotation}`)
+    ?? getBaseLandmarkTexture('shop_ladder');
   if (texture) {
     const ladder = new Sprite(texture);
     ladder.anchor.set(0.5, 1);
-    ladder.y = 29;
+    ladder.y = 1;
     ladder.roundPixels = true;
     root.addChild(ladder);
 
     const label = createPixelText('Loja', 9, 0xd8c8a8);
     label.anchor.set(0.5);
-    label.y = 32;
+    label.y = 10;
     root.addChild(label);
     return root;
   }
@@ -473,12 +503,32 @@ export function drawDungeonLayoutVector(
 
   for (const hazard of hazards) {
     if (hazard.kind === 'poison') {
-      g.ellipse(hazard.x, hazard.y + 2, hazard.radius, hazard.radius * 0.55);
-      g.fill({ color: 0x3a6a28, alpha: 0.55 });
-      g.ellipse(hazard.x, hazard.y, hazard.radius * 0.65, hazard.radius * 0.35);
-      g.fill({ color: 0x5a9a40, alpha: 0.35 });
-      g.ellipse(hazard.x, hazard.y - 2, hazard.radius * 0.35, hazard.radius * 0.2);
-      g.fill({ color: 0x8fd060, alpha: 0.25 });
+      const puddle = poisonPuddlePoints(hazard.x, hazard.y, hazard.radius, 1);
+      g.poly(puddle);
+      g.fill({ color: 0x30461f, alpha: 0.72 });
+      g.stroke({ width: 1.5, color: 0x657a32, alpha: 0.62 });
+
+      const inner = poisonPuddlePoints(hazard.x - 2, hazard.y, hazard.radius, 0.72);
+      g.poly(inner);
+      g.fill({ color: 0x526f2a, alpha: 0.28 });
+
+      for (let i = 0; i < 4; i++) {
+        const a = i * 2.17 + hazard.x * 0.013 + hazard.y * 0.007;
+        const bx = hazard.x + Math.cos(a) * hazard.radius * 0.55;
+        const by = hazard.y + Math.sin(a) * hazard.radius * 0.3;
+        const bubbleRadius = 1.4 + (i % 2) * 0.8;
+        g.circle(bx, by, bubbleRadius);
+        g.fill({ color: 0x9bad55, alpha: 0.5 });
+        g.stroke({ width: 0.75, color: 0x26381a, alpha: 0.8 });
+      }
+
+      for (let i = 0; i < 2; i++) {
+        const sx = hazard.x - hazard.radius * 0.25 + i * hazard.radius * 0.42;
+        const sy = hazard.y - hazard.radius * 0.18;
+        g.moveTo(sx, sy);
+        g.bezierCurveTo(sx - 3, sy - 5, sx + 4, sy - 8, sx + 1, sy - 13);
+        g.stroke({ width: 1, color: 0xa6b56a, alpha: 0.24 });
+      }
       continue;
     }
     if (hazard.kind === 'spore') {
@@ -556,6 +606,28 @@ export function drawDungeonLayoutVector(
   for (const chest of chests) {
     drawChestGraphic(g, chest.x, chest.y, chest.opened ?? false);
   }
+}
+
+function poisonPuddlePoints(
+  x: number,
+  y: number,
+  radius: number,
+  scale: number,
+): number[] {
+  const points: number[] = [];
+  const count = 16;
+  const seed = x * 0.031 + y * 0.017;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const wobble = 0.88
+      + Math.sin(angle * 3 + seed) * 0.08
+      + Math.cos(angle * 5 - seed * 0.7) * 0.045;
+    points.push(
+      x + Math.cos(angle) * radius * scale * wobble,
+      y + Math.sin(angle) * radius * 0.62 * scale * wobble,
+    );
+  }
+  return points;
 }
 
 /** @deprecated use drawDungeonLayoutVector */

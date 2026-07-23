@@ -84,8 +84,8 @@ export function isTargetInMeleeSweep(
   const dx = targetX - originX;
   const dy = targetY - originY;
   const dist = Math.hypot(dx, dy);
-  if (dist - targetRadius > outerR) return false;
-  if (dist + targetRadius < innerR) return false;
+  if (dist > outerR) return false;
+  if (dist < innerR) return false;
 
   const targetA = Math.atan2(dy, dx);
   return isAngleInSweep(targetA, startA, endA, sweep.anglePadding);
