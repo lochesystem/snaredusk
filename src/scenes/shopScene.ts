@@ -44,16 +44,8 @@ const CUSTOMER_SEPARATION = 22;
 /** Ultrapassa a profundidade dos expositores para permitir interação pelo corredor frontal. */
 const SHOP_INTERACT_RADIUS = 60;
 
-/**
- * Os atlas térmicos já usam o ponto dos pés perto da base do frame. O lift
- * global do cercado, necessário para os sprites antigos, os deixava altos.
- */
-const THERMAL_CAGE_Y_OFFSET: Partial<Record<string, number>> = {
-  salamandra: 8,
-  vaporoso: 4,
-  caranguejo_termal: 10,
-  salamandra_ancia: 6,
-};
+/** Todos os sprites usam a origem como ponto dos pés; este é o piso interno do cercado. */
+const CAGE_CREATURE_GROUND_OFFSET = 10;
 
 const CUSTOMER_COLORS: Record<string, number> = {
   morador: 0x6a8ab8,
@@ -216,7 +208,7 @@ export class ShopScene {
         creature.setLocomotion(false);
         const isBoss = species.behaviorId.startsWith('boss_');
         if (isBoss) creature.scale.set(0.9);
-        const creatureYOffset = THERMAL_CAGE_Y_OFFSET[species.id] ?? 0;
+        const creatureYOffset = CAGE_CREATURE_GROUND_OFFSET;
         creature.y = creatureYOffset;
         item = creature;
         const hitbox = getEnemyHitbox(species.id);

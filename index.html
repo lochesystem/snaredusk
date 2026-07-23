@@ -221,13 +221,22 @@
         </div>
         <p id="shop-reputation" class="shop-reputation"></p>
       </header>
-      <div class="shop-panel-block">
+      <div id="shop-stock-panel" class="shop-panel-block">
         <div class="shop-section-heading">
           <div>
             <p class="shop-section-kicker">Estoque disponível</p>
             <h3>Bolsa</h3>
           </div>
-          <span>Selecione para expor</span>
+          <div class="shop-section-controls">
+            <span>Selecione para expor</span>
+            <button
+              id="btn-shop-stock-toggle"
+              class="shop-stock-toggle"
+              type="button"
+              aria-controls="shop-bag-strip"
+              aria-expanded="true"
+            >Ocultar</button>
+          </div>
         </div>
         <div id="shop-bag-strip" class="shop-bag-strip"></div>
       </div>

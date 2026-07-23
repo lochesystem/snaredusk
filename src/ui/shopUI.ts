@@ -17,6 +17,7 @@ export interface ShopUICallbacks {
 export class ShopUI {
   private priceTarget: { type: 'shelf' | 'cage'; index: number; entry: BagEntry } | null = null;
   private draftPrice = 50;
+  private stockPanelCollapsed = false;
   private cb: ShopUICallbacks;
 
   constructor(cb: ShopUICallbacks) {
@@ -24,6 +25,10 @@ export class ShopUI {
     document.getElementById('btn-shop-back')?.addEventListener('click', () => this.cb.onBack());
     document.getElementById('btn-shop-open')?.addEventListener('click', () => this.cb.onOpenShopDay());
     document.getElementById('btn-shop-upgrade')?.addEventListener('click', () => this.cb.onUpgradeShop());
+    document.getElementById('btn-shop-stock-toggle')?.addEventListener('click', () => {
+      this.stockPanelCollapsed = !this.stockPanelCollapsed;
+      this.syncStockPanel();
+    });
     document.getElementById('price-up')?.addEventListener('click', () => this.adjustPrice(5));
     document.getElementById('price-down')?.addEventListener('click', () => this.adjustPrice(-5));
     document.getElementById('price-confirm')?.addEventListener('click', () => this.confirmPrice());
@@ -71,6 +76,7 @@ export class ShopUI {
     }
 
     this.renderBagStrip();
+    this.syncStockPanel();
   }
 
   openPriceModal(kind: 'shelf' | 'cage', index: number): void {
@@ -165,6 +171,20 @@ export class ShopUI {
     if (!container.children.length) {
       container.innerHTML = '<span class="empty">Bolsa vazia</span>';
     }
+  }
+
+  private syncStockPanel(): void {
+    const panel = document.getElementById('shop-stock-panel');
+    const toggle = document.getElementById('btn-shop-stock-toggle');
+    if (!panel || !toggle) return;
+
+    panel.classList.toggle('is-collapsed', this.stockPanelCollapsed);
+    toggle.textContent = this.stockPanelCollapsed ? 'Abrir bolsa' : 'Ocultar';
+    toggle.setAttribute('aria-expanded', String(!this.stockPanelCollapsed));
+    toggle.setAttribute(
+      'aria-label',
+      this.stockPanelCollapsed ? 'Abrir painel da bolsa' : 'Ocultar painel da bolsa',
+    );
   }
 
   private closePriceModal(): void {

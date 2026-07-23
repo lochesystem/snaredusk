@@ -1262,10 +1262,15 @@ button:hover {
   flex-direction: column;
   border: 1px solid rgba(174, 124, 66, 0.3);
   border-radius: 9px;
-  background: linear-gradient(145deg, rgba(25, 21, 22, 0.92), rgba(15, 15, 19, 0.86));
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(6px);
+  background: linear-gradient(145deg, rgba(25, 21, 22, 0.78), rgba(15, 15, 19, 0.7));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(4px);
   pointer-events: auto;
+  transition:
+    width 180ms ease,
+    max-height 180ms ease,
+    padding 180ms ease,
+    background-color 180ms ease;
 }
 
 .shop-section-heading {
@@ -1283,10 +1288,69 @@ button:hover {
   font-weight: 600;
 }
 
-.shop-section-heading > span {
+.shop-section-controls > span {
   color: #786d63;
   font-size: 9px;
   text-align: right;
+}
+
+.shop-section-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.shop-stock-toggle {
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid rgba(174, 124, 66, 0.36);
+  border-radius: 6px;
+  background: rgba(36, 29, 27, 0.62);
+  color: #c7ac8c;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.shop-stock-toggle:hover {
+  border-color: rgba(210, 154, 81, 0.68);
+  background: rgba(66, 47, 34, 0.76);
+  color: #f0dcc2;
+}
+
+.shop-panel-block.is-collapsed {
+  width: 128px;
+  max-height: 38px;
+  padding: 0;
+  overflow: hidden;
+  border-color: rgba(174, 124, 66, 0.42);
+  background: rgba(23, 19, 20, 0.62);
+}
+
+.shop-panel-block.is-collapsed .shop-section-heading {
+  height: 38px;
+  margin: 0;
+}
+
+.shop-panel-block.is-collapsed .shop-section-heading > div:first-child,
+.shop-panel-block.is-collapsed .shop-section-controls > span,
+.shop-panel-block.is-collapsed .shop-bag-strip {
+  display: none;
+}
+
+.shop-panel-block.is-collapsed .shop-section-controls {
+  width: 100%;
+  height: 100%;
+}
+
+.shop-panel-block.is-collapsed .shop-stock-toggle {
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #ddbf98;
+  font-size: 10px;
 }
 
 .shop-bag-strip {
