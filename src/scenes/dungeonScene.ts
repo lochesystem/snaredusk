@@ -163,7 +163,6 @@ import {
   drawCaptureBurst,
   drawDamageNumber,
   createProjectileSprite,
-  createShieldGraphic,
 } from '../world/placeholderArt.ts';
 import {
   buildDungeonFloorLayer,
@@ -218,7 +217,6 @@ interface LiveEnemy {
   dead: boolean;
   lootDropped: boolean;
   container: CreatureSprite;
-  shieldGfx: Graphics | null;
   statusBars: EnemyStatusBars | null;
   capturableGlow: boolean;
   captureLocked: boolean;
@@ -512,7 +510,6 @@ export class DungeonScene {
         dead: false,
         lootDropped: false,
         container,
-        shieldGfx: null,
         statusBars: null,
         capturableGlow: false,
         captureLocked: false,
@@ -523,7 +520,6 @@ export class DungeonScene {
         ...initEnemyWanderFields(spawn.x, spawn.y),
         ...combatInit,
       };
-      this.attachEnemyShield(enemy);
       this.attachEnemyStatusBars(enemy);
       this.enemies.push(enemy);
     }
@@ -565,7 +561,6 @@ export class DungeonScene {
       dead: false,
       lootDropped: false,
       container,
-      shieldGfx: null,
       statusBars: null,
       capturableGlow: false,
       captureLocked: false,
@@ -576,7 +571,6 @@ export class DungeonScene {
       ...initEnemyWanderFields(x, y),
       ...combatInit,
     };
-    this.attachEnemyShield(enemy);
     this.attachEnemyStatusBars(enemy);
     this.enemies.push(enemy);
   }
@@ -1222,8 +1216,10 @@ export class DungeonScene {
     enemy.aggroed = true;
     const behavior = getEnemyBehavior(enemy.behaviorId);
     const afterShield = applyShieldDamage(enemy, rawDmg, behavior);
-    this.updateEnemyShieldGfx(enemy);
     this.updateEnemyStatusBars(enemy);
+    if (enemy.isBoss && this.bossFightPhase === 'active') {
+      updateBossHud(this.getBossHudState(enemy));
+    }
     if (afterShield <= 0) return;
     const finalDmg = calcDamage(afterShield, enemy.def);
     enemy.hp = Math.max(0, enemy.hp - finalDmg);
@@ -1260,7 +1256,6 @@ export class DungeonScene {
     enemy.captureLocked = false;
     enemy.container.visible = false;
     enemy.container.alpha = 1;
-    if (enemy.shieldGfx) enemy.shieldGfx.visible = false;
     if (enemy.statusBars) enemy.statusBars.root.visible = false;
     if (!enemy.lootDropped) {
       enemy.lootDropped = true;
@@ -1344,26 +1339,6 @@ export class DungeonScene {
     );
   }
 
-  private attachEnemyShield(enemy: LiveEnemy): void {
-    if (enemy.shieldMax <= 0) {
-      enemy.shieldGfx = null;
-      return;
-    }
-    if (enemy.shieldGfx?.parent === enemy.container) return;
-    enemy.shieldGfx?.parent?.removeChild(enemy.shieldGfx);
-    const shieldGfx = createShieldGraphic(enemy.shieldMax);
-    shieldGfx.y = -2;
-    enemy.container.addChildAt(shieldGfx, 0);
-    enemy.shieldGfx = shieldGfx;
-    this.updateEnemyShieldGfx(enemy);
-  }
-
-  private updateEnemyShieldGfx(enemy: LiveEnemy): void {
-    if (!enemy.shieldGfx) return;
-    enemy.shieldGfx.visible = enemy.shieldHp > 0 && !enemy.dead;
-    enemy.shieldGfx.alpha = 0.35 + (enemy.shieldHp / Math.max(1, enemy.shieldMax)) * 0.55;
-  }
-
   private spawnEnemyChest(enemy: LiveEnemy): void {
     const drop = getEnemyChestDrop(enemy.speciesId, enemy.isBoss);
     const container = createChestSprite(false, drop.epic, this.layout.biomeId);
@@ -1430,7 +1405,6 @@ export class DungeonScene {
         enemy.container.x = enemy.x;
         enemy.container.y = enemy.y + wander.bobOffset;
         snapContainer(enemy.container);
-        this.updateEnemyShieldGfx(enemy);
         this.updateEnemyStatusBars(enemy);
         continue;
       }
@@ -1521,7 +1495,6 @@ export class DungeonScene {
       enemy.container.x = enemy.x;
       enemy.container.y = enemy.y;
       snapContainer(enemy.container);
-      this.updateEnemyShieldGfx(enemy);
       this.updateEnemyStatusBars(enemy);
     }
 
@@ -1583,7 +1556,6 @@ export class DungeonScene {
       if (enemy.isBoss) enemy.container.scale.set(1.35);
       enemy.container.x = enemy.x;
       enemy.container.y = enemy.y;
-      this.attachEnemyShield(enemy);
       this.attachEnemyStatusBars(enemy);
       parent.addChild(enemy.container);
     }

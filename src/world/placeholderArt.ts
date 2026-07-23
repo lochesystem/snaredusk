@@ -174,7 +174,6 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   let walkTextures: Texture[] | null = null;
   const facing = { value: 1 };
 
-  const isBoss = species.behaviorId.startsWith('boss_');
   const shadowRadius = species.id === 'matriarca_prismatica'
     ? 42
     : species.id === 'salamandra_ancia'
@@ -223,7 +222,7 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
   }
 
   if (capturableGlow) {
-    const glow = new Graphics();
+    const reticle = new Graphics({ roundPixels: true });
     const glowW = species.id === 'matriarca_prismatica'
       ? 82
       : species.id === 'salamandra_ancia'
@@ -234,9 +233,19 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
       : species.id === 'salamandra_ancia'
         ? 68
         : isDetailedCreature ? 42 : 20;
-    glow.roundRect(-glowW / 2, -glowH, glowW, glowH, isBoss ? 12 : 5);
-    glow.stroke({ width: 2, color: 0xc4f082, alpha: 0.9 });
-    root.addChildAt(glow, 0);
+    const left = -glowW / 2;
+    const right = glowW / 2;
+    const top = -glowH;
+    const bottom = 0;
+    const corner = Math.min(8, glowW * 0.22, glowH * 0.22);
+
+    reticle
+      .moveTo(left, top + corner).lineTo(left, top).lineTo(left + corner, top)
+      .moveTo(right - corner, top).lineTo(right, top).lineTo(right, top + corner)
+      .moveTo(right, bottom - corner).lineTo(right, bottom).lineTo(right - corner, bottom)
+      .moveTo(left + corner, bottom).lineTo(left, bottom).lineTo(left, bottom - corner)
+      .stroke({ width: 1.25, color: 0xb7d98a, alpha: 0.62 });
+    root.addChildAt(reticle, 0);
   }
 
   root.zOffset = 0.5;
@@ -802,16 +811,6 @@ export function createProjectileSprite(
   root.addChild(g);
   return root;
 }
-export function createShieldGraphic(maxHp: number): Graphics {
-  const g = new Graphics();
-  const r = 12 + Math.min(5, maxHp / 12);
-  g.circle(0, 0, r);
-  g.stroke({ width: 2, color: 0x8a6ab8, alpha: 0.85 });
-  g.circle(0, 0, r - 3);
-  g.stroke({ width: 1, color: 0xc4f082, alpha: 0.45 });
-  return g;
-}
-
 export function createLootIcon(lootId: string): Container {
   const root = new Container();
   const g = new Graphics();

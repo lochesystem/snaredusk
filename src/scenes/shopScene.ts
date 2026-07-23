@@ -47,6 +47,12 @@ const SHOP_INTERACT_RADIUS = 60;
 /** Todos os sprites usam a origem como ponto dos pés; este é o piso interno do cercado. */
 const CAGE_CREATURE_GROUND_OFFSET = 10;
 
+/** Sprites florestais altos precisam ficar acima da travessa frontal, sem perder contato com o piso. */
+const CAGE_CREATURE_Y_OFFSET: Partial<Record<string, number>> = {
+  lumimorcego: -2,
+  carapaca_musgo: -4,
+};
+
 const CUSTOMER_COLORS: Record<string, number> = {
   morador: 0x6a8ab8,
   minerador: 0x8a6a4a,
@@ -208,7 +214,7 @@ export class ShopScene {
         creature.setLocomotion(false);
         const isBoss = species.behaviorId.startsWith('boss_');
         if (isBoss) creature.scale.set(0.9);
-        const creatureYOffset = CAGE_CREATURE_GROUND_OFFSET;
+        const creatureYOffset = CAGE_CREATURE_Y_OFFSET[species.id] ?? CAGE_CREATURE_GROUND_OFFSET;
         creature.y = creatureYOffset;
         item = creature;
         const hitbox = getEnemyHitbox(species.id);
