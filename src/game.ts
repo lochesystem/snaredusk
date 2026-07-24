@@ -15,6 +15,7 @@ import { tryUpgradeShop } from './systems/shopProgress.ts';
 import { ShopUI } from './ui/shopUI.ts';
 import { getEquippedWeapon } from './data/weapons.ts';
 import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
+import { ensureCompanionSpritesPreloaded } from './world/companionAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import { ensureShopAssetsPreloaded } from './world/shopAssets.ts';
 import { ensureCustomerSpritesPreloaded } from './world/customerAssets.ts';
@@ -343,6 +344,7 @@ export class Game {
 
     void Promise.all([
       ensureCreatureSpritesPreloaded(),
+      ensureCompanionSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
       ensureBaseTilesetPreloaded(),
       ensureShopAssetsPreloaded(),
@@ -718,6 +720,7 @@ export class Game {
   private async showBaseView(): Promise<void> {
     await Promise.all([
       ensureCreatureSpritesPreloaded(),
+      ensureCompanionSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
       ensureBaseTilesetPreloaded(),
     ]);
@@ -844,6 +847,7 @@ export class Game {
     }
     await Promise.all([
       ensureCreatureSpritesPreloaded(),
+      ensureCompanionSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
       ensureEnvironmentPreloaded(this.state.activeBiome),
     ]);

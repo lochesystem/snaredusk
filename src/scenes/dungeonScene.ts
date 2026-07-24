@@ -153,6 +153,10 @@ import {
 } from '../systems/dungeonSpecial.ts';
 import type { CreatureItem, GameState, LootItem } from '../types.ts';
 import {
+  createCompanionSprite,
+  type CompanionSprite,
+} from '../world/companionArt.ts';
+import {
   createChestSprite,
   createCreatureSprite,
   type CreatureSprite,
@@ -274,7 +278,7 @@ interface LiveCompanion {
   x: number;
   y: number;
   attackCd: number;
-  container: CreatureSprite;
+  container: CompanionSprite;
   dead: boolean;
   idleRoam: CompanionIdleRoamFields;
   lastPlayerX: number;
@@ -2133,7 +2137,7 @@ export class DungeonScene {
     if (!creature) return;
 
     const species = getSpecies(creature.speciesId);
-    const container = createCreatureSprite(species);
+    const container = createCompanionSprite(species);
     const startX = this.playerX - 22;
     const startY = this.playerY + 2;
     container.x = startX;
@@ -2240,6 +2244,7 @@ export class DungeonScene {
     }
 
     if (intent.shouldShoot && targetEnemy) {
+      comp.container.playAttack(targetEnemy.x - comp.x);
       const shot = buildCompanionRangedShot(
         comp.behaviorId,
         comp.x,
@@ -2252,6 +2257,7 @@ export class DungeonScene {
       this.spawnProjectile(shot.data, 'companion', shot.visualStyle);
       comp.attackCd = shot.attackCooldown;
     } else if (intent.shouldMelee && targetEnemy) {
+      comp.container.playAttack(targetEnemy.x - comp.x);
       const dmg = calcDamage(comp.atk, targetEnemy.def);
       this.damageEnemy(targetEnemy, dmg);
       drawDamageNumber(this.fxLayer, dmg, targetEnemy.x, targetEnemy.y - 16, this.fxRunner);
