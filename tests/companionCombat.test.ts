@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCompanionRangedShot,
+  COMPANION_IDLE_ROAM_RADIUS,
   companionAttackRange,
   companionFollowAnchor,
   companionRangedAnchor,
   computeCompanionIntent,
   hasLineOfSight,
   isCompanionRanged,
+  initCompanionIdleRoam,
   shouldMoveTowardGoal,
+  tickCompanionIdleRoam,
 } from '../src/systems/companionCombat.ts';
 
 describe('companionCombat', () => {
@@ -89,5 +92,96 @@ describe('companionCombat', () => {
   it('shouldMoveTowardGoal respeita gap mínimo', () => {
     expect(shouldMoveTowardGoal(0, 0, 10, 0, 6)).toBe(true);
     expect(shouldMoveTowardGoal(0, 0, 3, 0, 6)).toBe(false);
+  });
+
+  it('escolhe um pequeno passeio caminhável quando jogador está parado', () => {
+    const fields = initCompanionIdleRoam(50, 50);
+    fields.decisionTimer = 0;
+    const values = [0, 0.5];
+    let index = 0;
+    const result = tickCompanionIdleRoam(fields, {
+      compX: 50,
+      compY: 50,
+      playerX: 50,
+      playerY: 50,
+      playerMoving: false,
+      hasCombatTarget: false,
+      dt: 0.1,
+      floors: [{ x: 0, y: 0, width: 120, height: 120 }],
+      walls: [],
+      obstacles: [],
+      rng: () => values[index++] ?? 0.5,
+    });
+
+    expect(result.active).toBe(true);
+    expect(Math.hypot(result.goalX - 50, result.goalY - 50)).toBeLessThanOrEqual(
+      COMPANION_IDLE_ROAM_RADIUS,
+    );
+  });
+
+  it('abandona o passeio assim que o jogador começa a andar', () => {
+    const fields = initCompanionIdleRoam(40, 50);
+    fields.active = true;
+    fields.targetX = 70;
+    fields.targetY = 50;
+    const result = tickCompanionIdleRoam(fields, {
+      compX: 40,
+      compY: 50,
+      playerX: 50,
+      playerY: 50,
+      playerMoving: true,
+      hasCombatTarget: false,
+      dt: 0.1,
+      floors: [{ x: 0, y: 0, width: 120, height: 120 }],
+      walls: [],
+      obstacles: [],
+      rng: () => 0.5,
+    });
+
+    expect(result.active).toBe(false);
+    expect(fields.active).toBe(false);
+  });
+
+  it('mantém o passeio ativo entre passos até realmente alcançar o alvo', () => {
+    const fields = initCompanionIdleRoam(40, 50);
+    fields.active = true;
+    fields.targetX = 70;
+    fields.targetY = 50;
+    const result = tickCompanionIdleRoam(fields, {
+      compX: 42,
+      compY: 50,
+      playerX: 50,
+      playerY: 50,
+      playerMoving: false,
+      hasCombatTarget: false,
+      dt: 0.1,
+      floors: [{ x: 0, y: 0, width: 120, height: 120 }],
+      walls: [],
+      obstacles: [],
+      rng: () => 0.5,
+    });
+
+    expect(result.active).toBe(true);
+    expect(result.goalX).toBe(70);
+  });
+
+  it('não passeia durante combate', () => {
+    const fields = initCompanionIdleRoam(40, 50);
+    fields.decisionTimer = 0;
+    const result = tickCompanionIdleRoam(fields, {
+      compX: 40,
+      compY: 50,
+      playerX: 50,
+      playerY: 50,
+      playerMoving: false,
+      hasCombatTarget: true,
+      dt: 0.1,
+      floors: [{ x: 0, y: 0, width: 120, height: 120 }],
+      walls: [],
+      obstacles: [],
+      rng: () => 0.5,
+    });
+
+    expect(result.active).toBe(false);
   });
 });

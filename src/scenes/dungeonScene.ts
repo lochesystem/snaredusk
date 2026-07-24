@@ -87,9 +87,13 @@ import { grantTutorialCreatureIfNeeded } from '../systems/tutorial.ts';
 import { losePartyCompanion } from '../systems/party.ts';
 import {
   buildCompanionRangedShot,
+  COMPANION_IDLE_ROAM_SPEED,
   computeCompanionIntent,
   findCompanionSpawnNearPlayer,
+  initCompanionIdleRoam,
   shouldMoveTowardGoal,
+  tickCompanionIdleRoam,
+  type CompanionIdleRoamFields,
 } from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
@@ -169,6 +173,7 @@ import {
   spawnDungeonPropSprites,
 } from '../world/tileRenderer.ts';
 import { BossArenaFog } from '../world/bossArenaFog.ts';
+import { DungeonVisionFog } from '../world/dungeonVisionFog.ts';
 import {
   calcAimAngle,
   calcAimReticlePosition,
@@ -271,6 +276,12 @@ interface LiveCompanion {
   attackCd: number;
   container: CreatureSprite;
   dead: boolean;
+  idleRoam: CompanionIdleRoamFields;
+  lastPlayerX: number;
+  lastPlayerY: number;
+  locomotionHoldTimer: number;
+  lastFacingX: number;
+  idlePhase: number;
 }
 
 interface LiveChest {
@@ -339,6 +350,7 @@ export class DungeonScene {
   private bossChestOpened = false;
   private bossGateGfx: Graphics | null = null;
   private bossArenaFog: BossArenaFog;
+  private visionFog = new DungeonVisionFog();
   private slideVelX = 0;
   private slideVelY = 0;
   private hazardTickTimer = 0;
@@ -437,6 +449,7 @@ export class DungeonScene {
     this.fxLayer.addChild(this.aimReticleGfx);
     this.world.addChild(this.fxLayer);
     this.root.addChild(this.world);
+    this.root.addChild(this.visionFog.root);
     this.root.addChild(this.minimap.container);
 
     this.spawnEnemies();
@@ -653,6 +666,7 @@ export class DungeonScene {
     this.camera.update();
     this.world.x = -this.camera.x;
     this.world.y = -this.camera.y;
+    this.visionFog.update(this.playerX - this.camera.x, this.playerY - this.camera.y);
     this.minimap.update(this.layout, this.playerX, this.playerY);
 
     this.state.playerHp = Math.round(this.playerHp);
@@ -747,6 +761,10 @@ export class DungeonScene {
     comp.y = spawn.y;
     comp.container.x = comp.x;
     comp.container.y = comp.y;
+    comp.idleRoam = initCompanionIdleRoam(comp.x, comp.y);
+    comp.lastPlayerX = this.playerX;
+    comp.lastPlayerY = this.playerY;
+    comp.locomotionHoldTimer = 0;
     this.companionPath = [];
     this.companionPathIndex = 0;
     this.companionStuckTimer = 0;
@@ -2135,6 +2153,12 @@ export class DungeonScene {
       attackCd: 0,
       container,
       dead: false,
+      idleRoam: initCompanionIdleRoam(startX, startY),
+      lastPlayerX: this.playerX,
+      lastPlayerY: this.playerY,
+      locomotionHoldTimer: 0,
+      lastFacingX: 1,
+      idlePhase: Math.random() * Math.PI * 2,
     };
     this.companionLastX = startX;
     this.companionLastY = startY;
@@ -2180,6 +2204,10 @@ export class DungeonScene {
     const target = targetEnemy
       ? { x: targetEnemy.x, y: targetEnemy.y, def: targetEnemy.def }
       : null;
+    const playerMoving = Math.hypot(
+      this.playerX - comp.lastPlayerX,
+      this.playerY - comp.lastPlayerY,
+    ) > 0.08;
 
     const intent = computeCompanionIntent({
       behaviorId: comp.behaviorId,
@@ -2192,6 +2220,24 @@ export class DungeonScene {
       walls: this.getCollisionWalls(),
       target,
     });
+    const idleRoam = tickCompanionIdleRoam(comp.idleRoam, {
+      compX: comp.x,
+      compY: comp.y,
+      playerX: this.playerX,
+      playerY: this.playerY,
+      playerMoving,
+      hasCombatTarget: target !== null,
+      dt,
+      floors: this.layout.floors,
+      walls: this.getCompanionCollisionWalls(),
+      obstacles: this.layout.obstacles,
+    });
+    if (idleRoam.active) {
+      intent.goalX = idleRoam.goalX;
+      intent.goalY = idleRoam.goalY;
+      intent.faceX = idleRoam.goalX - comp.x;
+      intent.faceY = idleRoam.goalY - comp.y;
+    }
 
     if (intent.shouldShoot && targetEnemy) {
       const shot = buildCompanionRangedShot(
@@ -2212,9 +2258,42 @@ export class DungeonScene {
       comp.attackCd = PARTY_ATTACK_COOLDOWN;
     }
 
-    const moveSpeed = target ? PARTY_CHASE_SPEED : PARTY_FOLLOW_SPEED;
-    const followGap = target ? 10 : PARTY_FOLLOW_GAP;
-    if (shouldMoveTowardGoal(comp.x, comp.y, intent.goalX, intent.goalY, followGap)) {
+    const moveSpeed = target
+      ? PARTY_CHASE_SPEED
+      : idleRoam.active
+        ? COMPANION_IDLE_ROAM_SPEED
+        : PARTY_FOLLOW_SPEED;
+    const followGap = target ? 10 : idleRoam.active ? 4 : playerMoving ? 16 : PARTY_FOLLOW_GAP;
+    let movedDx = 0;
+    let movedDy = 0;
+
+    if (idleRoam.active && !target) {
+      const prevX = comp.x;
+      const prevY = comp.y;
+      const dir = normalize(intent.goalX - comp.x, intent.goalY - comp.y);
+      const step = COMPANION_IDLE_ROAM_SPEED * dt;
+      const moved = moveWithCollision(
+        comp.x,
+        comp.y,
+        dir.x * step,
+        dir.y * step,
+        8,
+        this.getCompanionCollisionWalls(),
+        this.layout.floors,
+        this.layout.obstacles,
+      );
+      comp.x = moved.x;
+      comp.y = moved.y;
+      movedDx = comp.x - prevX;
+      movedDy = comp.y - prevY;
+      this.companionPath = [];
+      this.companionPathIndex = 0;
+
+      if (Math.hypot(movedDx, movedDy) < 0.01) {
+        comp.idleRoam.active = false;
+        comp.idleRoam.decisionTimer = 0.2 + Math.random() * 0.35;
+      }
+    } else if (shouldMoveTowardGoal(comp.x, comp.y, intent.goalX, intent.goalY, followGap)) {
       const prevX = comp.x;
       const prevY = comp.y;
 
@@ -2263,20 +2342,32 @@ export class DungeonScene {
 
       comp.x = nextX;
       comp.y = nextY;
-      const movedDx = comp.x - prevX;
-      comp.container.setFacing(movedDx !== 0 ? movedDx : intent.faceX);
-      comp.container.setLocomotion(Math.abs(movedDx) > 0.01 || Math.abs(comp.y - prevY) > 0.01, movedDx);
+      movedDx = comp.x - prevX;
+      movedDy = comp.y - prevY;
     } else {
       this.companionPath = [];
       this.companionPathIndex = 0;
-      comp.container.setFacing(intent.faceX);
-      comp.container.setLocomotion(false, intent.faceX);
     }
+
+    const moving = Math.hypot(movedDx, movedDy) > 0.01;
+    if (moving) {
+      comp.locomotionHoldTimer = 0.16;
+      if (Math.abs(movedDx) > 0.01) comp.lastFacingX = movedDx;
+    } else {
+      comp.locomotionHoldTimer = Math.max(0, comp.locomotionHoldTimer - dt);
+      if (Math.abs(intent.faceX) > 0.01) comp.lastFacingX = intent.faceX;
+    }
+    comp.container.setFacing(comp.lastFacingX);
+    comp.container.setLocomotion(moving || comp.locomotionHoldTimer > 0, comp.lastFacingX);
 
     this.companionLastX = comp.x;
     this.companionLastY = comp.y;
+    comp.lastPlayerX = this.playerX;
+    comp.lastPlayerY = this.playerY;
+    comp.idlePhase += dt * 2.2;
+    const idleBob = moving ? 0 : Math.sin(comp.idlePhase) * 0.45;
     comp.container.x = comp.x;
-    comp.container.y = comp.y;
+    comp.container.y = comp.y + idleBob;
     comp.container.alpha = comp.hp / comp.maxHp < 0.35 ? 0.65 : 1;
   }
 

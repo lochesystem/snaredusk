@@ -231,6 +231,96 @@ export function shouldMoveTowardGoal(
   return distance(compX, compY, goalX, goalY) > minGap;
 }
 
+export const COMPANION_IDLE_ROAM_SPEED = 46;
+export const COMPANION_IDLE_ROAM_RADIUS = 44;
+const COMPANION_IDLE_BREAK_DISTANCE = 58;
+
+export interface CompanionIdleRoamFields {
+  decisionTimer: number;
+  targetX: number;
+  targetY: number;
+  active: boolean;
+}
+
+export function initCompanionIdleRoam(x: number, y: number): CompanionIdleRoamFields {
+  return {
+    decisionTimer: 0.65 + Math.random() * 0.8,
+    targetX: x,
+    targetY: y,
+    active: false,
+  };
+}
+
+export interface CompanionIdleRoamInput {
+  compX: number;
+  compY: number;
+  playerX: number;
+  playerY: number;
+  playerMoving: boolean;
+  hasCombatTarget: boolean;
+  dt: number;
+  floors: Rect[];
+  walls: Rect[];
+  obstacles: DungeonObstacle[];
+  rng?: () => number;
+}
+
+export interface CompanionIdleRoamResult {
+  active: boolean;
+  goalX: number;
+  goalY: number;
+}
+
+export function tickCompanionIdleRoam(
+  fields: CompanionIdleRoamFields,
+  input: CompanionIdleRoamInput,
+): CompanionIdleRoamResult {
+  const rng = input.rng ?? Math.random;
+  const distToPlayer = distance(
+    input.compX,
+    input.compY,
+    input.playerX,
+    input.playerY,
+  );
+
+  if (
+    input.playerMoving
+    || input.hasCombatTarget
+    || distToPlayer > COMPANION_IDLE_BREAK_DISTANCE
+  ) {
+    fields.active = false;
+    fields.decisionTimer = 0.45 + rng() * 0.55;
+    return { active: false, goalX: input.playerX, goalY: input.playerY };
+  }
+
+  fields.decisionTimer -= input.dt;
+  if (fields.active && distance(input.compX, input.compY, fields.targetX, fields.targetY) <= 2.5) {
+    fields.active = false;
+    fields.decisionTimer = 0.65 + rng() * 1.35;
+  }
+
+  if (!fields.active && fields.decisionTimer <= 0) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const angle = rng() * Math.PI * 2;
+      const roamDistance = 18 + rng() * (COMPANION_IDLE_ROAM_RADIUS - 18);
+      const x = input.playerX + Math.cos(angle) * roamDistance;
+      const y = input.playerY + Math.sin(angle) * roamDistance * 0.72;
+      if (!isWalkablePosition(x, y, 8, input.floors, input.walls, input.obstacles)) continue;
+      fields.targetX = x;
+      fields.targetY = y;
+      fields.active = true;
+      break;
+    }
+    if (!fields.active) fields.decisionTimer = 0.5 + rng() * 0.7;
+  }
+
+  return {
+    active: fields.active,
+    goalX: fields.targetX,
+    goalY: fields.targetY,
+  };
+}
+
 const SPAWN_OFFSETS = [
   { x: 0, y: 0 },
   { x: -18, y: 0 },
