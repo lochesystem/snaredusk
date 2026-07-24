@@ -1981,7 +1981,7 @@ button:hover {
 
 .inventory-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -1997,6 +1997,230 @@ button:hover {
   border-color: #bb8350;
   background: linear-gradient(180deg, #4b3041, #2b202d);
   box-shadow: inset 0 -2px #c48b4f;
+}
+
+.inventory-bestiary-shortcut {
+  color: #b9cf9b;
+  border-color: #536641;
+  background: linear-gradient(180deg, #263326, #1c241d);
+}
+
+.bestiary-modal-content {
+  width: min(94vw, 980px);
+  max-width: 980px;
+}
+
+.bestiary-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bestiary-total-progress {
+  color: #c7b998;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bestiary-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.bestiary-biome-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  gap: 5px;
+  flex: 1;
+  max-width: 520px;
+}
+
+.bestiary-biome-tab {
+  min-width: 0;
+  padding: 8px 12px;
+}
+
+.bestiary-biome-tab.active {
+  color: #f4e3b7;
+  border-color: #a77a48;
+  background: linear-gradient(180deg, #49343e, #2b252e);
+  box-shadow: inset 0 -2px #c08b50;
+}
+
+.bestiary-biome-progress {
+  color: #b9cf9b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.bestiary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bestiary-card {
+  position: relative;
+  min-width: 0;
+  min-height: 196px;
+  padding: 11px;
+  border: 1px solid #54402f;
+  background:
+    linear-gradient(145deg, rgba(40, 30, 39, 0.98), rgba(19, 18, 24, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(218, 177, 116, 0.035);
+}
+
+.bestiary-card.boss {
+  border-color: #826241;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(161, 117, 66, 0.12), transparent 48%),
+    linear-gradient(145deg, rgba(46, 31, 38, 0.98), rgba(20, 18, 23, 0.98));
+}
+
+.bestiary-card.locked {
+  border-color: #3b3936;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 7px),
+    rgba(16, 17, 20, 0.96);
+}
+
+.bestiary-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(139, 103, 67, 0.26);
+}
+
+.bestiary-card-heading h4 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bestiary-index {
+  color: #786b59;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.bestiary-boss-badge {
+  margin-left: auto;
+  padding: 2px 4px;
+  color: #e8bd73;
+  border: 1px solid rgba(187, 131, 67, 0.48);
+  background: rgba(77, 48, 35, 0.55);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.bestiary-card-body {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 9px;
+  padding-top: 8px;
+}
+
+.bestiary-portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 116px;
+  overflow: hidden;
+  border: 1px solid rgba(100, 78, 57, 0.42);
+  background:
+    radial-gradient(circle, rgba(92, 109, 68, 0.14), transparent 66%),
+    rgba(11, 13, 16, 0.7);
+}
+
+.bestiary-creature {
+  width: 74px;
+  height: 94px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 5px 2px rgba(0, 0, 0, 0.68));
+}
+
+.bestiary-creature.undiscovered {
+  opacity: 0.62;
+  filter: brightness(0) drop-shadow(0 0 5px rgba(126, 151, 97, 0.34));
+}
+
+.bestiary-card-info {
+  min-width: 0;
+}
+
+.bestiary-role {
+  margin: 1px 0 7px;
+  color: #b9cf9b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.bestiary-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  margin-bottom: 7px;
+}
+
+.bestiary-stats span {
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  background: rgba(73, 54, 47, 0.38);
+  text-align: center;
+}
+
+.bestiary-stats small {
+  color: #8f816c;
+  font-size: 6px;
+  font-weight: 800;
+}
+
+.bestiary-stats strong {
+  color: #e7d7bb;
+  font-size: 10px;
+}
+
+.bestiary-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  margin: 4px 0 0;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.bestiary-detail span {
+  flex: 0 0 auto;
+  color: #8f816c;
+}
+
+.bestiary-detail strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #cfc0a7;
+  font-weight: 600;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bestiary-locked-copy {
+  margin: 24px 2px 0;
+  color: #77746c;
+  font-size: 9px;
+  line-height: 1.45;
 }
 
 .inventory-modal-content .inventory-grid,
@@ -2471,6 +2695,19 @@ button:hover {
 
   .equipment-stats {
     grid-column: 1 / -1;
+  }
+
+  .bestiary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bestiary-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bestiary-biome-progress {
+    text-align: left;
   }
 }
 
@@ -3303,7 +3540,7 @@ button:hover {
 
 .base-hub-header {
   width: fit-content;
-  max-width: calc(100% - 470px);
+  max-width: calc(100% - 570px);
   margin: 10px;
   padding: 8px 10px;
   border: 1px solid rgba(113, 139, 91, 0.55);

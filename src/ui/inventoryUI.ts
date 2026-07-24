@@ -21,6 +21,7 @@ export interface InventoryUICallbacks {
   getState: () => GameState;
   onChange: () => void;
   showToast: (msg: string) => void;
+  onOpenBestiary?: () => void;
   setPixiIcon?: (img: HTMLImageElement, createIcon: () => Container, cacheKey: string) => void;
 }
 
@@ -332,6 +333,10 @@ function renderAllPanels(
   if (equipment) renderEquipmentPanel(equipment, state, cb);
 
   root.querySelectorAll<HTMLButtonElement>('.inventory-tab').forEach((button) => {
+    if (button.hasAttribute('data-open-bestiary')) {
+      button.onclick = () => cb.onOpenBestiary?.();
+      return;
+    }
     button.onclick = () => {
       const tab = button.dataset.tab as InventoryTab;
       renderAllPanels(rootId, lootGridId, specialGridId, cb, compact);

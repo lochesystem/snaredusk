@@ -5,6 +5,7 @@ import { getHabitatCapacity } from '../systems/habitat.ts';
 export interface BaseBarCallbacks {
   getState: () => GameState;
   onParty: () => void;
+  onBestiary: () => void;
   onOrbs: () => void;
   onOptions: () => void;
 }
@@ -37,6 +38,7 @@ export function renderBaseHeader(state: GameState): void {
 
 export function bindBaseBar(callbacks: BaseBarCallbacks): void {
   document.getElementById('btn-base-party')?.addEventListener('click', () => callbacks.onParty());
+  document.getElementById('btn-base-bestiary')?.addEventListener('click', () => callbacks.onBestiary());
   document.getElementById('btn-base-orbs')?.addEventListener('click', () => callbacks.onOrbs());
   document.getElementById('btn-base-options')?.addEventListener('click', () => callbacks.onOptions());
 }

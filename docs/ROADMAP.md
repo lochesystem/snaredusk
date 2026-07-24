@@ -19,8 +19,8 @@ flowchart LR
 
 **Build local:** pós-`v0.5.0`, candidato à próxima release.
 
-**Próximo marco:** Bestiário simplificado, seguido pelo vertical slice da nova
-expedição roguelite na Floresta.
+**Próximo marco:** fundação do estado/save de expedição, seguida pelo vertical
+slice roguelite da Floresta.
 
 ---
 
@@ -30,7 +30,7 @@ expedição roguelite na Floresta.
 |------|--------|-------|
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
-| 2 — Core loop | **~92%** | Economia e saves auditados; Bestiário será concluído na próxima trilha |
+| 2 — Core loop | **~92%** | Economia, saves e Bestiário simplificado concluídos |
 | 2.5 — Expedições roguelite | **Planejada** | 3 andares, elites, perks, extração e arena própria por chefe |
 | 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
@@ -102,7 +102,7 @@ expedição roguelite na Floresta.
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
 | **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | **23 receitas**, construções consumíveis, orbes, materiais, armas e capuzes; armazenamento integrado |
 | **Companheiro** | 1 companheiro ativo | **Feito (MVP)** | Escopo fechado em 1 slot para preservar clareza da ação; IA de idle, seguir e atacar |
-| **Bestiário** | UI + bônus família | **Próxima etapa** | Registro já existe; UI simplificada vem antes das expedições |
+| **Bestiário** | UI + bônus família | **Feito (MVP)** | 18 fichas, silhuetas, dados, progresso por bioma e registro de chefes |
 | **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
 | **Loot** | 30 itens | **Feito** | **30/30** em `LOOT_TABLE` |
 | **Receitas** | 20 receitas | **Feito** | **23/20** |
@@ -121,7 +121,7 @@ expedição roguelite na Floresta.
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**283 testes**, 61 arquivos)
+- [x] Suite Vitest abrangente (**288 testes**, 62 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -157,8 +157,8 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 | Etapa | Entrega | Status |
 |-------|---------|--------|
-| 1 | Bestiário simplificado | Próxima |
-| 2 | Estado, save e retomada de expedição | Planejada |
+| 1 | Bestiário simplificado | **Feita** |
+| 2 | Estado, save e retomada de expedição | **Próxima** |
 | 3 | Floresta: 3 andares, elites, perks e arena | Planejada |
 | 4 | Balanceamento do vertical slice | Planejada |
 | 5 | Cristal e Termal | Planejada |
@@ -237,7 +237,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 6. ~~**Ambientação inicial dos biomas**~~ — props orgânicos e colisões por tipo
 7. ~~**Economia de 10 ciclos**~~ — conservador, normal e eficiente
 8. ~~**Suíte completa de save**~~ — migrações, corrupção, round-trip e localStorage
-9. **Bestiário UI simplificado** — primeira etapa da nova trilha
+9. ~~**Bestiário UI simplificado**~~ — 18 fichas e progresso por bioma
 10. **Fundação da expedição** — estado, save, extração e retomada
 11. **Vertical slice da Floresta** — 3 andares, elites, perks e arena
 12. **Balancear e replicar** — Cristal e Termal somente após validar a Floresta
@@ -258,4 +258,4 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 ---
 
-*Roadmap v0.9 — revisado 2026-07-24 (Bestiário e expedições roguelite divididos em etapas).*
+*Roadmap v0.10 — revisado 2026-07-24 (Bestiário concluído; próxima etapa é a fundação das expedições).*

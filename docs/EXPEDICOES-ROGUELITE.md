@@ -282,17 +282,17 @@ acoplado a todos os andares comuns.
 
 Cada etapa só começa quando a anterior estiver validada.
 
-### Etapa 1 — Bestiário simplificado
+### Etapa 1 — Bestiário simplificado — concluída
 
 **Objetivo:** transformar o registro existente em uma meta visível.
 
-- [ ] Definir dados de exibição por espécie.
-- [ ] Criar modal e navegação por bioma.
-- [ ] Renderizar silhuetas e criaturas descobertas.
-- [ ] Mostrar progresso por bioma e total.
-- [ ] Registrar chefe ao derrotá-lo.
-- [ ] Integrar abertura/fechamento e responsividade.
-- [ ] Adicionar testes de progresso e conteúdo bloqueado.
+- [x] Definir dados de exibição por espécie.
+- [x] Criar modal e navegação por bioma.
+- [x] Renderizar silhuetas e criaturas descobertas.
+- [x] Mostrar progresso por bioma e total.
+- [x] Registrar chefe ao derrotá-lo.
+- [x] Integrar abertura/fechamento e responsividade.
+- [x] Adicionar testes de progresso e conteúdo bloqueado.
 
 **Aceite:** as 18 posições aparecem corretamente; capturas antigas do save são
 respeitadas; uma criatura nova é revelada sem recarregar o jogo.
@@ -414,4 +414,3 @@ Questões que devem esperar o vertical slice:
 
 Sentinelas permanecem fora deste escopo. O jogo continua projetado para um único
 companheiro ativo e uma leitura de combate limpa.
-

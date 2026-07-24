@@ -65,6 +65,7 @@
         </header>
         <nav id="base-hub-bar" class="base-hub-bar">
           <button id="btn-base-party" type="button"><i aria-hidden="true">◆</i><span>Companheiro</span></button>
+          <button id="btn-base-bestiary" type="button"><i aria-hidden="true">▤</i><span>Bestiário</span></button>
           <button id="btn-base-orbs" type="button"><i aria-hidden="true">◈</i><span>Orbes</span></button>
           <button id="btn-base-options" type="button"><i aria-hidden="true">⚙</i><span>Opções</span></button>
         </nav>
@@ -240,6 +241,7 @@
           <button type="button" class="inventory-tab" data-tab="construction">Construção</button>
           <button type="button" class="inventory-tab" data-tab="equipment">Equipamento</button>
           <button type="button" class="inventory-tab" data-tab="special">Especiais</button>
+          <button type="button" class="inventory-tab inventory-bestiary-shortcut" data-open-bestiary>Bestiário</button>
         </div>
         <div id="base-bag-grid" class="inventory-grid" data-inventory-panel="loot"></div>
         <div id="base-bag-construction" class="construction-grid hidden" data-inventory-panel="construction"></div>
@@ -308,12 +310,37 @@
           <button type="button" class="inventory-tab" data-tab="construction">Construção</button>
           <button type="button" class="inventory-tab" data-tab="equipment">Equipamento</button>
           <button type="button" class="inventory-tab" data-tab="special">Especiais</button>
+          <button type="button" class="inventory-tab inventory-bestiary-shortcut" data-open-bestiary>Bestiário</button>
         </div>
         <p class="panel-hint inventory-tab-hint">Descarte itens para liberar espaço. [I] ou Esc para fechar.</p>
         <div id="inventory-modal-grid" class="inventory-grid" data-inventory-panel="loot"></div>
         <div id="inventory-modal-construction" class="construction-grid hidden" data-inventory-panel="construction"></div>
         <div id="inventory-modal-equipment" class="equipment-panel hidden" data-inventory-panel="equipment"></div>
         <div id="inventory-modal-special" class="inventory-grid hidden" data-inventory-panel="special"></div>
+      </div>
+    </div>
+
+    <div id="bestiary-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content bestiary-modal-content">
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Arquivo de Brumavale</p>
+            <h3>Bestiário</h3>
+          </div>
+          <div class="bestiary-title-actions">
+            <span id="bestiary-total-progress" class="bestiary-total-progress">0/18 registros</span>
+            <button id="bestiary-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+          </div>
+        </div>
+        <div class="bestiary-toolbar">
+          <div class="bestiary-biome-tabs" role="tablist" aria-label="Biomas">
+            <button type="button" class="bestiary-biome-tab active" data-biome="floresta">Floresta</button>
+            <button type="button" class="bestiary-biome-tab" data-biome="cristal">Cristal</button>
+            <button type="button" class="bestiary-biome-tab" data-biome="termal">Termal</button>
+          </div>
+          <strong id="bestiary-biome-progress" class="bestiary-biome-progress">Floresta Fúngica · 0/6</strong>
+        </div>
+        <div id="bestiary-grid" class="bestiary-grid"></div>
       </div>
     </div>
 

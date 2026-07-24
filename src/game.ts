@@ -46,6 +46,13 @@ import {
   type InventoryUICallbacks,
 } from './ui/inventoryUI.ts';
 import {
+  bindBestiaryModal,
+  closeBestiaryModal,
+  isBestiaryModalOpen,
+  openBestiaryModal,
+  type BestiaryUICallbacks,
+} from './ui/bestiaryUI.ts';
+import {
   bindAbandonModal,
   closeAbandonModal,
   isAbandonModalOpen,
@@ -160,6 +167,7 @@ export class Game {
     });
     this.bindDom();
     bindInventoryModal();
+    bindBestiaryModal();
     bindAbandonModal();
     bindAudioSettingsModal();
     this.bindTutorial();
@@ -273,6 +281,7 @@ export class Game {
     bindBaseBar({
       getState: () => this.state,
       onParty: () => openPartyModal(modalCb),
+      onBestiary: () => openBestiaryModal(this.bestiaryCallbacks(), this.state.activeBiome),
       onOrbs: () => {
         if (isTutorialActive(this.state) && !canOpenOrbsDuringTutorial(this.state)) {
           this.showToast('Siga a orientação da Mira primeiro.');
@@ -320,6 +329,20 @@ export class Game {
         if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
       },
       showToast: (m) => this.showToast(m),
+      onOpenBestiary: () => {
+        closeInventoryModal();
+        this.closeBaseBagModal();
+        openBestiaryModal(this.bestiaryCallbacks(), this.state.activeBiome);
+      },
+      setPixiIcon: (img: HTMLImageElement, createIcon: () => Container, key: string) => {
+        void this.setPixiIcon(img, createIcon, key);
+      },
+    };
+  }
+
+  private bestiaryCallbacks(): BestiaryUICallbacks {
+    return {
+      getState: () => this.state,
       setPixiIcon: (img: HTMLImageElement, createIcon: () => Container, key: string) => {
         void this.setPixiIcon(img, createIcon, key);
       },
@@ -665,6 +688,7 @@ export class Game {
     closeDungeonModal();
     closeOrbsModal();
     closeHabitatPenModal();
+    closeBestiaryModal();
     closeAudioSettingsModal();
     this.closeBaseBagModal();
     this.baseScene?.clearBuildTool();
@@ -913,7 +937,8 @@ export class Game {
         return;
       }
       if (this.input.consumeKey('i')) {
-        if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
+        if (isBestiaryModalOpen()) closeBestiaryModal();
+        else if (this.isBaseBagModalOpen()) this.closeBaseBagModal();
         else if (canOpenBaseBagDuringTutorial(this.state)) this.toggleBaseBagModal();
         else if (isTutorialActive(this.state)) {
           this.showToast('Siga a orientação da Mira primeiro.');
@@ -925,7 +950,8 @@ export class Game {
         this.buildHotbarCallbacks(),
       );
       if (this.input.consumeKey('escape')) {
-        if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
+        if (isBestiaryModalOpen()) closeBestiaryModal();
+        else if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
         else if (isWorkshopModalOpen()) closeWorkshopModal();
         else if (isChestModalOpen()) closeChestModal();
         else if (isHabitatPenModalOpen()) closeHabitatPenModal();
@@ -949,11 +975,13 @@ export class Game {
         return;
       }
       if (this.input.consumeKey('i')) {
-        if (isInventoryModalOpen()) closeInventoryModal();
+        if (isBestiaryModalOpen()) closeBestiaryModal();
+        else if (isInventoryModalOpen()) closeInventoryModal();
         else openInventoryModal(this.inventoryCallbacks());
       }
       if (this.input.consumeKey('escape')) {
-        if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
+        if (isBestiaryModalOpen()) closeBestiaryModal();
+        else if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
         else if (isInventoryModalOpen()) closeInventoryModal();
         else if (isAbandonModalOpen()) closeAbandonModal();
         else if (this.dungeon.canAbandon()) {
@@ -979,6 +1007,7 @@ export class Game {
   private async finishDungeonExit(payload: DungeonReturnPayload): Promise<void> {
     closeAbandonModal();
     closeInventoryModal();
+    closeBestiaryModal();
     clearDungeonSpecial(this.state);
     markDungeonReturned(this.state);
 

@@ -96,6 +96,7 @@ import {
   type CompanionIdleRoamFields,
 } from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
+import { registerBestiarySpecies } from '../systems/bestiary.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import {
   applySlipVelocity,
@@ -1303,6 +1304,7 @@ export class DungeonScene {
       clearBossVfxState(enemy.id);
       const species = getSpecies(enemy.speciesId);
       const unlockedBefore = [...this.state.unlockedBiomes];
+      registerBestiarySpecies(this.state, species.id);
       onBiomeBossDefeated(this.state, this.layout.biomeId);
       this.bossFightPhase = 'done';
       this.bossGateClosed = false;
@@ -1803,9 +1805,7 @@ export class DungeonScene {
       baseValue: species.baseValue,
     };
     if (addToBag(this.state, creature)) {
-      if (!this.state.bestiary.includes(species.id)) {
-        this.state.bestiary.push(species.id);
-      }
+      registerBestiarySpecies(this.state, species.id);
       this.eliminateEnemy(enemy, { skipToast: true });
       const anchor = this.getCaptureAnchor(enemy);
       drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true, this.fxRunner);

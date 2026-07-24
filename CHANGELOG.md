@@ -6,12 +6,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Adicionado
 
+- **Bestiário simplificado:** 18 fichas em abas por bioma, silhuetas para
+  criaturas não registradas, sprites e dados de combate, drops, produção,
+  disponibilidade como companheiro e progresso por bioma/total
+- Acesso ao Bestiário pela barra da base e pelo Inventário; chefes são
+  registrados automaticamente ao serem derrotados
+- Testes do Bestiário; suíte atualizada para **288 testes em 62 arquivos**
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado
 - **Economia de 10 ciclos:** simulação determinística dos perfis conservador, normal e eficiente usando loja, craft, orbes, reputação e upgrades reais
 - **Suíte completa de save:** round-trip do estado, migrações v1–v8, `localStorage`, JSON inválido e normalização de dados corrompidos
-- Testes: `economy.test.ts` e `save.test.ts` (**283 testes**, 61 arquivos)
+- Testes: `economy.test.ts` e `save.test.ts`
 
 ### Corrigido
 
