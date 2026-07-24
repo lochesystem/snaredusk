@@ -1,0 +1,108 @@
+{
+  "frames": {
+    "player_termal_idle_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 48
+      }
+    },
+    "player_termal_idle_1": {
+      "frame": {
+        "x": 48,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 48
+      }
+    },
+    "player_termal_idle_2": {
+      "frame": {
+        "x": 0,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 48
+      }
+    },
+    "player_termal_idle_3": {
+      "frame": {
+        "x": 48,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 48
+      }
+    }
+  },
+  "animations": {
+    "idle": [
+      "player_termal_idle_0",
+      "player_termal_idle_1",
+      "player_termal_idle_2",
+      "player_termal_idle_3"
+    ]
+  },
+  "meta": {
+    "app": "Snaredusk",
+    "version": "hood-1.0",
+    "image": "player-idle.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 96,
+      "h": 96
+    },
+    "scale": "1",
+    "snaredusk": {
+      "anchorX": 0.5,
+      "anchorY": 0.92,
+      "shadowY": 0
+    }
+  }
+}

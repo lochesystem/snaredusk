@@ -310,6 +310,9 @@ export class Game {
       getState: () => this.state,
       onChange: () => {
         saveGame(this.state);
+        this.baseScene?.syncPlayerAppearance();
+        this.dungeon?.syncPlayerAppearance();
+        this.shopScene?.syncPlayerAppearance();
         this.refreshBaseUI();
         this.shopUI.render();
         this.updateHud();

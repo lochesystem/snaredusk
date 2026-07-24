@@ -3,6 +3,7 @@ import { CRAFT_RECIPES, getRecipe } from '../data/recipes.ts';
 import { LOOT_TABLE } from '../data/items.ts';
 import type { GameState } from '../types.ts';
 import { acquireWeapon, equipWeapon as armoryEquip } from './weaponArmory.ts';
+import { acquireHood } from './hoodEquipment.ts';
 
 export interface CraftStatus {
   canCraft: boolean;
@@ -14,8 +15,7 @@ export function getCraftStatus(state: GameState, recipeId: string): CraftStatus 
   const recipe = getRecipe(recipeId);
   if (!recipe) return { canCraft: false, owned: false, missing: ['Receita inválida'] };
 
-  const owned = recipe.output.kind === 'weapon'
-    && state.ownedWeapons.includes(recipe.output.weaponId);
+  const owned = isCraftOutputOwned(state, recipe);
   if (owned) return { canCraft: false, owned: true, missing: [] };
 
   const missing: string[] = [];
@@ -78,6 +78,10 @@ export function grantCraftOutput(state: GameState, recipe: CraftRecipe): void {
     }
     return;
   }
+  if (recipe.output.kind === 'hood') {
+    acquireHood(state, recipe.output.hoodId);
+    return;
+  }
   if (recipe.output.kind === 'station') {
     const stationId = recipe.output.stationId;
     state.craftedStations[stationId] = (state.craftedStations[stationId] ?? 0)
@@ -125,4 +129,14 @@ export function equipWeapon(state: GameState, weaponId: string): boolean {
 
 export function listRecipes(): CraftRecipe[] {
   return CRAFT_RECIPES;
+}
+
+export function isCraftOutputOwned(state: GameState, recipe: CraftRecipe): boolean {
+  if (recipe.output.kind === 'weapon') {
+    return state.ownedWeapons.includes(recipe.output.weaponId);
+  }
+  if (recipe.output.kind === 'hood') {
+    return state.ownedHoods.includes(recipe.output.hoodId);
+  }
+  return false;
 }

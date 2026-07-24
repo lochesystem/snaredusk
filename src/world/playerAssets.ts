@@ -3,6 +3,7 @@ import {
   type CreatureSpriteLayout,
   DEFAULT_SPRITE_LAYOUT,
 } from './creatureAssets.ts';
+import { HOOD_IDS, type HoodId } from '../data/hoods.ts';
 
 /** Quatro quadros a 8 FPS: passada legível sem repetir o ciclo depressa demais. */
 export const PLAYER_WALK_ANIM_SPEED = 8 / 60;
@@ -17,7 +18,8 @@ export interface PlayerSpriteAnimations {
   layout: CreatureSpriteLayout;
 }
 
-let playerAnimations: PlayerSpriteAnimations | null = null;
+const playerAnimations = new Map<HoodId, PlayerSpriteAnimations>();
+const hoodIcons = new Map<HoodId, Texture>();
 let preloadPromise: Promise<void> | null = null;
 
 function playerAssetBase(): string {
@@ -41,21 +43,39 @@ function useNearestNeighbor(textures: Texture[]): void {
   for (const texture of textures) texture.source.scaleMode = 'nearest';
 }
 
-export async function preloadPlayerSprites(): Promise<void> {
+async function loadPlayerAnimationSet(hoodId: HoodId): Promise<void> {
+  const isDefault = hoodId === 'cacador';
+  const base = isDefault
+    ? playerAssetBase()
+    : `${playerAssetBase()}/skins/${hoodId}`;
+  const idleFile = isDefault ? 'player-idle-v7.json' : 'player-idle.json';
+  const walkFile = isDefault ? 'player-walk-v5.json' : 'player-walk.json';
+  const attackFiles = isDefault
+    ? [
+        'player-attack-faca-enferrujada-v4.json',
+        'player-attack-picareta-combate-v4.json',
+        'player-attack-lanca-esporo-v5.json',
+      ]
+    : [
+        'player-attack-faca.json',
+        'player-attack-picareta.json',
+        'player-attack-lanca.json',
+      ];
+
   try {
     const idleSheet = await Assets.load({
-      alias: 'player:idle',
-      src: `${playerAssetBase()}/player-idle-v7.json`,
+      alias: `player:${hoodId}:idle`,
+      src: `${base}/${idleFile}`,
     });
     const walkSheet = await Assets.load({
-      alias: 'player:walk',
-      src: `${playerAssetBase()}/player-walk-v5.json`,
+      alias: `player:${hoodId}:walk`,
+      src: `${base}/${walkFile}`,
     });
     const attackSheets = await Promise.all(
-      ['faca-enferrujada-v4', 'picareta-combate-v4', 'lanca-esporo-v5'].map((assetId) =>
+      attackFiles.map((assetFile, index) =>
         Assets.load({
-          alias: `player:attack:${assetId}`,
-          src: `${playerAssetBase()}/player-attack-${assetId}.json`,
+          alias: `player:${hoodId}:attack:${index}`,
+          src: `${base}/${assetFile}`,
         }),
       ),
     );
@@ -75,10 +95,26 @@ export async function preloadPlayerSprites(): Promise<void> {
     useNearestNeighbor(idle);
     useNearestNeighbor(walk);
     for (const textures of Object.values(attacks)) useNearestNeighbor(textures);
-    playerAnimations = { idle, walk, attacks, layout };
+    playerAnimations.set(hoodId, { idle, walk, attacks, layout });
+    if (!isDefault) {
+      try {
+        const icon = await Assets.load<Texture>({
+          alias: `hood-icon:${hoodId}`,
+          src: `${import.meta.env.BASE_URL}assets/hoods/${hoodId}.png`,
+        });
+        icon.source.scaleMode = 'nearest';
+        hoodIcons.set(hoodId, icon);
+      } catch {
+        hoodIcons.set(hoodId, idle[0]);
+      }
+    }
   } catch {
-    playerAnimations = null;
+    playerAnimations.delete(hoodId);
   }
+}
+
+export async function preloadPlayerSprites(): Promise<void> {
+  await Promise.all(HOOD_IDS.map((hoodId) => loadPlayerAnimationSet(hoodId)));
 }
 
 export function ensurePlayerSpritesPreloaded(): Promise<void> {
@@ -86,11 +122,17 @@ export function ensurePlayerSpritesPreloaded(): Promise<void> {
   return preloadPromise;
 }
 
-export function getPlayerAnimations(): PlayerSpriteAnimations | null {
-  return playerAnimations;
+export function getPlayerAnimations(hoodId: HoodId = 'cacador'): PlayerSpriteAnimations | null {
+  return playerAnimations.get(hoodId) ?? playerAnimations.get('cacador') ?? null;
+}
+
+export function getHoodIconTexture(hoodId: HoodId): Texture | null {
+  if (hoodId === 'cacador') return playerAnimations.get('cacador')?.idle[0] ?? null;
+  return hoodIcons.get(hoodId) ?? null;
 }
 
 export function resetPlayerSpriteCache(): void {
-  playerAnimations = null;
+  playerAnimations.clear();
+  hoodIcons.clear();
   preloadPromise = null;
 }

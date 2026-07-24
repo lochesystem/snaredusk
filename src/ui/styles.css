@@ -2173,6 +2173,41 @@ button:hover {
   white-space: nowrap;
 }
 
+.hood-equipment-choices {
+  display: flex;
+  max-width: 100%;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 5px;
+}
+
+.hood-equipment-option {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  padding: 1px !important;
+  place-items: center;
+  border: 1px solid #58412f;
+  border-radius: 3px;
+  background: rgba(19, 17, 22, 0.88);
+}
+
+.hood-equipment-option:hover,
+.hood-equipment-option.active {
+  border-color: #d29a54;
+  background: rgba(74, 49, 38, 0.92);
+}
+
+.hood-equipment-option img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
 .equipment-stats {
   grid-column: 1 / -1;
   display: grid;

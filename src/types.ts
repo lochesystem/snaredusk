@@ -113,6 +113,10 @@ export interface GameState {
   playerHp: number;
   playerStamina: number;
   playerDef: number;
+  /** Capuz cosmético ativo; o restante do traje permanece invariável. */
+  equippedHoodId: import('./data/hoods.ts').HoodId;
+  /** Capuzes fabricados e disponíveis no equipamento. */
+  ownedHoods: import('./data/hoods.ts').HoodId[];
   equippedWeaponId: string;
   ownedWeapons: string[];
   /** Armas no arsenal da base (fora dos slots 1–2 e dos baús). */
@@ -199,6 +203,8 @@ export function defaultGameState(): GameState {
     playerHp: 100,
     playerStamina: 80,
     playerDef: 5,
+    equippedHoodId: 'cacador',
+    ownedHoods: ['cacador'],
     equippedWeaponId: STARTING_WEAPON_ID,
     ownedWeapons: [STARTING_WEAPON_ID],
     weaponStash: [],

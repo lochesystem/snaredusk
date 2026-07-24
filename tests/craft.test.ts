@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGameState } from '../src/types.ts';
 import { canCraft, craftWeapon, equipWeapon, formatCraftMissing, getCraftStatus } from '../src/systems/craft.ts';
+import { equipHood } from '../src/systems/hoodEquipment.ts';
 
 describe('craft', () => {
   it('can craft picareta with materials', () => {
@@ -104,5 +105,41 @@ describe('craft', () => {
 
     expect(craftWeapon(state, 'craft_orbe_vinculo')).toBe(true);
     expect(state.orbs).toBe(before + 1);
+  });
+
+  it('crafta e equipa um capuz sem alterar arma ou defesa', () => {
+    const state = defaultGameState();
+    state.gold = 100;
+    state.bag[0] = {
+      kind: 'loot',
+      id: 'fibra_musgo',
+      name: 'Fibra de musgo',
+      baseValue: 20,
+      quantity: 4,
+    };
+    state.bag[1] = {
+      kind: 'loot',
+      id: 'esporo_brilhante',
+      name: 'Esporo brilhante',
+      baseValue: 45,
+      quantity: 2,
+    };
+    state.bag[2] = {
+      kind: 'loot',
+      id: 'chifre_fungico',
+      name: 'Chifre fúngico',
+      baseValue: 85,
+      quantity: 1,
+    };
+    const weapon = state.equippedWeaponId;
+    const defense = state.playerDef;
+
+    expect(craftWeapon(state, 'craft_capuz_fungico')).toBe(true);
+    expect(state.ownedHoods).toContain('fungico');
+    expect(canCraft(state, 'craft_capuz_fungico')).toBe(false);
+    expect(equipHood(state, 'fungico')).toBe(true);
+    expect(state.equippedHoodId).toBe('fungico');
+    expect(state.equippedWeaponId).toBe(weapon);
+    expect(state.playerDef).toBe(defense);
   });
 });

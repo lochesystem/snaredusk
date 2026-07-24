@@ -1,5 +1,6 @@
 import { WEAPONS } from '../data/weapons.ts';
 import { LOOT_TABLE } from '../data/items.ts';
+import { HOODS } from '../data/hoods.ts';
 import { listRecipes, equipWeapon } from '../systems/craft.ts';
 import {
   craftWeaponFromWorkbench,
@@ -18,6 +19,7 @@ import { chestWeaponHasSpace } from '../systems/baseChest.ts';
 import type { Container } from 'pixi.js';
 import {
   createCaptureOrbBall,
+  createHoodIcon,
   createLootIcon,
   createStationRecipeIcon,
   createWeaponIcon,
@@ -262,6 +264,9 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
     if (recipe.output.kind === 'weapon') {
       const weaponId = recipe.output.weaponId;
       callbacks.setPixiIcon(iconImg, () => createWeaponIcon(weaponId), `weapon-${weaponId}`);
+    } else if (recipe.output.kind === 'hood') {
+      const hoodId = recipe.output.hoodId;
+      callbacks.setPixiIcon(iconImg, () => createHoodIcon(hoodId), `hood-${hoodId}`);
     } else if (recipe.output.kind === 'station') {
       const stationId = recipe.output.stationId;
       callbacks.setPixiIcon(
@@ -280,6 +285,7 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
   for (const recipe of recipes) {
     const weapon = recipe.output.kind === 'weapon' ? WEAPONS[recipe.output.weaponId] : null;
     if (recipe.output.kind === 'weapon' && !weapon) continue;
+    if (recipe.output.kind === 'hood' && !HOODS[recipe.output.hoodId]) continue;
     const preview = getCraftPreviewFromSources(state, recipe.id, benchCellX, benchCellY, false);
 
     const btn = document.createElement('button');
@@ -364,7 +370,7 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
     source.textContent = preview.consumePlan.length > 0
       ? `Dos baús: ${formatConsumePlan(preview.consumePlan)}`
       : preview.owned
-        ? 'Você já possui esta arma.'
+        ? 'Você já possui este equipamento.'
         : preview.missing.length > 0
           ? `Falta: ${preview.missing.join(', ')}`
           : 'Pronto para fabricar.';
@@ -395,6 +401,8 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
         callbacks.showToast(
           `${selectedRecipe.name} fabricada!${loc?.kind === 'stash' ? ' — foi para o arsenal' : ''}`,
         );
+      } else if (selectedRecipe.output.kind === 'hood') {
+        callbacks.showToast(`${selectedRecipe.name} fabricado — equipe no inventário`);
       } else if (selectedRecipe.output.kind === 'station') {
         callbacks.showToast(`${selectedRecipe.name} virou um item de construção`);
       } else {

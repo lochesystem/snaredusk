@@ -18,6 +18,7 @@ import { normalizeBaseGrid } from '../world/baseGrid.ts';
 import { normalizeWeaponArmory } from './weaponArmory.ts';
 import { normalizeBuildHotbar } from './buildHotbar.ts';
 import { addLootToSlots, normalizeItemStacks } from './itemStacks.ts';
+import { normalizeHoodEquipment } from './hoodEquipment.ts';
 
 const SAVE_VERSION = 9;
 
@@ -26,12 +27,14 @@ interface SavePayloadV9 {
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'craftedStations' | 'buildHotbar' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedHoodId' | 'ownedHoods' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'craftedStations' | 'buildHotbar' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
   playerStamina?: number;
   playerDef?: number;
+  equippedHoodId?: GameState['equippedHoodId'];
+  ownedHoods?: GameState['ownedHoods'];
   equippedWeaponId?: string;
   ownedWeapons?: string[];
   weaponStash?: string[];
@@ -111,6 +114,7 @@ function normalizeState(partial: LegacyGameState): GameState {
   const base = defaultGameState();
   const level = partial.shopLevel ?? base.shopLevel;
   const def = getShopLevelDef(level);
+  const hoodEquipment = normalizeHoodEquipment(partial.ownedHoods, partial.equippedHoodId);
 
   const normalized: GameState = {
     ...base,
@@ -118,6 +122,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     shopLevel: level,
     playerStamina: partial.playerStamina ?? base.playerStamina,
     playerDef: partial.playerDef ?? base.playerDef,
+    ...hoodEquipment,
     equippedWeaponId: partial.equippedWeaponId ?? base.equippedWeaponId,
     ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
     weaponStash: partial.weaponStash ?? [],

@@ -162,6 +162,7 @@ import {
   type CreatureSprite,
   createInteractableSprite,
   createPlayerSprite,
+  type PlayerSprite,
   createPortalSprite,
   createSpeechBubble,
   createCaptureOrbBall,
@@ -321,7 +322,7 @@ export class DungeonScene {
   private entityLayer = new YSortLayer();
   private fxLayer = new Container();
   private camera = new Camera();
-  private playerSprite = createPlayerSprite();
+  private playerSprite!: PlayerSprite;
   private portalSprite = createPortalSprite();
   private attackFx: WeaponAttackFxState | null = null;
   private aimReticleGfx = createAimReticle();
@@ -388,6 +389,7 @@ export class DungeonScene {
     this.state = state;
     this.input = input;
     this.callbacks = callbacks;
+    this.playerSprite = createPlayerSprite(state.equippedHoodId);
     this.tutorialRun = config.tutorialRun ?? false;
     this.playerHp = state.playerHp;
     this.playerStamina = state.playerStamina;
@@ -460,6 +462,16 @@ export class DungeonScene {
     this.spawnChests();
     this.spawnInteractables();
     this.spawnCompanion();
+  }
+
+  syncPlayerAppearance(): void {
+    const parent = this.playerSprite.parent;
+    if (parent) parent.removeChild(this.playerSprite);
+    this.playerSprite.destroy({ children: true });
+    this.playerSprite = createPlayerSprite(this.state.equippedHoodId);
+    this.playerSprite.x = this.playerX;
+    this.playerSprite.y = this.playerY;
+    this.entityLayer.addChild(this.playerSprite);
   }
 
   enter(): void {

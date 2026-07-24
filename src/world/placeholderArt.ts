@@ -11,9 +11,11 @@ import {
 } from './creatureAssets.ts';
 import {
   getPlayerAnimations,
+  getHoodIconTexture,
   PLAYER_IDLE_ANIM_SPEED,
   PLAYER_WALK_ANIM_SPEED,
 } from './playerAssets.ts';
+import type { HoodId } from '../data/hoods.ts';
 import type { BiomeId, BiomeTheme } from '../data/biomes.ts';
 import type { CustomerArchetypeId } from '../systems/customers.ts';
 import { createPixelText } from './pixelText.ts';
@@ -63,14 +65,14 @@ export interface PlayerSprite extends Container {
   playAttack(weaponId: string, aimX: number, duration: number): void;
 }
 
-export function createPlayerSprite(): PlayerSprite {
+export function createPlayerSprite(hoodId: HoodId = 'cacador'): PlayerSprite {
   const root = new Container() as PlayerSprite;
   root.zOffset = 0.5;
   // Os sprites v6 usam quadros 48×48 com arte em resolução final; escala 1:1
   // evita ampliar pixels pequenos e preserva a nitidez do pixel art.
   root.scale.set(1);
 
-  const playerAnims = getPlayerAnimations();
+  const playerAnims = getPlayerAnimations(hoodId);
   let anim: AnimatedSprite | null = null;
   const facing = { value: 1 };
   let attacking = false;
@@ -879,6 +881,23 @@ export function createWeaponIcon(weaponId: string): Container {
   }
 
   root.addChild(g);
+  return root;
+}
+
+export function createHoodIcon(hoodId: HoodId): Container {
+  const root = new Container();
+  const texture = getHoodIconTexture(hoodId);
+  if (texture) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.scale.set(0.9);
+    sprite.roundPixels = true;
+    root.addChild(sprite);
+    return root;
+  }
+  const fallback = createPlayerSprite(hoodId);
+  fallback.scale.set(0.8);
+  root.addChild(fallback);
   return root;
 }
 

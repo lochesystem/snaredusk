@@ -33,6 +33,7 @@ import {
   drawShopFixtures,
   drawShopFloorBase,
   type CustomerSprite,
+  type PlayerSprite,
 } from '../world/placeholderArt.ts';
 import { getShopTileTexture } from '../world/shopAssets.ts';
 import { addToBag } from '../systems/saveManager.ts';
@@ -102,7 +103,7 @@ export class ShopScene {
   private uiLayer = new Container();
   private layout!: ShopLayout;
   private slotVisuals: SlotVisual[] = [];
-  private player = createPlayerSprite();
+  private player!: PlayerSprite;
   private playerX = 0;
   private playerY = 0;
   private carriedGfx: Container | null = null;
@@ -191,7 +192,7 @@ export class ShopScene {
       this.slotVisuals.push({ layout: slot, stand, itemLayer, highlight });
     }
 
-    this.player = createPlayerSprite();
+    this.player = createPlayerSprite(state.equippedHoodId);
     this.entityLayer.addChild(this.player);
     this.world.addChild(this.entityLayer);
     this.root.addChild(this.world);
@@ -200,6 +201,17 @@ export class ShopScene {
     this.playerX = this.layout.entrance.x;
     this.playerY = this.layout.entrance.y - 36;
     this.syncFromState(state);
+  }
+
+  syncPlayerAppearance(): void {
+    const state = this.cb.getState();
+    const parent = this.player?.parent;
+    if (parent) parent.removeChild(this.player);
+    this.player?.destroy({ children: true });
+    this.player = createPlayerSprite(state.equippedHoodId);
+    this.player.x = this.playerX;
+    this.player.y = this.playerY;
+    this.entityLayer.addChild(this.player);
   }
 
   syncFromState(state: GameState): void {

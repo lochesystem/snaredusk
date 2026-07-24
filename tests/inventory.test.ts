@@ -115,6 +115,22 @@ describe('inventory', () => {
     expect(loaded?.bag.filter(Boolean)).toHaveLength(18);
   });
 
+  it('preserva o capuz equipado e migra saves antigos para o original', () => {
+    const state = defaultGameState();
+    state.ownedHoods = ['cacador', 'prismatico'];
+    state.equippedHoodId = 'prismatico';
+    const loaded = deserializeState(serializeState(state));
+    expect(loaded?.ownedHoods).toEqual(['cacador', 'prismatico']);
+    expect(loaded?.equippedHoodId).toBe('prismatico');
+
+    const legacy = JSON.parse(serializeState(state));
+    delete legacy.state.ownedHoods;
+    delete legacy.state.equippedHoodId;
+    const migrated = deserializeState(JSON.stringify(legacy));
+    expect(migrated?.ownedHoods).toEqual(['cacador']);
+    expect(migrated?.equippedHoodId).toBe('cacador');
+  });
+
   it('move uma quantidade escolhida entre bolsa e baú e mescla pilhas', () => {
     const state = defaultGameState();
     const chest = createChestState('test', 0, 0);

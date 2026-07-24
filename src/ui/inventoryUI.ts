@@ -2,12 +2,15 @@ import type { Container } from 'pixi.js';
 import { BUILDABLE_STATIONS, getStation } from '../data/baseStations.ts';
 import { getSpecies } from '../data/creatures.ts';
 import { WEAPONS } from '../data/weapons.ts';
+import { getHood, type HoodId } from '../data/hoods.ts';
+import { equipHood } from '../systems/hoodEquipment.ts';
 import { assignBuildToFirstAvailable } from '../systems/buildHotbar.ts';
 import { formatSpecialItem } from '../systems/dungeonSpecial.ts';
 import { discardBagSlot, formatBagEntry } from '../systems/inventory.ts';
 import type { BagEntry, GameState } from '../types.ts';
 import {
   createCreatureSprite,
+  createHoodIcon,
   createLootIcon,
   createPlayerSprite,
   createStationRecipeIcon,
@@ -231,7 +234,11 @@ function renderEquipmentPanel(
   const player = document.createElement('img');
   player.className = 'equipment-player-sprite';
   player.alt = 'Personagem';
-  cb.setPixiIcon?.(player, () => createPlayerSprite(), 'inventory-player');
+  cb.setPixiIcon?.(
+    player,
+    () => createPlayerSprite(state.equippedHoodId),
+    `inventory-player-${state.equippedHoodId}`,
+  );
   paperdoll.appendChild(player);
 
   const equipped = WEAPONS[state.equippedWeaponId];
@@ -247,7 +254,29 @@ function renderEquipmentPanel(
   const companion = state.partyCompanion?.name ?? 'Nenhum';
   const companionSlot = equipmentSlot('Companheiro', companion, 'companion');
   const defenseSlot = equipmentSlot('Proteção', `DEF ${state.playerDef}`, 'armor');
-  const cloakSlot = equipmentSlot('Manto', 'Traje do Caçador', 'cloak');
+  const hood = getHood(state.equippedHoodId);
+  const cloakSlot = equipmentSlot('Capuz', hood.name, 'cloak');
+  const hoodChoices = document.createElement('div');
+  hoodChoices.className = 'hood-equipment-choices';
+  for (const hoodId of state.ownedHoods) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'hood-equipment-option';
+    option.classList.toggle('active', hoodId === state.equippedHoodId);
+    option.title = `${getHood(hoodId).name} — ${getHood(hoodId).description}`;
+    const icon = document.createElement('img');
+    icon.alt = getHood(hoodId).name;
+    cb.setPixiIcon?.(icon, () => createHoodIcon(hoodId), `hood-${hoodId}`);
+    option.appendChild(icon);
+    option.addEventListener('click', () => {
+      if (!equipHood(state, hoodId as HoodId)) return;
+      cb.onChange();
+      cb.showToast(`${getHood(hoodId).name} equipado`);
+      renderEquipmentPanel(container, cb.getState(), cb);
+    });
+    hoodChoices.appendChild(option);
+  }
+  cloakSlot.appendChild(hoodChoices);
 
   const stats = document.createElement('div');
   stats.className = 'equipment-stats';

@@ -3,7 +3,7 @@ import { getRecipe } from '../data/recipes.ts';
 import type { BaseChestState, GameState } from '../types.ts';
 import { getStation } from '../data/baseStations.ts';
 import { countLootInChest, removeLootFromChest } from './baseChest.ts';
-import { countLootInBag, grantCraftOutput } from './craft.ts';
+import { countLootInBag, grantCraftOutput, isCraftOutputOwned } from './craft.ts';
 
 export type ChestDirection = 'base';
 
@@ -64,8 +64,7 @@ export function getCraftPreviewFromSources(
     return { canCraft: false, owned: false, missing: ['Receita inválida'], consumePlan: [] };
   }
 
-  const owned = recipe.output.kind === 'weapon'
-    && state.ownedWeapons.includes(recipe.output.weaponId);
+  const owned = isCraftOutputOwned(state, recipe);
   if (owned) return { canCraft: false, owned: true, missing: [], consumePlan: [] };
 
   const workbenchChests = getWorkbenchChests(state, benchCellX, benchCellY);

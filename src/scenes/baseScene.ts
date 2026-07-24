@@ -256,10 +256,16 @@ export class BaseScene {
 
     }
 
-    this.player = createPlayerSprite();
+    this.player = createPlayerSprite(this.cb.getState().equippedHoodId);
 
     this.entityLayer.addChild(this.player);
 
+  }
+
+  syncPlayerAppearance(): void {
+    this.spawnPlayerSprite();
+    this.player.x = this.playerX;
+    this.player.y = this.playerY;
   }
 
 

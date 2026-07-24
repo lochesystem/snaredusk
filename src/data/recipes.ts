@@ -1,4 +1,5 @@
 import type { StationId } from './baseStations.ts';
+import type { HoodId } from './hoods.ts';
 
 export interface RecipeIngredient {
   lootId: string;
@@ -7,6 +8,7 @@ export interface RecipeIngredient {
 
 export type CraftOutput =
   | { kind: 'weapon'; weaponId: string }
+  | { kind: 'hood'; hoodId: HoodId }
   | { kind: 'station'; stationId: StationId; quantity?: number }
   | { kind: 'loot'; lootId: string; quantity: number }
   | { kind: 'orbs'; quantity: number };
@@ -79,6 +81,17 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     output: { kind: 'weapon', weaponId: 'foice_micelio' },
   },
   {
+    id: 'craft_capuz_fungico',
+    name: 'Capuz do Micélio',
+    goldCost: 35,
+    ingredients: [
+      { lootId: 'fibra_musgo', quantity: 4 },
+      { lootId: 'esporo_brilhante', quantity: 2 },
+      { lootId: 'chifre_fungico', quantity: 1 },
+    ],
+    output: { kind: 'hood', hoodId: 'fungico' },
+  },
+  {
     id: 'craft_lamina_prismatica',
     name: 'Lâmina prismática',
     goldCost: 70,
@@ -90,6 +103,17 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
     output: { kind: 'weapon', weaponId: 'lamina_prismatica' },
   },
   {
+    id: 'craft_capuz_prismatico',
+    name: 'Capuz Prismático',
+    goldCost: 65,
+    ingredients: [
+      { lootId: 'fragmento_cristal', quantity: 4 },
+      { lootId: 'poeira_prismatica', quantity: 2 },
+      { lootId: 'gema_rachada', quantity: 1 },
+    ],
+    output: { kind: 'hood', hoodId: 'prismatico' },
+  },
+  {
     id: 'craft_tridente_termal',
     name: 'Tridente termal',
     goldCost: 90,
@@ -99,6 +123,17 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
       { lootId: 'escama_termal', quantity: 4 },
     ],
     output: { kind: 'weapon', weaponId: 'tridente_termal' },
+  },
+  {
+    id: 'craft_capuz_termal',
+    name: 'Capuz da Brasa',
+    goldCost: 85,
+    ingredients: [
+      { lootId: 'escama_termal', quantity: 4 },
+      { lootId: 'essencia_termal', quantity: 2 },
+      { lootId: 'pluma_bruma', quantity: 1 },
+    ],
+    output: { kind: 'hood', hoodId: 'termal' },
   },
   {
     id: 'craft_cama',
