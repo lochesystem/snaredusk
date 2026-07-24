@@ -8,13 +8,18 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import {
-  advanceExpeditionStage,
   beginExpedition,
+  checkpointExpedition,
+  choosePerkAndAdvance,
   endExpedition,
   getExpeditionDifficulty,
   getExpeditionStageSeed,
   restoreExpeditionCheckpoint,
 } from './systems/expedition.ts';
+import {
+  generatePerkOffers,
+  getExpeditionPerk,
+} from './systems/expeditionPerks.ts';
 import {
   generateBossArena,
   generateExpeditionFloor,
@@ -70,6 +75,10 @@ import {
   isAbandonModalOpen,
   openAbandonModal,
 } from './ui/abandonUI.ts';
+import {
+  closeExpeditionRewardUI,
+  openExpeditionRewardUI,
+} from './ui/expeditionRewardUI.ts';
 import type { DungeonReturnPayload } from './scenes/dungeonScene.ts';
 import { isBiomeUnlocked } from './systems/biomeProgress.ts';
 import { renderWeaponHotbar } from './ui/hotbarUI.ts';
@@ -154,6 +163,7 @@ export class Game {
   private shopScene: ShopScene | null = null;
   private pendingDungeonExit: DungeonReturnPayload | null = null;
   private processingDungeonExit = false;
+  private rewardDecisionOpen = false;
   private shopUI: ShopUI;
   private iconCache = new Map<string, string>();
 
@@ -983,9 +993,14 @@ export class Game {
     document.getElementById('hud')?.classList.remove('hidden');
     this.updateHud();
     requestAnimationFrame(() => this.fitCanvas());
+    if (activeExpedition?.phase === 'reward') {
+      this.dungeon.pauseForReward();
+      void this.presentExpeditionReward();
+    }
   }
 
   private destroyDungeon(): void {
+    closeExpeditionRewardUI();
     if (!this.dungeon) return;
     this.dungeon.exit();
     this.dungeon = null;
@@ -1080,16 +1095,7 @@ export class Game {
     closeBestiaryModal();
 
     if (payload.reason === 'floor_complete' && this.state.activeExpedition) {
-      this.destroyDungeon();
-      clearDungeonSpecial(this.state);
-      const next = advanceExpeditionStage(this.state);
-      saveGame(this.state);
-      await this.enterDungeon({ resume: true });
-      this.showToast(
-        next.floor === 4
-          ? 'Arena do Rei das Esporas'
-          : `Floresta Fúngica — andar ${next.floor}/3`,
-      );
+      await this.presentExpeditionReward();
       return;
     }
 
@@ -1123,6 +1129,60 @@ export class Game {
       }
     } else if (payload.reason === 'death') {
       this.showToast('Você desmaiou — perdeu a bolsa!');
+    }
+  }
+
+  private async presentExpeditionReward(): Promise<void> {
+    const expedition = this.state.activeExpedition;
+    if (!expedition || expedition.floor >= 4 || this.rewardDecisionOpen) return;
+    this.rewardDecisionOpen = true;
+    this.dungeon?.pauseForReward();
+
+    try {
+      let offers = expedition.perkOffers;
+      const validOfferCount = offers.filter(
+        (perkId) => getExpeditionPerk(perkId) !== null,
+      ).length;
+      if (expedition.phase !== 'reward' || validOfferCount < 3) {
+        offers = generatePerkOffers(expedition);
+        checkpointExpedition(
+          this.state,
+          expedition.floor,
+          'reward',
+          offers,
+        );
+        saveGame(this.state);
+      }
+
+      const decision = await openExpeditionRewardUI(offers, expedition.floor);
+      clearDungeonSpecial(this.state);
+
+      if (decision.kind === 'extract') {
+        markDungeonReturned(this.state);
+        endExpedition(this.state, 'extract');
+        this.destroyDungeon();
+        saveGame(this.state);
+        this.showScreen('base');
+        this.showToast('Extração concluída — toda a bolsa voltou com você');
+        return;
+      }
+
+      const chosenPerk = getExpeditionPerk(decision.perkId);
+      const hpBefore = this.state.playerHp;
+      const next = choosePerkAndAdvance(this.state, decision.perkId);
+      const healed = this.state.playerHp - hpBefore;
+      saveGame(this.state);
+      this.destroyDungeon();
+      await this.enterDungeon({ resume: true });
+      this.showToast(
+        `${chosenPerk?.name ?? 'Bênção recebida'} · +${healed} HP · ${
+          next.floor === 4
+            ? 'Arena do Rei das Esporas'
+            : `andar ${next.floor}/3`
+        }`,
+      );
+    } finally {
+      this.rewardDecisionOpen = false;
     }
   }
 

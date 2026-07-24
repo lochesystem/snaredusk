@@ -7,6 +7,12 @@ import type {
   GameState,
 } from '../types.ts';
 import type { BiomeId } from '../data/biomes.ts';
+import {
+  getExpeditionPerk,
+  getExpeditionPerkModifiers,
+} from './expeditionPerks.ts';
+
+export const EXPEDITION_CONTINUE_HEAL_RATE = 0.05;
 
 export type ExpeditionEndReason = 'extract' | 'death' | 'abandon' | 'victory';
 
@@ -116,10 +122,14 @@ export function choosePerkAndAdvance(
   if (!expedition.perkOffers.includes(perkId)) {
     throw new Error('Perk fora das ofertas da expedição');
   }
+  if (!getExpeditionPerk(perkId) || expedition.perks.includes(perkId)) {
+    throw new Error('Perk inválido ou já escolhido');
+  }
   if (expedition.floor >= 4) {
     throw new Error('A arena final não possui próximo andar');
   }
   expedition.perks.push(perkId);
+  applyExpeditionContinueRecovery(state);
   const nextFloor = (expedition.floor + 1) as ExpeditionFloor;
   return checkpointExpedition(
     state,
@@ -136,17 +146,28 @@ export function advanceExpeditionStage(state: GameState): ActiveExpedition {
   const expedition = state.activeExpedition;
   if (!expedition) throw new Error('Nenhuma expedição ativa');
   if (expedition.floor >= 4) throw new Error('A arena final encerra a expedição');
-  state.playerHp = Math.min(
-    PLAYER_MAX_HP,
-    state.playerHp + Math.ceil(PLAYER_MAX_HP * 0.15),
-  );
-  state.playerStamina = PLAYER_MAX_STAMINA;
+  applyExpeditionContinueRecovery(state);
   const nextFloor = (expedition.floor + 1) as ExpeditionFloor;
   return checkpointExpedition(
     state,
     nextFloor,
     nextFloor === 4 ? 'boss' : 'exploring',
   );
+}
+
+export function applyExpeditionContinueRecovery(state: GameState): number {
+  const modifiers = getExpeditionPerkModifiers(
+    state.activeExpedition?.perks ?? [],
+  );
+  const healRate = EXPEDITION_CONTINUE_HEAL_RATE
+    + modifiers.transitionHealBonusRate;
+  const before = state.playerHp;
+  state.playerHp = Math.min(
+    PLAYER_MAX_HP,
+    state.playerHp + Math.ceil(PLAYER_MAX_HP * healRate),
+  );
+  state.playerStamina = PLAYER_MAX_STAMINA;
+  return state.playerHp - before;
 }
 
 /** Encerra qualquer caminho de saída e impede perks/andar de vazarem para a base. */

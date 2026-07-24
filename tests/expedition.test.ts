@@ -95,7 +95,7 @@ describe('ciclo de vida da expedição', () => {
     expect(floorTwoSeed).not.toBe(floorOneSeed);
   });
 
-  it('recupera 15% de HP, restaura stamina e cria o próximo checkpoint', () => {
+  it('recupera 5% de HP, restaura stamina e cria o próximo checkpoint', () => {
     const state = defaultGameState();
     beginExpedition(state, 'floresta', 14);
     state.playerHp = 40;
@@ -106,11 +106,25 @@ describe('ciclo de vida da expedição', () => {
     expect(next).toMatchObject({
       floor: 2,
       phase: 'exploring',
-      checkpointHp: 55,
+      checkpointHp: 45,
       checkpointStamina: 80,
     });
-    expect(state.playerHp).toBe(55);
+    expect(state.playerHp).toBe(45);
     expect(state.playerStamina).toBe(80);
+  });
+
+  it('aplica a cura base mais Segundo Fôlego ao escolher o perk e prosseguir', () => {
+    const state = defaultGameState();
+    beginExpedition(state, 'floresta', 18);
+    state.playerHp = 40;
+    state.playerStamina = 2;
+    checkpointExpedition(state, 1, 'reward', ['segundo_folego']);
+
+    const next = choosePerkAndAdvance(state, 'segundo_folego');
+
+    expect(next.checkpointHp).toBe(50);
+    expect(next.checkpointStamina).toBe(80);
+    expect(next.perks).toContain('segundo_folego');
   });
 
   it('usa a curva de dificuldade definida para cada andar', () => {
@@ -134,6 +148,8 @@ describe('ciclo de vida da expedição', () => {
     expect(() => choosePerkAndAdvance(state, 'guardiao')).toThrow();
     checkpointExpedition(state, 1, 'reward', ['fio_afiado']);
     expect(() => choosePerkAndAdvance(state, 'guardiao')).toThrow();
+    state.activeExpedition!.perks.push('fio_afiado');
+    expect(() => choosePerkAndAdvance(state, 'fio_afiado')).toThrow();
   });
 
   it.each(['extract', 'death', 'abandon', 'victory'] as const)(

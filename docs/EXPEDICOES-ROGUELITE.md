@@ -61,7 +61,7 @@ flowchart TD
 - Após cada elite, o jogador pode extrair ou escolher um entre três perks.
 - Os perks duram somente durante a expedição.
 - Extrair preserva a bolsa, encerra a expedição e consome a ida à masmorra do dia.
-- Continuar preserva bolsa, HP e companheiro; recupera stamina e 15% do HP máximo.
+- Continuar preserva bolsa, HP e companheiro; recupera stamina e 5% do HP máximo.
 - Morrer ou abandonar perde a bolsa e todos os perks, como no risco atual.
 - Uma nova ida ao mesmo bioma sempre começa no andar 1.
 - O tutorial inicial continua usando sua masmorra curta e não entra neste fluxo.
@@ -327,8 +327,8 @@ expedição antes do retorno à base.
 - [ ] Criar elite final por andar e impedir repetição.
 - [ ] Implementar Implacável, Tempestade e Bastião.
 - [x] Aplicar escalonamento de andar.
-- [ ] Criar tela de extração/continuação.
-- [ ] Implementar os 12 perks iniciais.
+- [x] Criar tela de extração/continuação.
+- [ ] Implementar os 12 perks iniciais. *(7 funcionais no primeiro lote)*
 - [x] Criar arena manual do Rei das Esporas.
 - [ ] Entregar chave somente no baú épico.
 
@@ -336,11 +336,21 @@ expedição antes do retorno à base.
 andares 1–3, com respectivamente 5–7, 7–10 e 9–12 inimigos. Ao limpar o estágio,
 uma passagem provisória desperta no centro de uma sala de combate aleatória,
 reservada sem evento, baú ou perigo ambiental. Um anúncio comunica a abertura e
-a sala fica marcada em ciano no minimapa. Ao usar o portal, o jogo cria o
-checkpoint seguinte, recupera 15% do HP, restaura stamina e avança até a arena
-isolada. Essa passagem automática será substituída pela escolha “extrair ou
-continuar com perk” no próximo recorte. Baús abertos somem após uma breve pausa
-para não acumular ruído visual nas salas já exploradas.
+a sala fica marcada em ciano no minimapa. Ao usar o portal, o jogador escolhe
+entre extrair a bolsa em segurança ou receber uma entre três bênçãos e avançar.
+Prosseguir cria o checkpoint seguinte, recupera 5% do HP e restaura a stamina;
+Segundo Fôlego acrescenta mais 5% de cura. As ofertas permanecem fixas no save.
+Baús abertos somem após uma breve pausa para não acumular ruído visual nas salas
+já exploradas.
+
+O primeiro lote contém sete perks já conectados ao combate: Fio Afiado, Mãos
+Rápidas, Casca Reforçada, Segundo Fôlego, Passo Leve, Vínculo Feroz e Guardião.
+Os cinco perks restantes continuam no escopo da Etapa 3.
+
+O mercador ambulante também oferece uma compra única de cura por encontro. O
+Elixir do Caminhante recupera de 5% a 10% do HP máximo e custa uma fração
+aleatória de 20% a 40% do ouro atual, com piso acima do pacote de três Orbes para
+continuar sendo o item mais caro da lista.
 
 **Aceite:** uma run completa da Floresta dura aproximadamente 25–40 minutos, pode
 ser extraída em três pontos, não apresenta softlock e continua legível com

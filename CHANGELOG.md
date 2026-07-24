@@ -23,8 +23,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   sem chefe e quarta etapa com arena isolada do Rei das Esporas
 - Quantidade crescente por estágio: 5–6/6–7/7–8 salas e
   5–7/7–10/9–12 inimigos, validada em 100 seeds por andar
-- Passagem automática provisória entre andares com checkpoint, recuperação de
-  15% do HP, stamina restaurada e HUD indicando andar/arena
+- **Recompensa entre andares:** ao usar a passagem, o jogador pode extrair toda
+  a bolsa para a base ou escolher uma entre três bênçãos para prosseguir
+- Sete perks funcionais no primeiro lote, com ofertas determinísticas e sem
+  repetição: dano, recarga, defesa, cura, movimento e dois bônus de companheiro
+- Prosseguir recupera 5% do HP máximo e toda a stamina; Segundo Fôlego acrescenta
+  outros 5% de cura, e a escolha fica persistida no checkpoint
+- O mercador da expedição vende um Elixir do Caminhante por encontro: cura
+  aleatória de 5–10% e preço dinâmico de 20–40% do ouro atual, sempre acima das
+  opções de Orbe
 - Ao limpar um andar, o portal surge no centro de uma sala de combate aleatória
   sem evento, baú ou perigo; um anúncio próprio informa o despertar e a sala
   passa a ser marcada em ciano no minimapa
@@ -32,8 +39,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   transição curta, reduzindo a poluição visual das salas já exploradas
 - Curva inicial de HP, ataque e velocidade aplicada por andar; Cristal, Termal
   e tutorial preservam o fluxo anterior
-- Testes da geração de expedição e do ciclo visual dos baús; suíte atualizada
-  para **308 testes em 65 arquivos**
+- Testes da geração, perks, cura do mercador e ciclo visual dos baús; suíte
+  atualizada para **314 testes em 67 arquivos**
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado

@@ -98,6 +98,15 @@ import {
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { registerBestiarySpecies } from '../systems/bestiary.ts';
 import type { ExpeditionDifficulty } from '../systems/expedition.ts';
+import {
+  createMerchantHealingOffer,
+  purchaseMerchantHealing,
+  type MerchantHealingOffer,
+} from '../systems/merchantHealing.ts';
+import {
+  getExpeditionPerkModifiers,
+  type ExpeditionPerkModifiers,
+} from '../systems/expeditionPerks.ts';
 import { getOpenedChestPresentation } from '../systems/openedChestLifecycle.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import {
@@ -316,6 +325,8 @@ interface LiveInteractable {
   container: Container;
   bubble: Container | null;
   used: boolean;
+  healingPurchased: boolean;
+  healingOffer: MerchantHealingOffer | null;
 }
 
 interface PendingChoices {
@@ -323,8 +334,10 @@ interface PendingChoices {
   interactable: LiveInteractable;
   labelA: string;
   labelB: string;
+  labelC?: string;
   applyA: () => void;
   applyB: () => void;
+  applyC?: () => void;
 }
 
 export class DungeonScene {
@@ -392,6 +405,7 @@ export class DungeonScene {
     attackMultiplier: 1,
     speedMultiplier: 1,
   };
+  private perkModifiers: ExpeditionPerkModifiers;
 
   private state: GameState;
   private input: InputManager;
@@ -406,6 +420,9 @@ export class DungeonScene {
     this.state = state;
     this.input = input;
     this.callbacks = callbacks;
+    this.perkModifiers = getExpeditionPerkModifiers(
+      state.activeExpedition?.perks ?? [],
+    );
     this.playerSprite = createPlayerSprite(state.equippedHoodId);
     this.tutorialRun = config.tutorialRun ?? false;
     this.expeditionStage = config.expeditionStage ?? 'none';
@@ -638,7 +655,14 @@ export class DungeonScene {
       container.x = data.x;
       container.y = data.y;
       this.entityLayer.addChild(container);
-      this.interactables.push({ data, container, bubble: null, used: false });
+      this.interactables.push({
+        data,
+        container,
+        bubble: null,
+        used: false,
+        healingPurchased: false,
+        healingOffer: null,
+      });
     }
   }
 
@@ -852,13 +876,19 @@ export class DungeonScene {
       const slip = applySlipVelocity(this.slideVelX, this.slideVelY, move.x, move.y, dt);
       this.slideVelX = slip.x;
       this.slideVelY = slip.y;
-      dx = this.slideVelX * dt;
-      dy = this.slideVelY * dt;
+      dx = this.slideVelX * dt * this.perkModifiers.moveSpeedMultiplier;
+      dy = this.slideVelY * dt * this.perkModifiers.moveSpeedMultiplier;
     } else {
       this.slideVelX = 0;
       this.slideVelY = 0;
-      dx = move.x * PLAYER_SPEED * dt;
-      dy = move.y * PLAYER_SPEED * dt;
+      dx = move.x
+        * PLAYER_SPEED
+        * this.perkModifiers.moveSpeedMultiplier
+        * dt;
+      dy = move.y
+        * PLAYER_SPEED
+        * this.perkModifiers.moveSpeedMultiplier
+        * dt;
     }
 
     const prevX = this.playerX;
@@ -1093,7 +1123,7 @@ export class DungeonScene {
       );
       for (const hit of hits) {
         const enemy = this.enemies.find((e) => e.id === hit.id);
-        if (enemy) this.damageEnemy(enemy, hit.damage);
+        if (enemy) this.damageEnemy(enemy, hit.damage, 'player');
       }
     } else {
       this.playAttackFx(weapon.attackFx ?? 'spear_thrust', angle, weapon.range, weapon.slashColor ?? 0xc4f082);
@@ -1104,7 +1134,8 @@ export class DungeonScene {
       this.spawnProjectile(data, 'player', weapon.projectileStyle ?? 'orb');
     }
 
-    this.attackCd = weapon.cooldown;
+    this.attackCd = weapon.cooldown
+      * this.perkModifiers.attackCooldownMultiplier;
     this.playerStamina -= weapon.staminaCost;
   }
 
@@ -1217,7 +1248,7 @@ export class DungeonScene {
             break;
           }
 
-          this.damageEnemy(enemy, p.damage);
+          this.damageEnemy(enemy, p.damage, p.owner);
           if (!markProjectileHit(p, enemy.id)) {
             this.fxLayer.removeChild(p.container);
             p.container.destroy({ children: true });
@@ -1234,7 +1265,10 @@ export class DungeonScene {
           }
         }
         if (!hit && projectileHitPlayer(p, this.playerX, this.playerY, PLAYER_RADIUS)) {
-          const dmg = calcDamage(p.damage, this.state.playerDef);
+          const dmg = calcDamage(
+            p.damage,
+            this.state.playerDef + this.perkModifiers.playerDefenseBonus,
+          );
           this.recordPlayerHit(p.sourceName ?? 'Um projétil');
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
@@ -1283,11 +1317,19 @@ export class DungeonScene {
     this.syncBossHud(enemy);
   }
 
-  private damageEnemy(enemy: LiveEnemy, rawDmg: number): void {
+  private damageEnemy(
+    enemy: LiveEnemy,
+    rawDmg: number,
+    source: 'player' | 'companion' = 'player',
+  ): void {
     if (enemy.dead || enemy.fled) return;
     enemy.aggroed = true;
+    const sourceMultiplier = source === 'companion'
+      ? this.perkModifiers.companionDamageMultiplier
+      : this.perkModifiers.weaponDamageMultiplier;
+    const modifiedDamage = Math.max(1, Math.round(rawDmg * sourceMultiplier));
     const behavior = getEnemyBehavior(enemy.behaviorId);
-    const afterShield = applyShieldDamage(enemy, rawDmg, behavior);
+    const afterShield = applyShieldDamage(enemy, modifiedDamage, behavior);
     this.updateEnemyStatusBars(enemy);
     if (enemy.isBoss && this.bossFightPhase === 'active') {
       updateBossHud(this.getBossHudState(enemy));
@@ -1514,7 +1556,10 @@ export class DungeonScene {
           this.stalactiteTelegraphs.push(createStalactiteTelegraph(stalactite));
         }
         if (mech.heatWaveDamage > 0 && this.invincibleTimer <= 0 && dist < 95) {
-          const dmg = calcDamage(mech.heatWaveDamage, this.state.playerDef);
+          const dmg = calcDamage(
+            mech.heatWaveDamage,
+            this.state.playerDef + this.perkModifiers.playerDefenseBonus,
+          );
           this.recordPlayerHit(this.enemyDisplayName(enemy));
           this.playerHp = Math.max(0, this.playerHp - dmg);
           drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
@@ -1561,7 +1606,10 @@ export class DungeonScene {
       }
 
       if (result.playerDamage > 0 && this.invincibleTimer <= 0) {
-        const dmg = calcDamage(result.playerDamage, this.state.playerDef);
+        const dmg = calcDamage(
+          result.playerDamage,
+          this.state.playerDef + this.perkModifiers.playerDefenseBonus,
+        );
         this.recordPlayerHit(this.enemyDisplayName(enemy));
         this.playerHp = Math.max(0, this.playerHp - dmg);
         drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
@@ -1918,7 +1966,12 @@ export class DungeonScene {
       const header = item.data.kind === 'event' ? '— Escolha —' : '— Mercador —';
       this.showInteractableBubble(
         item,
-        [header, `[1] ${this.pendingChoices.labelA}`, `[2] ${this.pendingChoices.labelB}`],
+        [
+          header,
+          `[1] ${this.pendingChoices.labelA}`,
+          `[2] ${this.pendingChoices.labelB}`,
+          ...(this.pendingChoices.labelC ? [`[3] ${this.pendingChoices.labelC}`] : []),
+        ],
         accent,
       );
       return;
@@ -1937,7 +1990,11 @@ export class DungeonScene {
     } else if (near.data.kind === 'event') {
       this.showInteractableBubble(near, ['[E] Investigar altar', 'Um evento aguarda...'], 0x8a6ab8);
     } else {
-      this.showInteractableBubble(near, ['[E] Falar com mercador', 'Compra Orbes de Vínculo'], 0xe8a84a);
+      this.showInteractableBubble(
+        near,
+        ['[E] Falar com mercador', 'Orbes e elixir restaurador'],
+        0xe8a84a,
+      );
     }
   }
 
@@ -1974,6 +2031,13 @@ export class DungeonScene {
         this.pendingChoices.interactable.used = true;
         this.refreshInteractableSprite(this.pendingChoices.interactable);
       }
+      this.pendingChoices = null;
+      this.callbacks.onStateChange();
+      return;
+    }
+
+    if (this.pendingChoices.applyC && this.input.consumeKey('3')) {
+      this.pendingChoices.applyC();
       this.pendingChoices = null;
       this.callbacks.onStateChange();
     }
@@ -2063,11 +2127,16 @@ export class DungeonScene {
   }
 
   private openMerchant(item: LiveInteractable): void {
+    item.healingOffer ??= createMerchantHealingOffer(this.state.gold);
+    const healingOffer = item.healingOffer;
     this.pendingChoices = {
       kind: 'merchant',
       interactable: item,
       labelA: `Orbe ×1 (${ORB_PRICE} ouro)`,
       labelB: `Orbes ×3 (${ORB_BUNDLE_PRICE} ouro)`,
+      labelC: item.healingPurchased
+        ? 'Elixir do Caminhante — esgotado'
+        : `Elixir do Caminhante +${healingOffer.healPercent}% HP (${healingOffer.price} ouro)`,
       applyA: () => {
         if (buyOrbPack(this.state, 'single')) {
           this.callbacks.showToast('Comprou 1 Orbe');
@@ -2082,6 +2151,29 @@ export class DungeonScene {
           this.callbacks.showToast('Ouro insuficiente');
         }
       },
+      applyC: item.healingPurchased
+        ? () => this.callbacks.showToast('O elixir deste mercador já foi comprado')
+        : () => {
+            const result = purchaseMerchantHealing(
+              this.state.gold,
+              this.playerHp,
+              healingOffer,
+            );
+            if (!result.ok) {
+              this.callbacks.showToast(
+                result.reason === 'full_hp'
+                  ? 'Sua vida já está cheia'
+                  : 'Ouro insuficiente',
+              );
+              return;
+            }
+            this.state.gold -= healingOffer.price;
+            this.playerHp = result.hp;
+            item.healingPurchased = true;
+            this.callbacks.showToast(
+              `Elixir restaurador — recuperou ${result.healed} HP`,
+            );
+          },
     };
   }
 
@@ -2316,7 +2408,7 @@ export class DungeonScene {
     } else if (intent.shouldMelee && targetEnemy) {
       comp.container.playAttack(targetEnemy.x - comp.x);
       const dmg = calcDamage(comp.atk, targetEnemy.def);
-      this.damageEnemy(targetEnemy, dmg);
+      this.damageEnemy(targetEnemy, dmg, 'companion');
       drawDamageNumber(this.fxLayer, dmg, targetEnemy.x, targetEnemy.y - 16, this.fxRunner);
       comp.attackCd = PARTY_ATTACK_COOLDOWN;
     }
@@ -2438,7 +2530,11 @@ export class DungeonScene {
     const comp = this.companion;
     if (!comp || comp.dead) return;
 
-    const dmg = Math.max(1, Math.round(rawDmg * 0.7));
+    const dmg = Math.max(1, Math.round(
+      rawDmg
+        * 0.7
+        * this.perkModifiers.companionDamageTakenMultiplier,
+    ));
     comp.hp = Math.max(0, comp.hp - dmg);
     drawDamageNumber(this.fxLayer, dmg, comp.x, comp.y - 18, this.fxRunner);
 
@@ -2540,7 +2636,10 @@ export class DungeonScene {
       this.invincibleTimer <= 0 &&
       circlesOverlap(this.playerX, this.playerY, PLAYER_RADIUS, impact.x, impact.y, impact.radius)
     ) {
-      const dmg = calcDamage(impact.damage, this.state.playerDef);
+      const dmg = calcDamage(
+        impact.damage,
+        this.state.playerDef + this.perkModifiers.playerDefenseBonus,
+      );
       this.playerHp = Math.max(0, this.playerHp - dmg);
       drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
       playSfx('combat.hurt');
@@ -2666,6 +2765,10 @@ export class DungeonScene {
     this.callbacks.onReturnToBase({ reason: 'abandon' });
   }
 
+  pauseForReward(): void {
+    this.active = false;
+  }
+
   getCompanionHud(): { hp: number; maxHp: number } | null {
     if (!this.companion || this.companion.dead) return null;
     return {
@@ -2676,7 +2779,10 @@ export class DungeonScene {
 
   getHudHint(): string {
     if (this.pendingChoices) {
-      return `[1] ${this.pendingChoices.labelA} · [2] ${this.pendingChoices.labelB}`;
+      const third = this.pendingChoices.labelC
+        ? ` · [3] ${this.pendingChoices.labelC}`
+        : '';
+      return `[1] ${this.pendingChoices.labelA} · [2] ${this.pendingChoices.labelB}${third}`;
     }
     if (this.activeCapture) {
       const cap = this.activeCapture;
@@ -2697,7 +2803,7 @@ export class DungeonScene {
     }
     if (this.portalActive) {
       return this.expeditionStage === 'floor'
-        ? '[E] Usar passagem — próximo andar'
+        ? '[E] Usar passagem — escolher destino'
         : '[E] Usar portal — retornar à base';
     }
     if (
