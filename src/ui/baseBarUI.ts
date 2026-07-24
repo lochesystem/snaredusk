@@ -14,9 +14,25 @@ export function renderBaseHeader(state: GameState): void {
   if (!stats) return;
   const inHabitat = state.habitat.length;
   const cap = getHabitatCapacity(state);
-  const shopNote = state.shopDayUsed ? ' · Loja fechada' : '';
-  stats.textContent =
-    `Ouro: ${state.gold} · Orbes: ${state.orbs} · STA: ${Math.round(state.playerStamina)} · Bolsa: ${bagCount(state)}/12 · Habitat: ${inHabitat}/${cap} · Dia ${state.dayNumber}${shopNote}`;
+  const values = [
+    ['Ouro', String(state.gold), 'gold'],
+    ['Orbes', String(state.orbs), 'orbs'],
+    ['STA', String(Math.round(state.playerStamina)), 'stamina'],
+    ['Bolsa', `${bagCount(state)}/12`, 'bag'],
+    ['Habitat', `${inHabitat}/${cap}`, 'habitat'],
+    ['Dia', String(state.dayNumber), 'day'],
+  ] as const;
+  stats.replaceChildren(...values.map(([label, value, kind]) => {
+    const chip = document.createElement('span');
+    chip.className = `base-stat-chip base-stat-${kind}`;
+    const labelEl = document.createElement('small');
+    labelEl.textContent = label;
+    const valueEl = document.createElement('strong');
+    valueEl.textContent = value;
+    chip.append(labelEl, valueEl);
+    return chip;
+  }));
+  stats.classList.toggle('shop-closed', state.shopDayUsed);
 }
 
 export function bindBaseBar(callbacks: BaseBarCallbacks): void {

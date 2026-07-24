@@ -2,7 +2,6 @@ import { Container, Graphics } from 'pixi.js';
 import {
   drawKnifeSlashArc,
   drawKnifeSlashLine,
-  drawPickaxeHead,
   drawSpearAlongX,
 } from './graphicsPaths.ts';
 
@@ -130,7 +129,7 @@ function buildPickaxeFx(root: Container, range: number, color: number): {
   sparks: Graphics;
 } {
   const pickaxe = new Graphics();
-  drawPickaxeHead(pickaxe, range * MELEE_SWEEP.pickaxe.lengthScale, color);
+  drawKnifeSlashArc(pickaxe, range * MELEE_SWEEP.pickaxe.lengthScale, color, 0.48);
   root.addChild(pickaxe);
 
   const sparks = new Graphics();
@@ -227,35 +226,22 @@ function updatePickaxeFx(fx: WeaponAttackFxState, t: number): void {
   }
 
   if (fx.sparks) {
-    if (t <= 0.62) {
+    if (t <= 0.68) {
       fx.sparks.visible = false;
       return;
     }
     fx.sparks.visible = true;
     fx.sparks.clear();
-    const impactT = (t - 0.62) / 0.38;
-    const pickA = curA - Math.PI / 2;
-    const ix = Math.cos(curA) * handleLen + Math.cos(pickA) * 11;
-    const iy = Math.sin(curA) * handleLen + Math.sin(pickA) * 11;
-    for (let i = 0; i < 4; i++) {
-      const rayA = pickA + (i / 4) * Math.PI * 2;
-      const rayLen = 4 + impactT * 6;
+    const impactT = (t - 0.68) / 0.32;
+    const ix = Math.cos(curA) * handleLen;
+    const iy = Math.sin(curA) * handleLen;
+    for (let i = 0; i < 2; i++) {
+      const rayA = curA - 0.55 + i * 1.1;
+      const rayLen = 3 + impactT * 3;
       fx.sparks
         .moveTo(ix, iy)
         .lineTo(ix + Math.cos(rayA) * rayLen, iy + Math.sin(rayA) * rayLen)
-        .stroke({ width: 2, color: 0xf0e6d3, alpha: 0.7 * (1 - impactT), cap: 'round' });
-    }
-    fx.sparks.circle(ix, iy, 3 + impactT * 5)
-      .stroke({ width: 2, color: fx.color, alpha: 0.55 * (1 - impactT) });
-    for (let i = 0; i < 3; i++) {
-      const chunkA = pickA - 0.8 + i * 0.8;
-      const chunkDist = 5 + impactT * (7 + i * 2);
-      fx.sparks.rect(
-        ix + Math.cos(chunkA) * chunkDist - 1,
-        iy + Math.sin(chunkA) * chunkDist - 1,
-        2,
-        2,
-      ).fill({ color: 0xc4a040, alpha: 0.8 * (1 - impactT) });
+        .stroke({ width: 1, color: 0xf0e6d3, alpha: 0.5 * (1 - impactT), cap: 'round' });
     }
   }
 }

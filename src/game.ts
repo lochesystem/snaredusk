@@ -8,7 +8,7 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
-import { endDay, canSleepToday, canEnterDungeonToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from './systems/dayCycle.ts';
+import { endDay, canSleepToday, canEnterDungeonToday, markDungeonReturned, resumeDayAtBase } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
 import { ORB_BUNDLE_PRICE, ORB_PRICE, PLAYER_MAX_HP, PLAYER_MAX_STAMINA, DODGE_STAMINA_COST } from './engine/constants.ts';
 import { tryUpgradeShop } from './systems/shopProgress.ts';
@@ -18,6 +18,7 @@ import { ensureCreatureSpritesPreloaded } from './world/creatureAssets.ts';
 import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import { ensureShopAssetsPreloaded } from './world/shopAssets.ts';
 import { ensureCustomerSpritesPreloaded } from './world/customerAssets.ts';
+import { ensureWeaponIconsPreloaded } from './world/weaponAssets.ts';
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
@@ -52,7 +53,7 @@ import type { DungeonReturnPayload } from './scenes/dungeonScene.ts';
 import { isBiomeUnlocked } from './systems/biomeProgress.ts';
 import { renderWeaponHotbar } from './ui/hotbarUI.ts';
 import { syncWeaponHotbar } from './systems/weaponHotbar.ts';
-import { createWeaponIcon } from './world/placeholderArt.ts';
+import { createStationRecipeIcon, createWeaponIcon } from './world/placeholderArt.ts';
 import {
   bindBaseBar,
   renderBaseHeader,
@@ -73,6 +74,7 @@ import {
   isChestModalOpen,
   openChestModal,
   renderChestModal,
+  type ChestUICallbacks,
 } from './ui/chestUI.ts';
 import {
   bindWorkshopModal,
@@ -208,9 +210,7 @@ export class Game {
     clearBuildTool();
     this.baseScene?.clearBuildTool();
     if (this.screen === 'base') {
-      renderBaseBuildHotbar(this.state, {
-        onSelect: (t) => this.onBuildHotbarSelect(t),
-      });
+      renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
     }
   }
 
@@ -266,9 +266,7 @@ export class Game {
 
   private bindBaseUI(): void {
     const modalCb = this.baseModalCallbacks();
-    const buildHotbarCb = {
-      onSelect: (tool: BuildTool | null) => this.onBuildHotbarSelect(tool),
-    };
+    const buildHotbarCb = this.buildHotbarCallbacks();
     bindBaseBar({
       getState: () => this.state,
       onParty: () => openPartyModal(modalCb),
@@ -282,22 +280,7 @@ export class Game {
       onOptions: () => this.openOptions(),
     });
     bindBuildModeModal(buildHotbarCb);
-    bindChestModal({
-      getState: () => this.state,
-      onChange: () => {
-        saveGame(this.state);
-        this.refreshBaseUI();
-        renderChestModal({
-          getState: () => this.state,
-          onChange: () => {
-            saveGame(this.state);
-            this.refreshBaseUI();
-          },
-          showToast: (m) => this.showToast(m),
-        });
-      },
-      showToast: (m) => this.showToast(m),
-    });
+    bindChestModal(this.chestCallbacks());
     bindWorkshopModal(this.workshopCallbacks());
     bindBaseModals(modalCb);
     bindHabitatPenModal(this.habitatPenCallbacks());
@@ -331,6 +314,9 @@ export class Game {
         if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
       },
       showToast: (m) => this.showToast(m),
+      setPixiIcon: (img: HTMLImageElement, createIcon: () => Container, key: string) => {
+        void this.setPixiIcon(img, createIcon, key);
+      },
     };
   }
 
@@ -361,6 +347,7 @@ export class Game {
       ensureBaseTilesetPreloaded(),
       ensureShopAssetsPreloaded(),
       ensureCustomerSpritesPreloaded(),
+      ensureWeaponIconsPreloaded(),
     ]);
 
     if (hasSave()) {
@@ -446,7 +433,7 @@ export class Game {
       const loaded = loadGame();
       if (loaded) {
         this.state = loaded;
-        if (syncDungeonDayFlagsAtBase(this.state)) saveGame(this.state);
+        if (resumeDayAtBase(this.state)) saveGame(this.state);
         this.startGame();
       }
     });
@@ -465,12 +452,42 @@ export class Game {
       clearBuildTool();
       this.baseScene?.clearBuildTool();
       this.showToast('Siga a orientação da Mira — use o cercado (tecla 3).');
-      renderBaseBuildHotbar(this.state, {
-        onSelect: (t) => this.onBuildHotbarSelect(t),
-      });
+      renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
       return;
     }
     this.baseScene?.setBuildTool(tool);
+  }
+
+  private buildHotbarCallbacks() {
+    return {
+      onSelect: (tool: BuildTool | null) => this.onBuildHotbarSelect(tool),
+      onAssign: () => {
+        saveGame(this.state);
+        this.showToast('Construção atribuída à barra');
+      },
+      setStationIcon: (img: HTMLImageElement, stationId: import('./data/baseStations.ts').StationId) => {
+        void this.setPixiIcon(
+          img,
+          () => createStationRecipeIcon(stationId),
+          `station-recipe-${stationId}`,
+        );
+      },
+    };
+  }
+
+  private chestCallbacks(): ChestUICallbacks {
+    return {
+      getState: () => this.state,
+      onChange: () => {
+        saveGame(this.state);
+        this.refreshBaseUI();
+        renderChestModal(this.chestCallbacks());
+      },
+      showToast: (message) => this.showToast(message),
+      setPixiIcon: (img, createIcon, key) => {
+        void this.setPixiIcon(img, createIcon, key);
+      },
+    };
   }
 
   private notifyCreaturePlaced(): void {
@@ -610,7 +627,6 @@ export class Game {
 
     if (screen === 'base') {
       playMusic('base');
-      if (syncDungeonDayFlagsAtBase(this.state)) saveGame(this.state);
       showBaseHub(true);
       this.closeBaseModals();
       void this.showBaseView().then(() => {
@@ -645,9 +661,7 @@ export class Game {
     closeAudioSettingsModal();
     this.closeBaseBagModal();
     this.baseScene?.clearBuildTool();
-    renderBaseBuildHotbar(this.state, {
-      onSelect: (tool) => this.onBuildHotbarSelect(tool),
-    });
+    renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
   }
 
   private async showShopView(): Promise<void> {
@@ -707,6 +721,9 @@ export class Game {
       ensurePlayerSpritesPreloaded(),
       ensureBaseTilesetPreloaded(),
     ]);
+    for (const stationId of ['workbench', 'chest_wood', 'habitat_pen', 'bed']) {
+      this.iconCache.delete(`station-recipe-${stationId}`);
+    }
     this.destroyBase();
     this.baseScene = new BaseScene(this.input, {
       getState: () => this.state,
@@ -717,22 +734,7 @@ export class Game {
       showToast: (m) => this.showToast(m),
       setHint: (text) => setBaseHint(text),
       onOpenChest: (chestId) => {
-        openChestModal(chestId, {
-          getState: () => this.state,
-          onChange: () => {
-            saveGame(this.state);
-            this.refreshBaseUI();
-            renderChestModal({
-              getState: () => this.state,
-              onChange: () => {
-                saveGame(this.state);
-                this.refreshBaseUI();
-              },
-              showToast: (m) => this.showToast(m),
-            });
-          },
-          showToast: (m) => this.showToast(m),
-        });
+        openChestModal(chestId, this.chestCallbacks());
       },
       onOpenWorkbench: (cellX, cellY) => openWorkshopModal(cellX, cellY, this.workshopCallbacks()),
       onOpenDungeon: () => {
@@ -780,9 +782,16 @@ export class Game {
   private refreshBaseUI(): void {
     renderBaseHeader(this.state);
     this.updateMerchantButtons();
-    renderBaseBuildHotbar(this.state, {
-      onSelect: (tool) => this.onBuildHotbarSelect(tool),
-    });
+    const activeBuildTool = getSelectedBuildTool();
+    if (
+      activeBuildTool
+      && activeBuildTool !== 'move'
+      && (this.state.craftedStations[activeBuildTool] ?? 0) <= 0
+    ) {
+      clearBuildTool();
+      this.baseScene?.clearBuildTool();
+    }
+    renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
     this.baseScene?.syncCreatures(this.state.habitat);
     if (this.isBaseBagModalOpen()) this.renderBaseBagModal();
   }
@@ -903,7 +912,7 @@ export class Game {
       bindBuildHotbarKeys(
         (key) => this.input.consumeKey(key),
         this.state,
-        { onSelect: (tool) => this.onBuildHotbarSelect(tool) },
+        this.buildHotbarCallbacks(),
       );
       if (this.input.consumeKey('escape')) {
         if (isAudioSettingsModalOpen()) closeAudioSettingsModal();
@@ -915,9 +924,7 @@ export class Game {
           clearBuildTool();
           this.baseScene.cancelBuildAction();
           this.baseScene.clearBuildTool();
-          renderBaseBuildHotbar(this.state, {
-            onSelect: (tool) => this.onBuildHotbarSelect(tool),
-          });
+          renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
         } else this.closeBaseModals();
       }
       this.baseScene.update(dt);

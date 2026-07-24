@@ -16,16 +16,16 @@ import type { BiomeId } from '../data/biomes.ts';
 import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
 import { normalizeWeaponArmory } from './weaponArmory.ts';
-import { syncDungeonDayFlagsAtBase } from './dayCycle.ts';
+import { normalizeBuildHotbar } from './buildHotbar.ts';
 
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 9;
 
-interface SavePayloadV7 {
+interface SavePayloadV9 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'craftedStations' | 'buildHotbar' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -40,13 +40,15 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   hasSporeKey?: boolean;
   hasPrismaticKey?: boolean;
   base?: GameState['base'];
+  craftedStations?: GameState['craftedStations'];
+  buildHotbar?: GameState['buildHotbar'];
   dayNumber?: number;
   dungeonUsedToday?: boolean;
   dungeonReturnedToday?: boolean;
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV7 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV9 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -60,6 +62,8 @@ export function deserializeState(raw: string): GameState | null {
     if (payload.version === 4) return normalizeState(payload.state);
     if (payload.version === 5) return normalizeState(payload.state);
     if (payload.version === 6) return normalizeState(payload.state);
+    if (payload.version === 7) return normalizeState(payload.state);
+    if (payload.version === 8) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -135,6 +139,8 @@ function normalizeState(partial: LegacyGameState): GameState {
     hasSporeKey: partial.hasSporeKey ?? false,
     hasPrismaticKey: partial.hasPrismaticKey ?? false,
     base: normalizeBaseGrid(partial.base),
+    craftedStations: { ...partial.craftedStations },
+    buildHotbar: normalizeBuildHotbar(partial.buildHotbar),
     tutorialComplete: partial.tutorialComplete ?? true,
     tutorialStep: partial.tutorialStep ?? 'done',
     shopGoldSold: partial.shopGoldSold ?? 0,
@@ -142,10 +148,16 @@ function normalizeState(partial: LegacyGameState): GameState {
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;
   }
+  if (
+    !normalized.tutorialComplete
+    && (normalized.tutorialStep === 'return_home' || normalized.tutorialStep === 'build_habitat')
+    && (normalized.craftedStations.habitat_pen ?? 0) < 1
+  ) {
+    normalized.craftedStations.habitat_pen = 1;
+  }
   syncBiomeUnlocks(normalized);
   migrateLegacyHabitatCreatures(normalized);
   normalizeWeaponArmory(normalized);
-  syncDungeonDayFlagsAtBase(normalized);
   syncShopShelfCapacity(normalized);
   return normalized;
 }

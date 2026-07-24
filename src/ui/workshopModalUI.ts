@@ -1,4 +1,5 @@
 import { WEAPONS } from '../data/weapons.ts';
+import { LOOT_TABLE } from '../data/items.ts';
 import { listRecipes, equipWeapon } from '../systems/craft.ts';
 import {
   craftWeaponFromWorkbench,
@@ -15,7 +16,12 @@ import {
 import { WEAPON_HOTBAR_SLOTS } from '../systems/weaponHotbar.ts';
 import { chestWeaponHasSpace } from '../systems/baseChest.ts';
 import type { Container } from 'pixi.js';
-import { createWeaponIcon } from '../world/placeholderArt.ts';
+import {
+  createCaptureOrbBall,
+  createLootIcon,
+  createStationRecipeIcon,
+  createWeaponIcon,
+} from '../world/placeholderArt.ts';
 
 export interface WorkshopModalCallbacks {
   getState: () => GameState;
@@ -28,12 +34,14 @@ import type { GameState } from '../types.ts';
 
 let benchCellX = 0;
 let benchCellY = 0;
+let selectedRecipeId: string | null = null;
 
 export function openWorkshopModal(cellX: number, cellY: number, callbacks: WorkshopModalCallbacks): void {
   benchCellX = cellX;
   benchCellY = cellY;
   const modal = document.getElementById('workshop-modal');
   if (!modal) return;
+  selectedRecipeId ??= listRecipes()[0]?.id ?? null;
   modal.classList.remove('hidden');
   renderWorkshopModal(callbacks);
 }
@@ -240,61 +248,160 @@ function renderArmorySection(state: GameState, callbacks: WorkshopModalCallbacks
 export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
   const state = callbacks.getState();
   const container = document.getElementById('workshop-modal-recipes');
+  const detail = document.getElementById('workshop-modal-detail');
   const armory = document.getElementById('workshop-modal-armory');
-  if (!container || !armory) return;
+  if (!container || !detail || !armory) return;
 
   container.innerHTML = '';
+  detail.innerHTML = '';
+  const recipes = listRecipes();
+  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId) ?? recipes[0];
+  if (selectedRecipe) selectedRecipeId = selectedRecipe.id;
 
-  for (const recipe of listRecipes()) {
-    const weapon = WEAPONS[recipe.weaponId];
-    if (!weapon) continue;
+  const setRecipeIcon = (iconImg: HTMLImageElement, recipe: (typeof recipes)[number]) => {
+    if (recipe.output.kind === 'weapon') {
+      const weaponId = recipe.output.weaponId;
+      callbacks.setPixiIcon(iconImg, () => createWeaponIcon(weaponId), `weapon-${weaponId}`);
+    } else if (recipe.output.kind === 'station') {
+      const stationId = recipe.output.stationId;
+      callbacks.setPixiIcon(
+        iconImg,
+        () => createStationRecipeIcon(stationId),
+        `station-recipe-${stationId}`,
+      );
+    } else if (recipe.output.kind === 'loot') {
+      const lootId = recipe.output.lootId;
+      callbacks.setPixiIcon(iconImg, () => createLootIcon(lootId), `loot-${lootId}`);
+    } else {
+      callbacks.setPixiIcon(iconImg, () => createCaptureOrbBall(), 'craft-orb');
+    }
+  };
+
+  for (const recipe of recipes) {
+    const weapon = recipe.output.kind === 'weapon' ? WEAPONS[recipe.output.weaponId] : null;
+    if (recipe.output.kind === 'weapon' && !weapon) continue;
     const preview = getCraftPreviewFromSources(state, recipe.id, benchCellX, benchCellY, false);
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'depot-item craft-recipe-btn';
-    btn.disabled = preview.owned;
+    btn.className = 'craft-grid-slot';
+    if (recipe.id === selectedRecipeId) btn.classList.add('selected');
+    if (preview.owned) btn.classList.add('owned');
+    if (!preview.canCraft && !preview.owned) btn.classList.add('missing');
+    btn.title = recipe.name;
 
     const iconImg = document.createElement('img');
     iconImg.className = 'craft-icon';
-    callbacks.setPixiIcon(iconImg, () => createWeaponIcon(recipe.weaponId), `weapon-${recipe.weaponId}`);
-
-    const body = document.createElement('span');
-    body.className = 'craft-recipe-body';
-
-    const title = document.createElement('span');
-    title.className = 'craft-recipe-title';
-    title.textContent = preview.owned ? `${weapon.name} — possui` : `Craft: ${weapon.name}`;
-
-    const previewText = document.createElement('span');
-    previewText.className = 'craft-recipe-reqs';
-    if (preview.consumePlan.length > 0) {
-      previewText.textContent = `Consome: ${formatConsumePlan(preview.consumePlan)}`;
-    } else if (!preview.owned && preview.missing.length > 0) {
-      previewText.textContent = `Falta: ${preview.missing.join(', ')}`;
-    }
-
-    body.appendChild(title);
-    body.appendChild(previewText);
+    setRecipeIcon(iconImg, recipe);
     btn.appendChild(iconImg);
-    btn.appendChild(body);
-
+    const shortName = document.createElement('span');
+    shortName.className = 'craft-grid-name';
+    shortName.textContent = recipe.name;
+    btn.appendChild(shortName);
     btn.addEventListener('click', () => {
-      if (preview.owned) return;
-      const fresh = getCraftPreviewFromSources(state, recipe.id, benchCellX, benchCellY, false);
-      if (!fresh.canCraft) {
-        callbacks.showToast(fresh.missing.length ? `Falta: ${fresh.missing.join(', ')}` : 'Materiais insuficientes nos baús adjacentes');
-        return;
-      }
-      if (craftWeaponFromWorkbench(state, recipe.id, benchCellX, benchCellY, false)) {
-        callbacks.onChange();
-        renderWorkshopModal(callbacks);
-        const loc = findWeaponLocation(state, recipe.weaponId);
-        const note = loc?.kind === 'stash' ? ' — atribua um slot na bancada' : '';
-        callbacks.showToast(`${weapon.name} craftada!${note}`);
-      }
+      selectedRecipeId = recipe.id;
+      renderWorkshopModal(callbacks);
     });
     container.appendChild(btn);
+  }
+
+  if (selectedRecipe) {
+    const preview = getCraftPreviewFromSources(
+      state,
+      selectedRecipe.id,
+      benchCellX,
+      benchCellY,
+      false,
+    );
+    const hero = document.createElement('div');
+    hero.className = 'craft-detail-hero';
+    const icon = document.createElement('img');
+    icon.className = 'craft-detail-icon';
+    setRecipeIcon(icon, selectedRecipe);
+    if (
+      selectedRecipe.output.kind === 'station'
+      && (state.craftedStations[selectedRecipe.output.stationId] ?? 0) > 0
+    ) {
+      const stationId = selectedRecipe.output.stationId;
+      icon.draggable = true;
+      icon.title = 'Arraste para um slot da barra inferior';
+      icon.addEventListener('dragstart', (event) => {
+        event.dataTransfer?.setData('application/x-snaredusk-station', stationId);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      });
+    }
+    const heading = document.createElement('div');
+    heading.innerHTML = `
+      <p class="modal-kicker">Resultado</p>
+      <h4>${selectedRecipe.name}</h4>
+      <span class="craft-gold-cost">${selectedRecipe.goldCost} ouro</span>
+    `;
+    hero.append(icon, heading);
+    detail.appendChild(hero);
+
+    const ingredients = document.createElement('div');
+    ingredients.className = 'craft-ingredients';
+    for (const ingredient of selectedRecipe.ingredients) {
+      const chip = document.createElement('div');
+      chip.className = 'craft-ingredient-chip';
+      const itemIcon = document.createElement('img');
+      itemIcon.className = 'craft-ingredient-icon';
+      callbacks.setPixiIcon(
+        itemIcon,
+        () => createLootIcon(ingredient.lootId),
+        `loot-${ingredient.lootId}`,
+      );
+      const name = LOOT_TABLE[ingredient.lootId]?.name ?? ingredient.lootId;
+      chip.append(itemIcon, Object.assign(document.createElement('span'), {
+        textContent: `${ingredient.quantity}× ${name}`,
+      }));
+      ingredients.appendChild(chip);
+    }
+    detail.appendChild(ingredients);
+
+    const source = document.createElement('p');
+    source.className = 'craft-source-preview';
+    source.textContent = preview.consumePlan.length > 0
+      ? `Dos baús: ${formatConsumePlan(preview.consumePlan)}`
+      : preview.owned
+        ? 'Você já possui esta arma.'
+        : preview.missing.length > 0
+          ? `Falta: ${preview.missing.join(', ')}`
+          : 'Pronto para fabricar.';
+    detail.appendChild(source);
+
+    const craftButton = document.createElement('button');
+    craftButton.type = 'button';
+    craftButton.className = 'craft-confirm-button';
+    craftButton.textContent = preview.owned ? 'Já fabricada' : 'Fabricar';
+    craftButton.disabled = preview.owned || !preview.canCraft;
+    craftButton.addEventListener('click', () => {
+      const fresh = getCraftPreviewFromSources(
+        state,
+        selectedRecipe.id,
+        benchCellX,
+        benchCellY,
+        false,
+      );
+      if (!fresh.canCraft) {
+        callbacks.showToast(`Falta: ${fresh.missing.join(', ')}`);
+        return;
+      }
+      if (!craftWeaponFromWorkbench(state, selectedRecipe.id, benchCellX, benchCellY, false)) return;
+      callbacks.onChange();
+      renderWorkshopModal(callbacks);
+      if (selectedRecipe.output.kind === 'weapon') {
+        const loc = findWeaponLocation(state, selectedRecipe.output.weaponId);
+        callbacks.showToast(
+          `${selectedRecipe.name} fabricada!${loc?.kind === 'stash' ? ' — foi para o arsenal' : ''}`,
+        );
+      } else if (selectedRecipe.output.kind === 'station') {
+        callbacks.showToast(`${selectedRecipe.name} virou um item de construção`);
+      } else {
+        callbacks.showToast(`${selectedRecipe.name} fabricado!`);
+      }
+    });
+    detail.appendChild(craftButton);
   }
 
   renderArmorySection(state, callbacks, armory);

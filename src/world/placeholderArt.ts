@@ -1,5 +1,6 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { SpeciesDef } from '../types.ts';
+import type { StationId } from '../data/baseStations.ts';
 import { LOOT_TABLE } from '../data/items.ts';
 import type { FxRunner } from '../engine/fxRunner.ts';
 import {
@@ -25,6 +26,7 @@ import {
 } from './environmentAssets.ts';
 import { getShopPropTexture } from './shopAssets.ts';
 import { CUSTOMER_WALK_ANIM_SPEED, getCustomerWalkFrames } from './customerAssets.ts';
+import { getWeaponIconTexture } from './weaponAssets.ts';
 import {
   drawEnergyOrb,
   drawKnifeBlade,
@@ -161,12 +163,18 @@ export function createCreatureSprite(species: SpeciesDef, capturableGlow = false
     || species.id === 'esporo_dorminhoco'
     || species.id === 'lumimorcego'
     || species.id === 'carapaca_musgo'
+    || species.id === 'cogumante'
+    || species.id === 'ferrao_fungico'
     || species.id === 'lumicascalho'
     || species.id === 'eco_quartzo'
+    || species.id === 'gema_viva'
+    || species.id === 'refrator'
     || species.id === 'matriarca_prismatica'
     || species.id === 'salamandra'
     || species.id === 'vaporoso'
     || species.id === 'caranguejo_termal'
+    || species.id === 'lodo_vivo'
+    || species.id === 'fenix_bruma'
     || species.id === 'salamandra_ancia';
   let flipTarget: Sprite | AnimatedSprite | null = null;
   let animSprite: AnimatedSprite | null = null;
@@ -864,16 +872,58 @@ export function createLootIcon(lootId: string): Container {
 
 export function createWeaponIcon(weaponId: string): Container {
   const root = new Container();
+  const texture = getWeaponIconTexture(weaponId);
+  if (texture) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    root.addChild(sprite);
+    return root;
+  }
   const g = new Graphics({ roundPixels: true });
 
   if (weaponId === 'picareta_combate') {
     drawPickaxeHead(g, 14, 0xc4a040);
-  } else if (weaponId === 'lanca_esporo') {
+  } else if (weaponId === 'lanca_esporo' || weaponId === 'tridente_termal') {
     drawSpearAlongX(g, 12, 0xc4f082);
   } else {
     drawKnifeBlade(g, 12, 0xc0c0c0, 1);
   }
 
+  root.addChild(g);
+  return root;
+}
+
+export function createStationRecipeIcon(stationId: StationId): Container {
+  const root = new Container();
+  const frame = stationId === 'workbench'
+    ? 'base_workbench_0'
+    : stationId === 'chest_wood'
+      ? 'base_chest_0'
+      : stationId === 'bed'
+        ? 'base_bed_0'
+      : null;
+  const texture = frame ? getBaseStationTexture(frame) : null;
+  if (texture) {
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    const maxSide = Math.max(texture.width, texture.height);
+    sprite.scale.set(Math.min(1, 28 / maxSide));
+    root.addChild(sprite);
+    return root;
+  }
+
+  const g = new Graphics({ roundPixels: true });
+  if (stationId === 'habitat_pen') {
+    g.rect(-13, -9, 26, 18).stroke({ width: 2, color: 0xb87935 });
+    for (let x = -8; x <= 8; x += 8) {
+      g.moveTo(x, -9).lineTo(x, 9).stroke({ width: 1, color: 0xd6a15c });
+    }
+  } else {
+    g.roundRect(-11, -8, 22, 16, 2).fill(0x6a5038);
+    g.roundRect(-11, -8, 22, 16, 2).stroke({ width: 2, color: 0xb87935 });
+  }
   root.addChild(g);
   return root;
 }

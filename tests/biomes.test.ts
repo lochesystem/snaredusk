@@ -68,7 +68,7 @@ describe('dungeonGenerator biomes', () => {
     const layout = generateDungeon(99, 'cristal');
     const species = new Set(layout.enemySpawns.filter((s) => !s.isBoss).map((s) => s.speciesId));
     for (const id of species) {
-      expect(['prismarin', 'lumicascalho', 'eco_quartzo']).toContain(id);
+      expect(['prismarin', 'lumicascalho', 'eco_quartzo', 'gema_viva', 'refrator']).toContain(id);
     }
     expect(layout.decor.every((d) => d.kind === 'crystal')).toBe(true);
   });
@@ -79,7 +79,7 @@ describe('dungeonGenerator biomes', () => {
     expect(layout.enemySpawns.find((s) => s.isBoss)?.speciesId).toBe('salamandra_ancia');
     const species = new Set(layout.enemySpawns.filter((s) => !s.isBoss).map((s) => s.speciesId));
     for (const id of species) {
-      expect(['salamandra', 'vaporoso', 'caranguejo_termal']).toContain(id);
+      expect(['salamandra', 'vaporoso', 'caranguejo_termal', 'lodo_vivo', 'fenix_bruma']).toContain(id);
     }
     expect(layout.decor.every((d) => d.kind === 'thermal')).toBe(true);
   });

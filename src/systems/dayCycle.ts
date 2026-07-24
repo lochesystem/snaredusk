@@ -27,15 +27,14 @@ export function markDungeonReturned(state: GameState): void {
 }
 
 /**
- * Corrige save inconsistente: ida registrada mas retorno não salvo
- * (ex.: refresh após entrar na masmorra, ou bug no loop de saída).
+ * Continue sempre reabre o jogo na base. Libera uma nova expedição sem
+ * avançar o calendário nem processar a produção diária.
  */
-export function syncDungeonDayFlagsAtBase(state: GameState): boolean {
-  if (state.dungeonUsedToday && !state.dungeonReturnedToday) {
-    state.dungeonReturnedToday = true;
-    return true;
-  }
-  return false;
+export function resumeDayAtBase(state: GameState): boolean {
+  if (!state.dungeonUsedToday && !state.dungeonReturnedToday) return false;
+  state.dungeonUsedToday = false;
+  state.dungeonReturnedToday = false;
+  return true;
 }
 
 export function endDay(state: GameState): DayEndResult {

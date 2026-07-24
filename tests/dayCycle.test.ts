@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGameState, type CreatureItem } from '../src/types.ts';
-import { endDay, canEnterDungeonToday, canSleepToday, markDungeonReturned, syncDungeonDayFlagsAtBase } from '../src/systems/dayCycle.ts';
+import { endDay, canEnterDungeonToday, canSleepToday, markDungeonReturned, resumeDayAtBase } from '../src/systems/dayCycle.ts';
 import { canPlaceHabitatPen, placeHabitatPen } from '../src/systems/baseBuild.ts';
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 import { PLAYER_MAX_HP, PLAYER_MAX_STAMINA } from '../src/engine/constants.ts';
@@ -74,24 +74,31 @@ describe('dayCycle', () => {
     expect(canSleepToday(state)).toBe(true);
   });
 
-  it('syncDungeonDayFlagsAtBase heals inconsistent save when player is at base', () => {
+  it('resumeDayAtBase libera nova expedição sem avançar o dia', () => {
     const state = defaultGameState();
     state.dungeonUsedToday = true;
     state.dungeonReturnedToday = false;
+    state.shopDayUsed = true;
+    state.dayNumber = 4;
 
-    expect(syncDungeonDayFlagsAtBase(state)).toBe(true);
-    expect(state.dungeonReturnedToday).toBe(true);
-    expect(canSleepToday(state)).toBe(true);
-    expect(syncDungeonDayFlagsAtBase(state)).toBe(false);
+    expect(resumeDayAtBase(state)).toBe(true);
+    expect(state.dungeonUsedToday).toBe(false);
+    expect(state.dungeonReturnedToday).toBe(false);
+    expect(canEnterDungeonToday(state)).toBe(true);
+    expect(canSleepToday(state)).toBe(false);
+    expect(state.dayNumber).toBe(4);
+    expect(state.shopDayUsed).toBe(true);
   });
 
-  it('syncDungeonDayFlagsAtBase does nothing when flags are consistent', () => {
+  it('resumeDayAtBase também limpa um retorno concluído e ignora estado novo', () => {
     const fresh = defaultGameState();
-    expect(syncDungeonDayFlagsAtBase(fresh)).toBe(false);
+    expect(resumeDayAtBase(fresh)).toBe(false);
 
     const returned = defaultGameState();
     returned.dungeonUsedToday = true;
     returned.dungeonReturnedToday = true;
-    expect(syncDungeonDayFlagsAtBase(returned)).toBe(false);
+    expect(resumeDayAtBase(returned)).toBe(true);
+    expect(returned.dungeonUsedToday).toBe(false);
+    expect(returned.dungeonReturnedToday).toBe(false);
   });
 });

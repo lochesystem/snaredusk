@@ -1,6 +1,5 @@
 import {
   canRotateStation,
-  FREE_BUILD_COUNT,
   getStation,
   getStationFootprint,
   type StationId,
@@ -80,7 +79,6 @@ export function canPlaceStation(
   excludePlacementId?: string,
   rotation: StationRotation = 0,
 ): PlaceResult {
-  const def = getStation(stationId);
   const footprint = getStationFootprint(stationId, rotation);
   const base = state.base;
 
@@ -101,9 +99,8 @@ export function canPlaceStation(
     return { ok: false, message: 'Espaço ocupado' };
   }
 
-  const free = base.freeBuildsUsed < FREE_BUILD_COUNT;
-  if (!free && def.goldCost > 0 && state.gold < def.goldCost) {
-    return { ok: false, message: `Precisa de ${def.goldCost} ouro` };
+  if (!excludePlacementId && (state.craftedStations[stationId] ?? 0) <= 0) {
+    return { ok: false, message: `Fabrique ${getStation(stationId).name} na bancada` };
   }
 
   return { ok: true, message: '' };
@@ -121,10 +118,8 @@ export function canPlaceHabitatPen(
     return { ok: false, message: 'Espaço ocupado' };
   }
 
-  const def = getStation('habitat_pen');
-  const free = state.base.freeBuildsUsed < FREE_BUILD_COUNT;
-  if (!free && def.goldCost > 0 && state.gold < def.goldCost) {
-    return { ok: false, message: `Precisa de ${def.goldCost} ouro` };
+  if (!excludePlacementId && (state.craftedStations.habitat_pen ?? 0) <= 0) {
+    return { ok: false, message: 'Fabrique um Cercado na bancada' };
   }
 
   return { ok: true, message: '' };
@@ -134,14 +129,7 @@ export function placeHabitatPen(state: GameState, zone: BaseHabitatZone): PlaceR
   const check = canPlaceHabitatPen(state, zone);
   if (!check.ok) return check;
 
-  const def = getStation('habitat_pen');
-  const free = state.base.freeBuildsUsed < FREE_BUILD_COUNT;
-
-  if (!free && def.goldCost > 0) {
-    state.gold -= def.goldCost;
-  } else if (free) {
-    state.base.freeBuildsUsed += 1;
-  }
+  state.craftedStations.habitat_pen = (state.craftedStations.habitat_pen ?? 1) - 1;
 
   const id = `place_${state.base.nextPlacementId++}`;
   const placement: BasePlacement = {
@@ -174,13 +162,7 @@ export function placeStation(
   if (!check.ok) return check;
 
   const def = getStation(stationId);
-  const free = state.base.freeBuildsUsed < FREE_BUILD_COUNT;
-
-  if (!free && def.goldCost > 0) {
-    state.gold -= def.goldCost;
-  } else if (free) {
-    state.base.freeBuildsUsed += 1;
-  }
+  state.craftedStations[stationId] = (state.craftedStations[stationId] ?? 1) - 1;
 
   const id = `place_${state.base.nextPlacementId++}`;
   const placement: BasePlacement = {
@@ -330,10 +312,10 @@ export function removePlacement(state: GameState, placementId: string): PlaceRes
 
   state.base.placements.splice(idx, 1);
 
-  const refund = Math.floor(def.goldCost * 0.5);
-  if (refund > 0) state.gold += refund;
+  state.craftedStations[placement.stationId] =
+    (state.craftedStations[placement.stationId] ?? 0) + 1;
 
-  return { ok: true, message: `${def.name} removido` };
+  return { ok: true, message: `${def.name} recolhido para o inventário` };
 }
 
 export function getHabitatCapacityFromBase(state: GameState): number {

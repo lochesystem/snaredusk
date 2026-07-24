@@ -3,8 +3,7 @@ import { getRecipe } from '../data/recipes.ts';
 import type { BaseChestState, GameState } from '../types.ts';
 import { getStation } from '../data/baseStations.ts';
 import { countLootInChest, removeLootFromChest } from './baseChest.ts';
-import { countLootInBag } from './craft.ts';
-import { acquireWeapon } from './weaponArmory.ts';
+import { countLootInBag, grantCraftOutput } from './craft.ts';
 
 export type ChestDirection = 'north' | 'east' | 'south' | 'west';
 
@@ -78,12 +77,21 @@ export function getCraftPreviewFromSources(
     return { canCraft: false, owned: false, missing: ['Receita inválida'], consumePlan: [] };
   }
 
-  const owned = state.ownedWeapons.includes(recipe.weaponId);
+  const owned = recipe.output.kind === 'weapon'
+    && state.ownedWeapons.includes(recipe.output.weaponId);
   if (owned) return { canCraft: false, owned: true, missing: [], consumePlan: [] };
 
   const adjacent = getAdjacentChestsForWorkbench(state, benchCellX, benchCellY);
   const missing: string[] = [];
   const consumePlan: CraftConsumePlan[] = [];
+
+  if (recipe.output.kind === 'loot') {
+    const outputLootId = recipe.output.lootId;
+    if (!state.bag.some((entry) =>
+      entry === null || (entry.kind === 'loot' && entry.id === outputLootId))) {
+      missing.push('espaço na bolsa');
+    }
+  }
 
   if (recipe.goldCost > 0 && state.gold < recipe.goldCost) {
     missing.push(`${recipe.goldCost - state.gold} ouro`);
@@ -161,9 +169,7 @@ export function craftWeaponFromWorkbench(
   state.gold -= recipe.goldCost;
   if (!consumeFromPlan(state, preview.consumePlan, adjacent)) return false;
 
-  if (!state.ownedWeapons.includes(recipe.weaponId)) {
-    acquireWeapon(state, recipe.weaponId);
-  }
+  grantCraftOutput(state, recipe);
   return true;
 }
 

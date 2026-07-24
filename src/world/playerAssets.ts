@@ -69,6 +69,9 @@ export async function preloadPlayerSprites(): Promise<void> {
       picareta_combate: attackSheets[1].animations?.attack ?? [],
       lanca_esporo: attackSheets[2].animations?.attack ?? [],
     };
+    attacks.foice_micelio = attacks.faca_enferrujada;
+    attacks.lamina_prismatica = attacks.faca_enferrujada;
+    attacks.tridente_termal = attacks.lanca_esporo;
     useNearestNeighbor(idle);
     useNearestNeighbor(walk);
     for (const textures of Object.values(attacks)) useNearestNeighbor(textures);

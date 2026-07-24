@@ -146,6 +146,10 @@ export interface GameState {
   hasPrismaticKey: boolean;
   /** Grid escavável da base subterrânea. */
   base: BaseGridState;
+  /** Construções fabricadas e prontas para colocação no modo Construir. */
+  craftedStations: Partial<Record<StationId, number>>;
+  /** Itens de construção atribuídos aos quatro slots inferiores da base. */
+  buildHotbar: import('./systems/buildHotbar.ts').BuildHotbar;
   /** Tutorial com Mira concluído (MVP: base + masmorra + captura). */
   tutorialComplete: boolean;
   tutorialStep: TutorialStepId;
@@ -185,6 +189,7 @@ export function createShopCages(count: number): (ShopListing | null)[] {
 
 import { STARTING_WEAPON_ID } from './data/weapons.ts';
 import { defaultWeaponHotbar } from './systems/weaponHotbar.ts';
+import { defaultBuildHotbar } from './systems/buildHotbar.ts';
 import { createDefaultBaseGrid } from './world/baseGrid.ts';
 
 export function defaultGameState(): GameState {
@@ -217,6 +222,8 @@ export function defaultGameState(): GameState {
     hasSporeKey: false,
     hasPrismaticKey: false,
     base: createDefaultBaseGrid(),
+    craftedStations: { habitat_pen: 1 },
+    buildHotbar: defaultBuildHotbar(),
     tutorialComplete: false,
     tutorialStep: 'welcome',
     shopGoldSold: 0,

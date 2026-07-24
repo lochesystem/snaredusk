@@ -11,7 +11,7 @@ export interface StationDef {
   name: string;
   width: number;
   height: number;
-  /** Custo em ouro (0 = grátis nas 3 primeiras colocações). */
+  /** Custo em ouro depois das 3 primeiras colocações; unidade fabricada evita o custo. */
   goldCost: number;
   color: number;
   accent: number;
@@ -24,7 +24,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
     name: 'Bancada',
     width: 2,
     height: 1,
-    goldCost: 0,
+    goldCost: 80,
     color: 0x5a4a38,
     accent: 0x8a7a58,
     interact: 'craft',
@@ -34,7 +34,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
     name: 'Baú de madeira',
     width: 1,
     height: 1,
-    goldCost: 0,
+    goldCost: 35,
     color: 0x6a5038,
     accent: 0x9a7048,
     interact: 'chest',
@@ -44,7 +44,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
     name: 'Cercado',
     width: 1,
     height: 1,
-    goldCost: 40,
+    goldCost: 70,
     color: 0x3d5c3a,
     accent: 0x5dbb63,
     interact: 'habitat',
@@ -54,7 +54,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
     name: 'Cama',
     width: 1,
     height: 2,
-    goldCost: 0,
+    goldCost: 60,
     color: 0x4a3d5c,
     accent: 0x8a6a9a,
     interact: 'sleep',
@@ -81,7 +81,7 @@ export const BASE_STATIONS: Record<StationId, StationDef> = {
   },
 };
 
-export const BUILDABLE_STATIONS: StationId[] = ['workbench', 'chest_wood', 'habitat_pen'];
+export const BUILDABLE_STATIONS: StationId[] = ['workbench', 'chest_wood', 'habitat_pen', 'bed'];
 
 export const FREE_BUILD_COUNT = 3;
 

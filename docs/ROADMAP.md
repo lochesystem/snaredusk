@@ -90,18 +90,18 @@ flowchart LR
 | **Boss fights** | Chefes únicos, arena, progressão | **Feito** | Arena, portão + chave, intro, 3 mecânicas, minions |
 | **Hazards de bioma** | Esporos, gelo, veneno | **Feito** | Vinheta, inércia, poças de veneno |
 | **Procedural** | 8–11 salas, 6 tipos de sala | **Feito** | Combate, tesouro, evento, descanso, mercador, chefe |
-| **Combate variado** | 3 armas, projéteis, escudos, esquiva | **Forte** | Hotbar 1/2, stamina, Shift dash, 3 armas, mira de alcance |
-| **Bolsa / inventário** | 12 slots + gestão | **Feito** | Grid, descarte, modal na masmorra, aba Especiais |
-| **Chave da arena** | Limpar fase → portão do chefe | **Feito** | Mata/captura todos → chave |
+| **Combate variado** | Armas, projéteis, escudos, esquiva | **Forte** | Hotbar 1/2, stamina, Shift dash, 6 armas, mira de alcance |
+| **Bolsa / inventário** | 12 slots + gestão | **Feito** | Grid redesenhado, descarte, modal na masmorra, aba Especiais |
+| **Chave da arena** | Limpar fase → portão do chefe | **Feito** | Mata/captura todos → chave; some ao voltar à base |
 | **Portal pós-chefe** | Só após baú épico | **Feito** | Não exige limpar masmorra inteira |
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
-| **Craft / oficina** | 20 receitas | **Parcial** | Craft na bancada com baús adjacentes; modal de arsenal |
-| **Party** | 2 companheiros ativos | **Parcial** | 1 slot com IA; falta 2º slot |
-| **Bestiário** | UI + bônus família | **Mínimo** | Registro no save; sem tela dedicada |
-| **Criaturas** | 18 espécies | **Parcial** | **12/18** (3 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
-| **Loot** | 30 itens | **Parcial** | **17/30** em `LOOT_TABLE` |
-| **Receitas** | 20 receitas | **Parcial** | **2/20** |
-| **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia |
+| **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | 20 receitas, construções prontas, orbes, materiais e armas; baús adjacentes |
+| **Party** | 2 companheiros ativos | **Parcial** | 1 slot com IA (seguir, atacar); falta 2º slot |
+| **Bestiário** | UI + bônus família | **Mínimo** | Registro no save + contador na base; sem tela dedicada |
+| **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
+| **Loot** | 30 itens | **Feito** | **30/30** em `LOOT_TABLE` |
+| **Receitas** | 20 receitas | **Feito** | **20/20** |
+| **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia; dormir após voltar ou fechar loja |
 | **Sentinelas** | 1 por bioma, passivos | **Pendente** | — |
 | **Base escavável** | Grid, escavação, baús, craft adjacente | **Feito (v0.4)** | Tileset v2, estações v3, landmarks movíveis, rotação (R) |
 | **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
@@ -116,7 +116,7 @@ flowchart LR
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**243 testes**, 55 arquivos)
+- [x] Suite Vitest abrangente (**252 testes**, 56 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -197,7 +197,7 @@ Pendente:
 1. ~~**Ciclo dia/noite jogável**~~ — MVP feito
 2. ~~**Tutorial com Mira**~~ — fluxo completo (masmorra + habitat + loja + orbes)
 3. ~~**Reputação na loja**~~ — níveis 1–3
-4. **Conteúdo** — +6 criaturas, +13 loots, +18 receitas
+4. ~~**Conteúdo**~~ — +6 criaturas, +13 loots, +18 receitas
 5. **Party 2 slots** + **sentinelas**
 6. **Bestiário UI**
 7. `economy.test.ts` — validar sinks de ouro
@@ -209,7 +209,7 @@ Pendente:
 
 | Risco | Mitigação |
 |-------|-----------|
-| Conteúdo fino (12/18 criaturas) | Próximo bloco: completar catálogo por bioma |
+| Economia sem teste de 10 ciclos | Implementar `economy.test.ts` |
 | Arte ainda mistura placeholder + v2 | Fase 3 focada em pipeline único por bioma |
 | ROADMAP desatualizado | Revisar a cada release (última: v0.5.0) |
 

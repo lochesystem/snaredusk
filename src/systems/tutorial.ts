@@ -94,14 +94,14 @@ const STEP_COPY: Record<TutorialStepId, Omit<TutorialDialogContent, 'step'>> = {
     highlight: null,
   },
   return_home: {
-    text: 'Primeira expedição concluída! A criatura está na bolsa. Agora monte um cercado — tecla [3] na barra de construção, arraste uma área no chão.',
+    text: 'Primeira expedição concluída! A criatura está na bolsa. Deixei um kit de Cercado no slot [3] — selecione e arraste uma área no chão. Depois, os móveis precisam ser fabricados na bancada.',
     showSkip: false,
     showContinue: true,
     skipLabel: '',
     highlight: null,
   },
   build_habitat: {
-    text: 'Arraste no chão para definir o cercado do habitat. Precisa de espaço livre na base.',
+    text: 'Arraste no chão para definir o cercado. A colocação consome o kit do slot; para construir outro, junte materiais e fabrique na bancada.',
     showSkip: false,
     showContinue: false,
     skipLabel: '',

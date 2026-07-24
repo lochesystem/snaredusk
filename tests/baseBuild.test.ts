@@ -4,8 +4,47 @@ import { canPlaceStation, placeStation, removePlacement, relocatePlacement } fro
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 
 describe('baseBuild', () => {
+  it('não permite construir sem ter fabricado o item', () => {
+    const state = defaultGameState();
+    state.craftedStations.chest_wood = 0;
+    let floor = { x: -1, y: -1 };
+    for (let y = 0; y < state.base.height && floor.x < 0; y++) {
+      for (let x = 0; x < state.base.width; x++) {
+        if (getCell(state.base, x, y) === BaseCellKind.Floor) {
+          floor = { x, y };
+          break;
+        }
+      }
+    }
+    const result = canPlaceStation(state, 'chest_wood', floor.x, floor.y);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('Fabrique');
+  });
+
+  it('consome primeiro uma construção fabricada sem cobrar ouro', () => {
+    const state = defaultGameState();
+    state.craftedStations.chest_wood = 1;
+    state.gold = 0;
+
+    let spot: { x: number; y: number } | null = null;
+    for (let y = 0; y < state.base.height && !spot; y++) {
+      for (let x = 0; x < state.base.width; x++) {
+        if (canPlaceStation(state, 'chest_wood', x, y).ok) {
+          spot = { x, y };
+          break;
+        }
+      }
+    }
+
+    expect(spot).not.toBeNull();
+    expect(placeStation(state, 'chest_wood', spot!.x, spot!.y).ok).toBe(true);
+    expect(state.craftedStations.chest_wood).toBe(0);
+    expect(state.gold).toBe(0);
+  });
+
   it('coloca baú em chão livre', () => {
     const state = defaultGameState();
+    state.craftedStations.chest_wood = 1;
     let spot = { x: -1, y: -1 };
     outer: for (let y = 0; y < state.base.height; y++) {
       for (let x = 0; x < state.base.width; x++) {
@@ -48,6 +87,7 @@ describe('baseBuild', () => {
 
   it('gira bancada em 90 graus e troca a área ocupada de 2x1 para 1x2', () => {
     const state = defaultGameState();
+    state.craftedStations.chest_wood = 1;
     const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
     let spot = { x: -1, y: -1 };
     outer: for (let y = 0; y < state.base.height; y++) {
@@ -86,6 +126,14 @@ describe('baseBuild', () => {
     const placement = state.base.placements.find((p) => p.id === chest.id)!;
     const removed = removePlacement(state, placement.id);
     expect(removed.ok).toBe(false);
+  });
+
+  it('devolve a construção ao inventário quando uma estação vazia é recolhida', () => {
+    const state = defaultGameState();
+    const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
+    const before = state.craftedStations.workbench ?? 0;
+    expect(removePlacement(state, bench.id).ok).toBe(true);
+    expect(state.craftedStations.workbench).toBe(before + 1);
   });
 
   it.each(['dungeon_portal', 'shop_ladder'] as const)(

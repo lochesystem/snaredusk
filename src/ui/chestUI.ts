@@ -1,3 +1,5 @@
+import type { Container } from 'pixi.js';
+import { getSpecies } from '../data/creatures.ts';
 import type { GameState } from '../types.ts';
 import { WEAPONS } from '../data/weapons.ts';
 import {
@@ -6,11 +8,13 @@ import {
   transferLootToChest,
 } from '../systems/baseChest.ts';
 import { withdrawWeaponFromChest } from '../systems/weaponArmory.ts';
+import { createCreatureSprite, createLootIcon, createWeaponIcon } from '../world/placeholderArt.ts';
 
 export interface ChestUICallbacks {
   getState: () => GameState;
   onChange: () => void;
   showToast: (msg: string) => void;
+  setPixiIcon?: (img: HTMLImageElement, createIcon: () => Container, cacheKey: string) => void;
 }
 
 let activeChestId: string | null = null;
@@ -50,12 +54,39 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
   bagGrid.innerHTML = '';
   weaponGrid.innerHTML = '';
 
+  const appendIcon = (
+    button: HTMLButtonElement,
+    createIcon: () => Container,
+    key: string,
+    alt: string,
+  ) => {
+    if (!callbacks.setPixiIcon) return;
+    const icon = document.createElement('img');
+    icon.className = 'inv-slot-sprite';
+    icon.alt = alt;
+    callbacks.setPixiIcon(icon, createIcon, key);
+    button.appendChild(icon);
+  };
+
+  const appendLabel = (button: HTMLButtonElement, text: string, quantity?: number) => {
+    const label = document.createElement('span');
+    label.className = 'inv-slot-label';
+    label.textContent = text;
+    button.appendChild(label);
+    if (quantity === undefined) return;
+    const qty = document.createElement('span');
+    qty.className = 'inv-slot-qty';
+    qty.textContent = String(quantity);
+    button.appendChild(qty);
+  };
+
   chest.slots.forEach((slot, index) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'inv-slot';
     if (slot) {
-      btn.textContent = `${slot.name} ×${slot.quantity}`;
+      appendIcon(btn, () => createLootIcon(slot.id), `loot-${slot.id}`, slot.name);
+      appendLabel(btn, slot.name, slot.quantity);
       btn.title = 'Mover para bolsa';
       btn.addEventListener('click', () => {
         if (transferLootToBag(state, chest, index)) {
@@ -78,7 +109,13 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
     btn.type = 'button';
     btn.className = 'inv-slot';
     if (weaponId && WEAPONS[weaponId]) {
-      btn.textContent = `⚔ ${WEAPONS[weaponId].name}`;
+      appendIcon(
+        btn,
+        () => createWeaponIcon(weaponId),
+        `weapon-${weaponId}`,
+        WEAPONS[weaponId].name,
+      );
+      appendLabel(btn, WEAPONS[weaponId].name);
       btn.title = 'Retirar para o arsenal';
       btn.addEventListener('click', () => {
         if (withdrawWeaponFromChest(state, chest, index)) {
@@ -102,7 +139,8 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
     btn.type = 'button';
     btn.className = 'inv-slot';
     if (entry && entry.kind === 'loot') {
-      btn.textContent = `${entry.name} ×${entry.quantity}`;
+      appendIcon(btn, () => createLootIcon(entry.id), `loot-${entry.id}`, entry.name);
+      appendLabel(btn, entry.name, entry.quantity);
       btn.title = 'Depositar no baú';
       btn.addEventListener('click', () => {
         if (transferLootToChest(state, chest, index)) {
@@ -113,7 +151,14 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
         }
       });
     } else if (entry && entry.kind === 'creature') {
-      btn.textContent = `🐾 ${entry.name}`;
+      const species = getSpecies(entry.speciesId);
+      appendIcon(
+        btn,
+        () => createCreatureSprite(species),
+        `inventory-creature-${entry.speciesId}`,
+        entry.name,
+      );
+      appendLabel(btn, entry.name);
       btn.disabled = true;
     } else {
       btn.classList.add('empty');

@@ -14,10 +14,18 @@ export function getCraftStatus(state: GameState, recipeId: string): CraftStatus 
   const recipe = getRecipe(recipeId);
   if (!recipe) return { canCraft: false, owned: false, missing: ['Receita inválida'] };
 
-  const owned = state.ownedWeapons.includes(recipe.weaponId);
+  const owned = recipe.output.kind === 'weapon'
+    && state.ownedWeapons.includes(recipe.output.weaponId);
   if (owned) return { canCraft: false, owned: true, missing: [] };
 
   const missing: string[] = [];
+  if (recipe.output.kind === 'loot') {
+    const outputLootId = recipe.output.lootId;
+    if (!state.bag.some((entry) =>
+      entry === null || (entry.kind === 'loot' && entry.id === outputLootId))) {
+      missing.push('espaço na bolsa');
+    }
+  }
   if (recipe.goldCost > 0 && state.gold < recipe.goldCost) {
     missing.push(`${recipe.goldCost - state.gold} ouro`);
   }
@@ -63,6 +71,43 @@ export function canCraft(state: GameState, recipeId: string): boolean {
   return getCraftStatus(state, recipeId).canCraft;
 }
 
+export function grantCraftOutput(state: GameState, recipe: CraftRecipe): void {
+  if (recipe.output.kind === 'weapon') {
+    if (!state.ownedWeapons.includes(recipe.output.weaponId)) {
+      acquireWeapon(state, recipe.output.weaponId);
+    }
+    return;
+  }
+  if (recipe.output.kind === 'station') {
+    const stationId = recipe.output.stationId;
+    state.craftedStations[stationId] = (state.craftedStations[stationId] ?? 0)
+      + (recipe.output.quantity ?? 1);
+    return;
+  }
+  if (recipe.output.kind === 'orbs') {
+    state.orbs += recipe.output.quantity;
+    return;
+  }
+  const loot = LOOT_TABLE[recipe.output.lootId];
+  if (!loot) return;
+  const existing = state.bag.find((entry) =>
+    entry?.kind === 'loot' && entry.id === loot.id);
+  if (existing?.kind === 'loot') {
+    existing.quantity += recipe.output.quantity;
+    return;
+  }
+  const empty = state.bag.findIndex((entry) => entry === null);
+  if (empty >= 0) {
+    state.bag[empty] = {
+      kind: 'loot',
+      id: loot.id,
+      name: loot.name,
+      baseValue: loot.baseValue,
+      quantity: recipe.output.quantity,
+    };
+  }
+}
+
 export function craftWeapon(state: GameState, recipeId: string): boolean {
   if (!canCraft(state, recipeId)) return false;
   const recipe = getRecipe(recipeId)!;
@@ -70,9 +115,7 @@ export function craftWeapon(state: GameState, recipeId: string): boolean {
   for (const ing of recipe.ingredients) {
     if (!consumeLoot(state, ing.lootId, ing.quantity)) return false;
   }
-  if (!state.ownedWeapons.includes(recipe.weaponId)) {
-    acquireWeapon(state, recipe.weaponId);
-  }
+  grantCraftOutput(state, recipe);
   return true;
 }
 
