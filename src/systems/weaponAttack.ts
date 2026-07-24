@@ -29,7 +29,7 @@ export function findMeleeHits(
     if (t.dead || t.fled || t.captureLocked) continue;
     if (!isTargetInMeleeSweep(
       playerX,
-      playerY - 4,
+      playerY,
       aimAngle,
       t.x,
       t.y + (t.hitOffsetY ?? 0),
@@ -52,7 +52,7 @@ export function buildPlayerProjectile(
 ) {
   return createProjectileData(
     playerX,
-    playerY - 4,
+    playerY,
     aimAngle,
     weapon.projectileSpeed ?? 200,
     weapon.atk,

@@ -3,6 +3,18 @@ import { Graphics } from 'pixi.js';
 const RETICLE_ARM = 4;
 const RETICLE_COLOR = 0xff4444;
 const RETICLE_ALPHA = 0.9;
+/** O `playerY` é a base dos pés; combate parte do centro visual do corpo. */
+export const PLAYER_AIM_ORIGIN_OFFSET_Y = -18;
+
+export function getPlayerAimOrigin(
+  playerX: number,
+  playerY: number,
+): { x: number; y: number } {
+  return {
+    x: playerX,
+    y: playerY + PLAYER_AIM_ORIGIN_OFFSET_Y,
+  };
+}
 
 /** Ângulo da mira (radianos) do jogador em direção ao alvo. */
 export function calcAimAngle(

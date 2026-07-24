@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { calcAimAngle, calcAimReticlePosition } from '../src/world/aimReticle.ts';
+import {
+  calcAimAngle,
+  calcAimReticlePosition,
+  getPlayerAimOrigin,
+} from '../src/world/aimReticle.ts';
 
 describe('aimReticle', () => {
   it('calcAimAngle points toward target', () => {
@@ -19,5 +23,9 @@ describe('aimReticle', () => {
     const up = calcAimReticlePosition(0, 0, -Math.PI / 2, 34);
     expect(up.x).toBeCloseTo(0, 5);
     expect(up.y).toBeCloseTo(-34, 5);
+  });
+
+  it('centraliza a mira no corpo, não na base dos pés', () => {
+    expect(getPlayerAimOrigin(100, 80)).toEqual({ x: 100, y: 62 });
   });
 });

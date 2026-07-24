@@ -55,6 +55,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Corrigido
 
+- Mira, efeitos e ataques usam o centro visual do corpo como origem, em vez da
+  âncora dos pés do personagem
 - Saves com ouro/HP/stamina/dia fora dos limites são normalizados sem perder o restante do progresso
 - Armas, capuzes, biomas, tutorial, bolsa e layout da base inválidos recebem fallbacks seguros
 - Saves antigos sem campos do tutorial continuam pulando o tutorial, como antes

@@ -207,6 +207,7 @@ import {
   calcAimReticlePosition,
   createAimReticle,
   drawAimReticle,
+  getPlayerAimOrigin,
 } from '../world/aimReticle.ts';
 
 export type DungeonExitReason = 'portal' | 'floor_complete' | 'death' | 'abandon';
@@ -1001,14 +1002,20 @@ export class DungeonScene {
 
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
+    const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
     this.lastAimAngle = calcAimAngle(
-      this.playerX,
-      this.playerY,
+      aimOrigin.x,
+      aimOrigin.y,
       worldMouse.x,
       worldMouse.y,
       this.lastAimAngle,
     );
-    const tip = calcAimReticlePosition(this.playerX, this.playerY, this.lastAimAngle, weapon.range);
+    const tip = calcAimReticlePosition(
+      aimOrigin.x,
+      aimOrigin.y,
+      this.lastAimAngle,
+      weapon.range,
+    );
     drawAimReticle(this.aimReticleGfx, tip.x, tip.y);
     this.aimReticleGfx.visible = true;
   }
@@ -1148,7 +1155,14 @@ export class DungeonScene {
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
     if (this.playerStamina < weapon.staminaCost) return;
     const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
-    const angle = calcAimAngle(this.playerX, this.playerY, worldMouse.x, worldMouse.y, this.lastAimAngle);
+    const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
+    const angle = calcAimAngle(
+      aimOrigin.x,
+      aimOrigin.y,
+      worldMouse.x,
+      worldMouse.y,
+      this.lastAimAngle,
+    );
     this.lastAimAngle = angle;
     // Quatro frames a 12 FPS (art bible), sem ultrapassar o cooldown da arma.
     this.playerSprite.playAttack(weapon.id, Math.cos(angle), Math.min(weapon.cooldown, 4 / 12));
@@ -1158,8 +1172,8 @@ export class DungeonScene {
       this.playAttackFx(fxStyle, angle, weapon.range, weapon.slashColor ?? 0xf0e6d3);
       playSfx(fxStyle === 'pickaxe' ? 'combat.attack.pickaxe' : fxStyle === 'spear_thrust' ? 'combat.attack.spear' : 'combat.attack.knife');
       const hits = findMeleeHits(
-        this.playerX,
-        this.playerY,
+        aimOrigin.x,
+        aimOrigin.y,
         angle,
         weapon,
         this.enemies.map((e) => ({
@@ -1181,7 +1195,7 @@ export class DungeonScene {
     } else {
       this.playAttackFx(weapon.attackFx ?? 'spear_thrust', angle, weapon.range, weapon.slashColor ?? 0xc4f082);
       playSfx('combat.attack.spear');
-      const data = buildPlayerProjectile(this.playerX, this.playerY, angle, weapon);
+      const data = buildPlayerProjectile(aimOrigin.x, aimOrigin.y, angle, weapon);
       data.x += Math.cos(angle) * 12;
       data.y += Math.sin(angle) * 12;
       this.spawnProjectile(data, 'player', weapon.projectileStyle ?? 'orb');
@@ -1197,12 +1211,19 @@ export class DungeonScene {
     const fx = createWeaponAttackFx(style, angle, range, color);
     this.attackFx = fx;
     this.fxLayer.addChild(fx.root);
-    tickWeaponAttackFx(fx, 0, this.playerX, this.playerY);
+    const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
+    tickWeaponAttackFx(fx, 0, aimOrigin.x, aimOrigin.y);
   }
 
   private updateAttackFx(dt: number): void {
     if (!this.attackFx) return;
-    const alive = tickWeaponAttackFx(this.attackFx, dt, this.playerX, this.playerY);
+    const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
+    const alive = tickWeaponAttackFx(
+      this.attackFx,
+      dt,
+      aimOrigin.x,
+      aimOrigin.y,
+    );
     if (!alive) this.clearAttackFx();
   }
 
