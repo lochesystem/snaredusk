@@ -41,6 +41,8 @@ export interface DungeonEnemySpawn {
   y: number;
   roomIndex: number;
   isBoss?: boolean;
+  isElite?: boolean;
+  eliteAffix?: 'implacavel' | 'tempestade' | 'bastiao';
   /** HP customizado (ex.: tutorial). */
   hp?: number;
 }

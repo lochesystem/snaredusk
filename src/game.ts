@@ -20,6 +20,7 @@ import {
   generatePerkOffers,
   getExpeditionPerk,
 } from './systems/expeditionPerks.ts';
+import { promoteExpeditionElite } from './systems/expeditionElites.ts';
 import {
   generateBossArena,
   generateExpeditionFloor,
@@ -955,6 +956,13 @@ export class Game {
               includeBoss: false,
             })
         : undefined;
+    if (
+      layout
+      && expeditionStage === 'floor'
+      && activeExpedition
+    ) {
+      promoteExpeditionElite(layout, activeExpedition);
+    }
 
     hideTutorialDialog();
 

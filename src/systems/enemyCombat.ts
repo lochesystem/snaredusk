@@ -1,5 +1,5 @@
 import type { EnemyBehaviorDef } from '../data/enemyBehaviors.ts';
-import { getEnemyBehavior, isBossBehaviorKind, isRangedBossKind } from '../data/enemyBehaviors.ts';
+import { getEnemyBehavior, isRangedBossKind } from '../data/enemyBehaviors.ts';
 import { getBossPhaseModifiers, type BossCombatPhase } from './bossPhase.ts';
 import { calcDamage, distance, normalize } from './combat.ts';
 import { createProjectileData } from './projectiles.ts';
@@ -26,6 +26,7 @@ export interface EnemyCombatEnemy {
   bossCombatPhase: BossCombatPhase;
   def: number;
   behaviorId: string;
+  attackCooldownScale?: number;
   shieldHp: number;
   shieldMax: number;
   shieldRegenCd: number;
@@ -85,11 +86,12 @@ export function initEnemyCombatFields(
 }
 
 function getEffectiveBehavior(enemy: EnemyCombatEnemy, behavior: EnemyBehaviorDef): EnemyBehaviorDef {
-  if (!enemy.isBoss) return behavior;
+  const attackCooldown = behavior.attackCooldown * (enemy.attackCooldownScale ?? 1);
+  if (!enemy.isBoss) return { ...behavior, attackCooldown };
   const mods = getBossPhaseModifiers(enemy, behavior);
   return {
     ...behavior,
-    attackCooldown: behavior.attackCooldown * mods.attackCooldownMult,
+    attackCooldown: attackCooldown * mods.attackCooldownMult,
     burstCount: (behavior.burstCount ?? 3) + mods.burstCountBonus,
     chargeDuration: (behavior.chargeDuration ?? 0.55) * mods.chargeDurationMult,
     leapInterval: (behavior.leapInterval ?? 5) * mods.leapIntervalMult,
@@ -290,8 +292,12 @@ export function tickEnemyCombat(
   return result;
 }
 
-export function applyShieldDamage(enemy: EnemyCombatEnemy, damage: number, behavior: EnemyBehaviorDef): number {
-  if (enemy.shieldHp > 0 && (behavior.kind === 'shielded' || isBossBehaviorKind(behavior.kind))) {
+export function applyShieldDamage(
+  enemy: EnemyCombatEnemy,
+  damage: number,
+  _behavior: EnemyBehaviorDef,
+): number {
+  if (enemy.shieldHp > 0) {
     const absorbed = Math.min(enemy.shieldHp, damage);
     enemy.shieldHp -= absorbed;
     const remaining = damage - absorbed;

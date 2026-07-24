@@ -14,4 +14,10 @@ describe('enemyStatusBars', () => {
     updateEnemyStatusBars(bars, 50, 100, 0, 30);
     expect(bars.shieldFill?.visible).toBe(false);
   });
+
+  it('creates a wider identified bar for elites', () => {
+    const bars = createEnemyStatusBars(true, false, true, 'Bastião');
+    expect(bars.barWidth).toBe(40);
+    expect(bars.eliteLabel?.text).toContain('Bastião');
+  });
 });

@@ -120,21 +120,21 @@ serão criados inicialmente quinze movesets individuais.
 
 ### Modificadores-base
 
-- HP: ×2,00;
-- ataque: ×1,25;
-- velocidade: até ×1,08;
+- HP: ×1,70;
+- ataque: ×1,10 antes do afixo;
+- velocidade: definida pelo afixo;
 - escala visual: ×1,10–1,15;
 - nome com título e aura discreta;
-- barra de vida própria;
+- barra de vida própria em dourado;
 - um afixo de comportamento.
 
 ### Afixos iniciais
 
 | Afixo | Efeito | Afinidade |
 |-------|--------|-----------|
-| Implacável | Investida periódica curta e telegrafada | Melee |
+| Implacável | +20% de ataque, +18% de velocidade e ataques mais frequentes | Melee |
 | Tempestade | Rajada curta em leque | Ranged |
-| Bastião | Recupera parte do escudo uma vez em 50% HP | Shielded |
+| Bastião | +3 de defesa e escudo equivalente a 40% do HP | Shielded |
 | Volátil | Cria área perigosa após um ataque forte | Qualquer |
 | Invocador | Invoca uma criatura fraca uma vez | Raros |
 
@@ -324,8 +324,8 @@ expedição antes do retorno à base.
 **Objetivo:** validar a experiência inteira em um único bioma.
 
 - [x] Gerar três andares compactos sem chefe.
-- [ ] Criar elite final por andar e impedir repetição.
-- [ ] Implementar Implacável, Tempestade e Bastião.
+- [x] Criar elite final por andar e impedir repetição.
+- [x] Implementar Implacável, Tempestade e Bastião.
 - [x] Aplicar escalonamento de andar.
 - [x] Criar tela de extração/continuação.
 - [ ] Implementar os 12 perks iniciais. *(7 funcionais no primeiro lote)*
@@ -342,6 +342,13 @@ Prosseguir cria o checkpoint seguinte, recupera 5% do HP e restaura a stamina;
 Segundo Fôlego acrescenta mais 5% de cura. As ofertas permanecem fixas no save.
 Baús abertos somem após uma breve pausa para não acumular ruído visual nas salas
 já exploradas.
+
+Cada andar agora reserva uma espécie diferente para o confronto elite. Ela
+desperta no centro da sala marcada somente depois que todas as criaturas comuns
+forem resolvidas, evitando que o encerramento seja consumido por acidente no
+meio da exploração. Nome, barra dourada, aura e anúncio identificam o afixo:
+Implacável acelera o ritmo de combate, Tempestade lança uma rajada em leque e
+Bastião acrescenta defesa e escudo.
 
 O primeiro lote contém sete perks já conectados ao combate: Fio Afiado, Mãos
 Rápidas, Casca Reforçada, Segundo Fôlego, Passo Leve, Vínculo Feroz e Guardião.

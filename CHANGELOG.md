@@ -40,7 +40,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Curva inicial de HP, ataque e velocidade aplicada por andar; Cristal, Termal
   e tutorial preservam o fluxo anterior
 - Testes da geração, perks, cura do mercador e ciclo visual dos baús; suíte
-  atualizada para **314 testes em 67 arquivos**
+  atualizada para **319 testes em 68 arquivos**
+- **Elites de encerramento dos andares:** uma espécie diferente por piso
+  desperta na sala marcada após a derrota dos inimigos comuns, com escala,
+  aura, barra dourada, título e anúncio próprios
+- Três afixos funcionais para elites: Implacável acelera ataques e movimento,
+  Tempestade dispara rajadas em leque e Bastião recebe defesa e escudo
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado

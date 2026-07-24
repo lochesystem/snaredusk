@@ -107,6 +107,13 @@ import {
   getExpeditionPerkModifiers,
   type ExpeditionPerkModifiers,
 } from '../systems/expeditionPerks.ts';
+import {
+  ELITE_AFFIXES,
+  getEliteCombatModifiers,
+  shouldAwakenExpeditionElite,
+  tickEliteStorm,
+  type EliteAffixId,
+} from '../systems/expeditionElites.ts';
 import { getOpenedChestPresentation } from '../systems/openedChestLifecycle.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import {
@@ -230,6 +237,11 @@ interface LiveEnemy {
   speciesId: string;
   roomIndex: number;
   isBoss: boolean;
+  isElite: boolean;
+  eliteAwakened: boolean;
+  eliteAffix: EliteAffixId | null;
+  eliteAbilityCd: number;
+  eliteAura: Graphics | null;
   hp: number;
   maxHp: number;
   x: number;
@@ -238,6 +250,7 @@ interface LiveEnemy {
   speed: number;
   def: number;
   behaviorId: string;
+  attackCooldownScale: number;
   attackCd: number;
   enraged: boolean;
   aggroed: boolean;
@@ -406,6 +419,8 @@ export class DungeonScene {
     speedMultiplier: 1,
   };
   private perkModifiers: ExpeditionPerkModifiers;
+  private eliteAnnounced = false;
+  private eliteRoomRevealed = false;
 
   private state: GameState;
   private input: InputManager;
@@ -559,24 +574,54 @@ export class DungeonScene {
       container.y = spawn.y;
       if (spawn.isBoss) {
         container.scale.set(1.35);
+      } else if (spawn.isElite) {
+        container.scale.set(1.14);
       }
       this.entityLayer.addChild(container);
       const combatInit = initEnemyCombatFields(species.behaviorId);
       const baseMaxHp = spawn.hp ?? species.maxHp;
-      const maxHp = Math.max(1, Math.round(baseMaxHp * this.difficulty.hpMultiplier));
+      const eliteAffix = spawn.eliteAffix ?? null;
+      const eliteMods = eliteAffix
+        ? getEliteCombatModifiers(eliteAffix)
+        : null;
+      const eliteHpMultiplier = eliteMods?.hpMultiplier ?? 1;
+      const maxHp = Math.max(1, Math.round(
+        baseMaxHp
+          * this.difficulty.hpMultiplier
+          * eliteHpMultiplier,
+      ));
+      if (spawn.isElite && eliteMods && eliteMods.shieldRate > 0) {
+        combatInit.shieldMax = Math.max(
+          18,
+          Math.round(maxHp * eliteMods.shieldRate),
+        );
+        combatInit.shieldHp = combatInit.shieldMax;
+      }
       const enemy: LiveEnemy = {
         id: `enemy-${nextEnemyId++}`,
         speciesId: spawn.speciesId,
         roomIndex: spawn.roomIndex,
         isBoss: spawn.isBoss ?? false,
+        isElite: spawn.isElite ?? false,
+        eliteAwakened: !spawn.isElite,
+        eliteAffix,
+        eliteAbilityCd: eliteAffix === 'tempestade' ? 2.1 : 0,
+        eliteAura: null,
         hp: maxHp,
         maxHp,
         x: spawn.x,
         y: spawn.y,
-        atk: Math.max(1, Math.round(species.atk * this.difficulty.attackMultiplier)),
-        speed: species.speed * this.difficulty.speedMultiplier,
-        def: species.def,
+        atk: Math.max(1, Math.round(
+          species.atk
+            * this.difficulty.attackMultiplier
+            * (eliteMods?.attackMultiplier ?? 1),
+        )),
+        speed: species.speed
+          * this.difficulty.speedMultiplier
+          * (eliteMods?.speedMultiplier ?? 1),
+        def: species.def + (eliteMods?.defenseBonus ?? 0),
         behaviorId: species.behaviorId,
+        attackCooldownScale: eliteMods?.attackCooldownScale ?? 1,
         attackCd: 0,
         enraged: false,
         aggroed: false,
@@ -594,6 +639,8 @@ export class DungeonScene {
         ...initEnemyWanderFields(spawn.x, spawn.y),
         ...combatInit,
       };
+      if (enemy.isElite) enemy.container.visible = false;
+      this.attachEliteAura(enemy);
       this.attachEnemyStatusBars(enemy);
       this.enemies.push(enemy);
     }
@@ -620,6 +667,11 @@ export class DungeonScene {
       speciesId,
       roomIndex,
       isBoss: false,
+      isElite: false,
+      eliteAwakened: true,
+      eliteAffix: null,
+      eliteAbilityCd: 0,
+      eliteAura: null,
       hp: Math.round(species.maxHp * 0.6),
       maxHp: Math.round(species.maxHp * 0.6),
       x,
@@ -628,6 +680,7 @@ export class DungeonScene {
       speed: species.speed,
       def: species.def,
       behaviorId: species.behaviorId,
+      attackCooldownScale: 1,
       attackCd: 0.5,
       enraged: true,
       aggroed: true,
@@ -742,7 +795,7 @@ export class DungeonScene {
       this.layout,
       this.playerX,
       this.playerY,
-      this.portalActive,
+      this.portalActive || this.eliteRoomRevealed,
     );
 
     this.state.playerHp = Math.round(this.playerHp);
@@ -1317,12 +1370,76 @@ export class DungeonScene {
     this.syncBossHud(enemy);
   }
 
+  private attachEliteAura(enemy: LiveEnemy): void {
+    enemy.eliteAura?.destroy();
+    enemy.eliteAura = null;
+    if (!enemy.isElite || !enemy.eliteAffix) return;
+    const affix = ELITE_AFFIXES[enemy.eliteAffix];
+    const aura = new Graphics({ roundPixels: true });
+    aura.ellipse(0, 5, 21, 9);
+    aura.fill({ color: affix.color, alpha: 0.12 });
+    aura.ellipse(0, 5, 19, 8);
+    aura.stroke({ width: 1.5, color: affix.color, alpha: 0.72 });
+    enemy.container.addChildAt(aura, 0);
+    enemy.eliteAura = aura;
+  }
+
+  private updateEliteAffix(enemy: LiveEnemy, dt: number, playerDistance: number): void {
+    if (!enemy.isElite || !enemy.eliteAffix) return;
+    if (enemy.eliteAura) {
+      const pulse = 0.82 + Math.sin(Date.now() * 0.006) * 0.12;
+      enemy.eliteAura.alpha = 0.78 + Math.sin(Date.now() * 0.008) * 0.16;
+      enemy.eliteAura.scale.set(pulse);
+    }
+    if (
+      !this.eliteAnnounced
+      && this.isPlayerInRoom(enemy.roomIndex)
+      && !enemy.dead
+      && !enemy.fled
+    ) {
+      this.eliteAnnounced = true;
+      const species = getSpecies(enemy.speciesId);
+      const affix = ELITE_AFFIXES[enemy.eliteAffix];
+      this.callbacks.showToast(`Elite: ${species.name} — ${affix.name}`);
+      playSfx('boss.phase2', { volume: 0.42, speed: 1.18 });
+    }
+    const storm = tickEliteStorm(
+      enemy.eliteAbilityCd,
+      dt,
+      enemy.eliteAffix === 'tempestade' && enemy.aggroed && playerDistance <= 210,
+    );
+    enemy.eliteAbilityCd = storm.cooldown;
+    if (!storm.fire) return;
+    const aim = Math.atan2(this.playerY - enemy.y, this.playerX - enemy.x);
+    for (const offset of [-0.3, 0, 0.3]) {
+      const data = createProjectileData(
+        enemy.x,
+        enemy.y - 5,
+        aim + offset,
+        145,
+        Math.max(2, Math.round(enemy.atk * 0.72)),
+        'enemy',
+        215,
+        0,
+        6,
+      );
+      this.spawnProjectile(
+        data,
+        'enemy',
+        'orb',
+        `${getSpecies(enemy.speciesId).name} Tempestade`,
+      );
+    }
+    playSfx('combat.attack.spear', { volume: 0.52, speed: 1.2 });
+  }
+
   private damageEnemy(
     enemy: LiveEnemy,
     rawDmg: number,
     source: 'player' | 'companion' = 'player',
   ): void {
     if (enemy.dead || enemy.fled) return;
+    if (enemy.isElite && !enemy.eliteAwakened) return;
     enemy.aggroed = true;
     const sourceMultiplier = source === 'companion'
       ? this.perkModifiers.companionDamageMultiplier
@@ -1378,6 +1495,13 @@ export class DungeonScene {
         this.spawnEnemyChest(enemy);
       }
     }
+    if (enemy.isElite && this.state.activeExpedition) {
+      const defeated = this.state.activeExpedition.defeatedEliteSpecies;
+      if (!defeated.includes(enemy.speciesId)) {
+        defeated.push(enemy.speciesId);
+      }
+      this.callbacks.onStateChange();
+    }
 
     if (enemy.isBoss) {
       hideBossHud();
@@ -1406,6 +1530,13 @@ export class DungeonScene {
           }
         }
       }
+    } else if (enemy.isElite && !options?.skipToast) {
+      const species = getSpecies(enemy.speciesId);
+      const affix = enemy.eliteAffix
+        ? ELITE_AFFIXES[enemy.eliteAffix].name
+        : 'Elite';
+      playSfx('boss.defeated', { volume: 0.62, speed: 1.12 });
+      this.callbacks.showToast(`${species.name} ${affix} derrotado — passagem próxima`);
     } else if (!enemy.isMinion && !options?.skipToast) {
       const species = getSpecies(enemy.speciesId);
       if (this.tutorialRun) {
@@ -1430,9 +1561,18 @@ export class DungeonScene {
 
   private attachEnemyStatusBars(enemy: LiveEnemy): void {
     enemy.statusBars?.root.parent?.removeChild(enemy.statusBars.root);
-    const bars = createEnemyStatusBars(enemy.shieldMax > 0, enemy.isBoss);
+    const eliteName = enemy.eliteAffix
+      ? ELITE_AFFIXES[enemy.eliteAffix].name
+      : '';
+    const bars = createEnemyStatusBars(
+      enemy.shieldMax > 0,
+      enemy.isBoss,
+      enemy.isElite,
+      eliteName,
+    );
     if (!enemy.isBoss || enemy.speciesId === 'matriarca_prismatica') {
-      bars.root.y = getEnemyHitbox(enemy.speciesId).statusBarY;
+      bars.root.y = getEnemyHitbox(enemy.speciesId).statusBarY
+        - (enemy.isElite ? 9 : 0);
     }
     enemy.statusBars = bars;
     enemy.container.addChild(bars.root);
@@ -1476,9 +1616,11 @@ export class DungeonScene {
   }
 
   private updateEnemies(dt: number): void {
+    this.awakenEliteWhenReady();
     const walls = this.getCollisionWalls();
     for (const enemy of this.enemies) {
       if (enemy.dead || enemy.fled || enemy.captureLocked) continue;
+      if (enemy.isElite && !enemy.eliteAwakened) continue;
 
       if (enemy.isBoss && this.bossFightPhase === 'intro') {
         enemy.container.x = enemy.x;
@@ -1488,6 +1630,7 @@ export class DungeonScene {
       }
 
       const dist = distance(this.playerX, this.playerY, enemy.x, enemy.y);
+      this.updateEliteAffix(enemy, dt, dist);
       const wasAggroed = enemy.aggroed;
       enemy.aggroed = shouldEnemyAggro({
         aggroed: enemy.aggroed,
@@ -1625,6 +1768,28 @@ export class DungeonScene {
     if (this.attackCd > 0) this.attackCd -= dt;
   }
 
+  private awakenEliteWhenReady(): void {
+    const elite = this.enemies.find(
+      (enemy) => enemy.isElite && !enemy.dead && !enemy.fled,
+    );
+    if (!elite || elite.eliteAwakened) return;
+    if (!shouldAwakenExpeditionElite(this.enemies)) return;
+
+    elite.eliteAwakened = true;
+    this.eliteRoomRevealed = true;
+    elite.container.visible = true;
+    elite.container.alpha = 1;
+    this.updateEnemyStatusBars(elite);
+
+    const affixName = elite.eliteAffix
+      ? ELITE_AFFIXES[elite.eliteAffix].name
+      : 'Elite';
+    this.callbacks.showToast(
+      `${getSpecies(elite.speciesId).name} ${affixName} despertou na sala marcada!`,
+    );
+    playSfx('dungeon.gate', { volume: 0.58, speed: 0.82 });
+  }
+
   private isPlayerInRoom(roomIndex: number): boolean {
     const room = this.layout.rooms.find((r) => r.index === roomIndex);
     if (!room) return false;
@@ -1642,7 +1807,15 @@ export class DungeonScene {
     let best: LiveEnemy | null = null;
     let bestDist = Infinity;
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.fled || enemy.captureLocked || enemy.isMinion) continue;
+      if (
+        enemy.dead ||
+        enemy.fled ||
+        enemy.captureLocked ||
+        enemy.isMinion ||
+        (enemy.isElite && !enemy.eliteAwakened)
+      ) {
+        continue;
+      }
       const species = getSpecies(enemy.speciesId);
       if (!species.capturable) continue;
       if (!canTargetForCapture(enemy.hp, enemy.maxHp)) continue;
@@ -1678,8 +1851,10 @@ export class DungeonScene {
       enemy.container.destroy({ children: true });
       enemy.container = createCreatureSprite(species, shouldGlow);
       if (enemy.isBoss) enemy.container.scale.set(1.35);
+      else if (enemy.isElite) enemy.container.scale.set(1.14);
       enemy.container.x = enemy.x;
       enemy.container.y = enemy.y;
+      this.attachEliteAura(enemy);
       this.attachEnemyStatusBars(enemy);
       parent.addChild(enemy.container);
     }
@@ -1897,7 +2072,11 @@ export class DungeonScene {
       this.eliminateEnemy(enemy, { skipToast: true });
       const anchor = this.getCaptureAnchor(enemy);
       drawCaptureBurst(this.fxLayer, anchor.x, anchor.y, true, this.fxRunner);
-      this.callbacks.showToast(`Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`);
+      this.callbacks.showToast(
+        enemy.isElite
+          ? `Capturou o elite ${species.name}! (${formatCapturePercent(plan.chance)})`
+          : `Capturou ${species.name}! (${formatCapturePercent(plan.chance)})`,
+      );
       playSfx('capture.success');
       if (this.tutorialRun) {
         this.callbacks.onTutorialEvent?.('capture_success');

@@ -1,22 +1,33 @@
 import { Container, Graphics } from 'pixi.js';
+import { createPixelText } from './pixelText.ts';
 
 export interface EnemyStatusBars {
   root: Container;
   hpFill: Graphics;
   shieldFill: Graphics | null;
   barWidth: number;
+  eliteLabel: ReturnType<typeof createPixelText> | null;
 }
 
-export function createEnemyStatusBars(hasShield: boolean, isBoss: boolean): EnemyStatusBars {
-  const barWidth = isBoss ? 34 : 26;
+export function createEnemyStatusBars(
+  hasShield: boolean,
+  isBoss: boolean,
+  isElite = false,
+  eliteName = '',
+): EnemyStatusBars {
+  const barWidth = isBoss ? 34 : isElite ? 40 : 26;
   const root = new Container();
-  root.y = isBoss ? -26 : -22;
+  root.y = isBoss ? -26 : isElite ? -31 : -22;
 
   const frame = new Graphics({ roundPixels: true });
   frame.roundRect(-barWidth / 2, 0, barWidth, 4, 1);
   frame.fill(0x120f1a);
   frame.roundRect(-barWidth / 2, 0, barWidth, 4, 1);
-  frame.stroke({ width: 1, color: 0x3d5c3a, alpha: 0.9 });
+  frame.stroke({
+    width: 1,
+    color: isElite ? 0xd8b86b : 0x3d5c3a,
+    alpha: 0.9,
+  });
   root.addChild(frame);
 
   const hpFill = new Graphics({ roundPixels: true });
@@ -35,7 +46,15 @@ export function createEnemyStatusBars(hasShield: boolean, isBoss: boolean): Enem
     root.addChild(shieldFill);
   }
 
-  return { root, hpFill, shieldFill, barWidth };
+  let eliteLabel: ReturnType<typeof createPixelText> | null = null;
+  if (isElite) {
+    eliteLabel = createPixelText(`ELITE · ${eliteName}`, 6, 0xf2d58c);
+    eliteLabel.anchor.set(0.5, 1);
+    eliteLabel.y = hasShield ? -9 : -4;
+    root.addChild(eliteLabel);
+  }
+
+  return { root, hpFill, shieldFill, barWidth, eliteLabel };
 }
 
 export function updateEnemyStatusBars(

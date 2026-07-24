@@ -121,7 +121,7 @@ elites, escolha de perks e arena final.
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**314 testes**, 67 arquivos)
+- [x] Suite Vitest abrangente (**319 testes**, 68 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -161,7 +161,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 |-------|---------|--------|
 | 1 | Bestiário simplificado | **Feita** |
 | 2 | Estado, save e retomada de expedição | **Feita** |
-| 3 | Floresta: 3 andares, elites, perks e arena | **Em andamento — recompensa e 7 perks prontos** |
+| 3 | Floresta: 3 andares, elites, perks e arena | **Em andamento — elites, recompensa e 7 perks prontos** |
 | 4 | Balanceamento do vertical slice | Planejada |
 | 5 | Cristal e Termal | Planejada |
 | 6 | Drops de elite e longevidade | Planejada |
@@ -170,9 +170,9 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 ### Critérios de done
 
 - [ ] Três andares compactos por bioma e uma arena final. *(Floresta pronta)*
-- [ ] Extração segura após cada elite.
+- [x] Extração segura após cada elite. *(portal e recompensa liberados ao limpar o andar)*
 - [x] Três escolhas de perk sem repetição. *(7 perks funcionais; pool final terá 12)*
-- [ ] Elites existentes com afixos legíveis.
+- [x] Elites existentes com afixos legíveis. *(Implacável, Tempestade e Bastião)*
 - [x] Continue retoma a mesma seed e o mesmo andar.
 - [ ] Chave do próximo bioma vem apenas do chefe.
 - [ ] Expedição completa dura aproximadamente 25–40 minutos.
