@@ -4,7 +4,7 @@ const RETICLE_ARM = 4;
 const RETICLE_COLOR = 0xff4444;
 const RETICLE_ALPHA = 0.9;
 /** O `playerY` é a base dos pés; combate parte do centro visual do corpo. */
-export const PLAYER_AIM_ORIGIN_OFFSET_Y = -18;
+export const PLAYER_AIM_ORIGIN_OFFSET_Y = -13;
 
 export function getPlayerAimOrigin(
   playerX: number,

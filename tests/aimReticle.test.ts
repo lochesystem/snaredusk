@@ -26,6 +26,6 @@ describe('aimReticle', () => {
   });
 
   it('centraliza a mira no corpo, não na base dos pés', () => {
-    expect(getPlayerAimOrigin(100, 80)).toEqual({ x: 100, y: 62 });
+    expect(getPlayerAimOrigin(100, 80)).toEqual({ x: 100, y: 67 });
   });
 });
