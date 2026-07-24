@@ -1,7 +1,7 @@
 let onConfirm: (() => void) | null = null;
 
 export function bindAbandonModal(): void {
-  document.getElementById('abandon-cancel')?.addEventListener('click', () => {
+  document.getElementById('abandon-close')?.addEventListener('click', () => {
     closeAbandonModal();
   });
   document.getElementById('abandon-confirm')?.addEventListener('click', () => {

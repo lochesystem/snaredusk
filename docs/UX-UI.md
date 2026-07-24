@@ -367,7 +367,7 @@ sequenceDiagram
 │   Orbe Reforçado  │  │ 🔮 │  Orbe de Vínculo             │
 │   Tocha           │  └────┘                              │
 │   Comedouro       │  2× fibra + 1× pó luminescente       │
-│                   │  (baús adjacentes: ✓ ✓)              │
+│                   │  (armazenamento da base: ✓)          │
 ├──────────────────────────────────────────────────────────┤
 │                              [CRAFTAR]                   │
 └──────────────────────────────────────────────────────────┘

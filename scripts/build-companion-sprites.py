@@ -13,6 +13,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 ASSET_DIR = ROOT / "public" / "assets" / "companions"
 SOURCE_DIR = ASSET_DIR / "source"
+ANIMATED_SOURCE_DIR = SOURCE_DIR / "animated"
 FRAME_SIZE = 40
 
 BIOMES = {
@@ -174,6 +175,59 @@ def normalize_pose(pose: Image.Image) -> Image.Image:
     return frame
 
 
+def clean_transparent_pose(cell: Image.Image) -> Image.Image:
+    rgba = cell.convert("RGBA")
+    pixels = rgba.load()
+    for y in range(rgba.height):
+        for x in range(rgba.width):
+            r, g, b, a = pixels[x, y]
+            pixels[x, y] = (r, g, b, 255 if a >= 96 else 0)
+    bbox = rgba.getbbox()
+    if bbox is None:
+        raise RuntimeError("Empty animated companion cell")
+    return rgba.crop(bbox)
+
+
+def normalize_animated_poses(poses: list[Image.Image]) -> list[Image.Image]:
+    main_boxes = []
+    for pose in poses:
+        components = alpha_components(pose)
+        main_boxes.append(max(components, key=lambda component: component[4]))
+
+    max_width = max(box[2] - box[0] for box in main_boxes)
+    max_height = max(box[3] - box[1] for box in main_boxes)
+    shared_scale = min(34 / max_width, 30 / max_height)
+    frames: list[Image.Image] = []
+
+    for pose, main in zip(poses, main_boxes):
+        target = (
+            max(1, round(pose.width * shared_scale)),
+            max(1, round(pose.height * shared_scale)),
+        )
+        resized = pose.resize(target, Image.Resampling.NEAREST)
+        body_center_x = round(((main[0] + main[2]) / 2) * shared_scale)
+        body_bottom = round(main[3] * shared_scale)
+        frame = Image.new("RGBA", (FRAME_SIZE, FRAME_SIZE))
+        frame.alpha_composite(
+            resized,
+            (FRAME_SIZE // 2 - body_center_x, FRAME_SIZE - 3 - body_bottom),
+        )
+        frames.append(frame)
+    return frames
+
+
+def frames_from_animated_sheet(source: Image.Image) -> list[Image.Image]:
+    poses: list[Image.Image] = []
+    for row in range(3):
+        y0 = round(row * source.height / 3)
+        y1 = round((row + 1) * source.height / 3)
+        for column in range(4):
+            x0 = round(column * source.width / 4)
+            x1 = round((column + 1) * source.width / 4)
+            poses.append(clean_transparent_pose(source.crop((x0, y0, x1, y1))))
+    return normalize_animated_poses(poses)
+
+
 def shift_upper(frame: Image.Image, dx: int = 0, dy: int = 0) -> Image.Image:
     """Move the torso while preserving the grounded bottom pixels."""
     result = frame.copy()
@@ -265,6 +319,11 @@ def main() -> None:
         source = Image.open(SOURCE_DIR / source_name).convert("RGBA")
         cell_width = source.width // 3
         for row, species_id in enumerate(species_ids):
+            animated_source = ANIMATED_SOURCE_DIR / f"{species_id}-alpha.png"
+            if animated_source.exists():
+                animated = Image.open(animated_source).convert("RGBA")
+                write_atlas(species_id, frames_from_animated_sheet(animated))
+                continue
             y0 = round(row * source.height / 6)
             y1 = round((row + 1) * source.height / 6)
             poses = []

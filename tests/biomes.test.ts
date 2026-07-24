@@ -83,4 +83,19 @@ describe('dungeonGenerator biomes', () => {
     }
     expect(layout.decor.every((d) => d.kind === 'thermal')).toBe(true);
   });
+
+  it('cogumante aparece com taxa baixa na floresta', () => {
+    let cogumante = 0;
+    let total = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      const layout = generateDungeon(seed, 'floresta');
+      for (const spawn of layout.enemySpawns) {
+        if (spawn.isBoss) continue;
+        total++;
+        if (spawn.speciesId === 'cogumante') cogumante++;
+      }
+    }
+    expect(total).toBeGreaterThan(50);
+    expect(cogumante / total).toBeLessThan(0.14);
+  });
 });

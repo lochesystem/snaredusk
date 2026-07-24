@@ -1,5 +1,6 @@
 import type { BagEntry, ShopListing } from '../types.ts';
 import { getPriceTier, type PriceTier } from './pricing.ts';
+import { bagEntryTotalValue } from './inventory.ts';
 
 export type CustomerArchetypeId =
   | 'morador'
@@ -123,6 +124,7 @@ export function customerBuysListing(
 ): boolean {
   if (!customerInterested(archetypeId, listing.entry)) return false;
   const price = salePriceForCustomer(archetypeId, listing.price);
-  if (archetypeId === 'crianca' && price > listing.entry.baseValue * 1.2) return false;
-  return customerWillBuy(archetypeId, price, listing.entry.baseValue, rng);
+  const referenceValue = bagEntryTotalValue(listing.entry);
+  if (archetypeId === 'crianca' && price > referenceValue * 1.2) return false;
+  return customerWillBuy(archetypeId, price, referenceValue, rng);
 }

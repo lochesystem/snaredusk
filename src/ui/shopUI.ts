@@ -1,7 +1,8 @@
 import type { BagEntry, GameState } from '../types.ts';
-import { discardBagSlot, formatBagEntry } from '../systems/inventory.ts';
+import { bagEntryTotalValue, discardBagSlot, formatBagEntry } from '../systems/inventory.ts';
 import { formatReputationSummary } from '../systems/reputation.ts';
 import { getNextShopLevel, getShopLevelDef } from '../systems/shopUpgrade.ts';
+import { openQuantityPicker } from './quantityPicker.ts';
 
 export interface ShopUICallbacks {
   getState: () => GameState;
@@ -10,8 +11,9 @@ export interface ShopUICallbacks {
   onBack: () => void;
   onOpenShopDay: () => void;
   onUpgradeShop: () => void;
-  onBagSelect: (bagIndex: number) => void;
+  onBagSelect: (bagIndex: number, quantity?: number) => void;
   getSelectedBag: () => number;
+  getSelectedBagQuantity: () => number;
 }
 
 export class ShopUI {
@@ -32,7 +34,7 @@ export class ShopUI {
     document.getElementById('price-up')?.addEventListener('click', () => this.adjustPrice(5));
     document.getElementById('price-down')?.addEventListener('click', () => this.adjustPrice(-5));
     document.getElementById('price-confirm')?.addEventListener('click', () => this.confirmPrice());
-    document.getElementById('price-cancel')?.addEventListener('click', () => this.closePriceModal());
+    document.getElementById('price-modal-close')?.addEventListener('click', () => this.closePriceModal());
   }
 
   render(): void {
@@ -91,7 +93,7 @@ export class ShopUI {
     const hint = document.getElementById('price-modal-hint');
     const value = document.getElementById('price-value');
     if (title) title.textContent = `Preço: ${formatEntry(listing.entry)}`;
-    if (hint) hint.textContent = `Valor de referência: ~${listing.entry.baseValue} ouro`;
+    if (hint) hint.textContent = `Valor de referência do lote: ~${bagEntryTotalValue(listing.entry)} ouro`;
     if (value) value.textContent = String(this.draftPrice);
     modal?.classList.remove('hidden');
   }
@@ -120,6 +122,7 @@ export class ShopUI {
     container.innerHTML = '';
     const state = this.cb.getState();
     const selected = this.cb.getSelectedBag();
+    const selectedQuantity = this.cb.getSelectedBagQuantity();
 
     state.bag.forEach((entry, index) => {
       if (!entry) return;
@@ -139,12 +142,38 @@ export class ShopUI {
       name.textContent = formatEntry(entry);
       const value = document.createElement('span');
       value.className = 'bag-chip-value';
-      value.textContent = `${entry.baseValue}g base`;
-      btn.append(kind, name, value);
+      value.textContent = entry.kind === 'loot'
+        ? `${entry.quantity} un. · ${entry.baseValue}g cada`
+        : `${entry.baseValue}g base`;
+      if (index === selected && entry.kind === 'loot') {
+        const selectedQty = document.createElement('span');
+        selectedQty.className = 'bag-chip-selected-qty';
+        selectedQty.textContent = `Selecionado: ${selectedQuantity}`;
+        btn.append(kind, name, value, selectedQty);
+      } else {
+        btn.append(kind, name, value);
+      }
       btn.title = 'Selecionar para colocar na loja';
       btn.addEventListener('click', () => {
-        const next = index === selected ? -1 : index;
-        this.cb.onBagSelect(next);
+        if (index === selected) {
+          this.cb.onBagSelect(-1);
+          this.renderBagStrip();
+          return;
+        }
+        if (entry.kind === 'loot' && entry.quantity > 1) {
+          openQuantityPicker({
+            title: 'Separar para a loja',
+            itemName: entry.name,
+            max: entry.quantity,
+            actionLabel: 'Carregar lote',
+            onConfirm: (quantity) => {
+              this.cb.onBagSelect(index, quantity);
+              this.renderBagStrip();
+            },
+          });
+          return;
+        }
+        this.cb.onBagSelect(index, 1);
         this.renderBagStrip();
       });
       wrap.appendChild(btn);

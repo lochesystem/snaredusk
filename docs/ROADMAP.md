@@ -95,7 +95,7 @@ flowchart LR
 | **Chave da arena** | Limpar fase → portão do chefe | **Feito** | Mata/captura todos → chave; some ao voltar à base |
 | **Portal pós-chefe** | Só após baú épico | **Feito** | Não exige limpar masmorra inteira |
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
-| **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | 20 receitas, construções prontas, orbes, materiais e armas; baús adjacentes |
+| **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | 20 receitas, construções prontas, orbes, materiais e armas; armazenamento integrado da base |
 | **Party** | 2 companheiros ativos | **Parcial** | 1 slot com IA (seguir, atacar); falta 2º slot |
 | **Bestiário** | UI + bônus família | **Mínimo** | Registro no save + contador na base; sem tela dedicada |
 | **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
@@ -103,7 +103,7 @@ flowchart LR
 | **Receitas** | 20 receitas | **Feito** | **20/20** |
 | **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia; dormir após voltar ou fechar loja |
 | **Sentinelas** | 1 por bioma, passivos | **Pendente** | — |
-| **Base escavável** | Grid, escavação, baús, craft adjacente | **Feito (v0.4)** | Tileset v2, estações v3, landmarks movíveis, rotação (R) |
+| **Base escavável** | Grid, escavação, baús, craft integrado | **Feito (v0.4)** | Tileset v2, estações v3, landmarks movíveis, rotação (R) |
 | **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
 | **Popularidade / reputação** | Níveis 1–3 | **Feito (MVP)** | Ouro vendido; +1 prateleira (nív. 2); colecionador (nív. 3) |
 | **Tutorial** | 15 min com Mira | **Feito (fluxo)** | Masmorra → habitat → loja → orbes; skippável; fixes anti-softlock |

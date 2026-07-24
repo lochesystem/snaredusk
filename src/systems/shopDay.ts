@@ -11,6 +11,7 @@ import {
 import { getPriceTier, getPriceTierLabel, type PriceTier } from './pricing.ts';
 import { getReputationLevel, recordShopGold, type ReputationLevelUp } from './reputation.ts';
 import { getShopLevelDef } from './shopUpgrade.ts';
+import { bagEntryTotalValue } from './inventory.ts';
 
 export interface ShopDayLogLine {
   text: string;
@@ -95,7 +96,7 @@ export function planShopDay(state: GameState, rng: () => number = Math.random): 
     visitCounts.set(archetype.id, (visitCounts.get(archetype.id) ?? 0) + 1);
 
     const paidPrice = salePriceForCustomer(archetype.id, listing.price);
-    const tier = getPriceTier(paidPrice, listing.entry.baseValue);
+    const tier = getPriceTier(paidPrice, bagEntryTotalValue(listing.entry));
     const willBuy = customerBuysListing(archetype.id, listing, rng);
     const { slotKind, slotIndex } = listingSlotRef(listing);
 

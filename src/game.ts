@@ -150,11 +150,12 @@ export class Game {
       onBack: () => this.showScreen('base'),
       onOpenShopDay: () => this.startShopDay(),
       onUpgradeShop: () => this.upgradeShop(),
-      onBagSelect: (index) => {
-        this.shopScene?.setSelectedBag(index);
+      onBagSelect: (index, quantity) => {
+        this.shopScene?.setSelectedBag(index, quantity);
         this.shopUI.render();
       },
       getSelectedBag: () => this.shopScene?.getSelectedBag() ?? -1,
+      getSelectedBagQuantity: () => this.shopScene?.getSelectedBagQuantity() ?? 0,
     });
     this.bindDom();
     bindInventoryModal();

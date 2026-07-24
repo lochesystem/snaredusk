@@ -24,7 +24,7 @@ Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GD
 | **Captura** | Orbe Q, taxa por HP, mira de alcance | Igual + upgrades e tipos |
 | **Party / sentinelas** | 1 companheiro com IA | 2 companheiros + 1 sentinela/bioma |
 | **Loja** | 5 níveis, 6 arquétipos, 4 faixas, reputação 1–3, tileset visual, clientes animados | 5 níveis, 6 arquétipos, 4 faixas |
-| **Base** | Grid escavável, estações rotacionáveis (R), craft adjacente, habitat com cercados | Escavação, oficina, craft, baús |
+| **Base** | Grid escavável, estações rotacionáveis (R), craft conectado aos baús, habitat com cercados | Escavação, oficina, craft, baús |
 | **Ciclo dia/noite** | Cama, 1 masmorra/dia, produção habitat ao dormir | Dormir, loja diurna, evento entardecer |
 | **Craft / economia** | 2 receitas, compra de orbes, reputação | 20 receitas, sinks de ouro |
 | **Tutorial** | Mira: masmorra → habitat → loja → orbes (skippável) | 15 min guiado |
@@ -500,7 +500,7 @@ Hub persistente estilo Core Keeper: escave, construa, organize. Zona segura — 
 | **Habitat** | Alojar criaturas; produção passiva | Comedouro |
 | **Oficina** | Craft armas, orbes, ferramentas | Bancada, Forja |
 | **Jardim de fungos** | Cultivar ingredientes | Hoe + Regador |
-| **Armazém** | Baús; materiais para craft adjacente | Baús (4 tipos) |
+| **Armazém** | Baús; materiais compartilhados com a bancada | Baús (4 tipos) |
 | **Quarto** | Dormir = avançar dia; salvar | Cama |
 | **Pátio de companheiros** | Upgrade party para 3 | — |
 
@@ -526,9 +526,9 @@ Fórmula (MVP): `producao = base` (humor fixo 100%). Fórmula completa: `produca
 
 Área com iluminação < 40%: evento negativo 5% por ciclo (ladrão, criatura triste, −10 humor global).
 
-### Craft adjacente (padrão Core Keeper)
+### Craft conectado ao armazenamento da base
 
-- Estações de craft puxam materiais de **baús nas 4 células cardinais adjacentes**
+- Estações de craft puxam materiais de **qualquer baú colocado na base**
 - UI mostra preview do que será consumido antes de confirmar
 
 ---

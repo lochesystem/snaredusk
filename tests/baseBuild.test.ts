@@ -4,6 +4,38 @@ import { canPlaceStation, placeStation, removePlacement, relocatePlacement } fro
 import { BaseCellKind, getCell } from '../src/world/baseGrid.ts';
 
 describe('baseBuild', () => {
+  it('inicia novos jogos com o layout organizado da base', () => {
+    const state = defaultGameState();
+    const { placements, chests } = state.base;
+
+    expect(placements.find((p) => p.id === 'portal_default')).toMatchObject({
+      cellX: 15,
+      cellY: 8,
+      rotation: 0,
+    });
+    expect(placements.find((p) => p.id === 'chest_default')).toMatchObject({
+      cellX: 11,
+      cellY: 10,
+      rotation: 0,
+    });
+    expect(placements.find((p) => p.id === 'ladder_default')).toMatchObject({
+      cellX: 21,
+      cellY: 10,
+      rotation: 0,
+    });
+    expect(placements.find((p) => p.id === 'bed_default')).toMatchObject({
+      cellX: 21,
+      cellY: 12,
+      rotation: 0,
+    });
+    expect(placements.find((p) => p.id === 'bench_default')).toMatchObject({
+      cellX: 21,
+      cellY: 14,
+      rotation: 1,
+    });
+    expect(chests[0]).toMatchObject({ id: 'chest_default', cellX: 11, cellY: 10 });
+  });
+
   it('não permite construir sem ter fabricado o item', () => {
     const state = defaultGameState();
     state.craftedStations.chest_wood = 0;
@@ -70,7 +102,7 @@ describe('baseBuild', () => {
     outer: for (let y = 0; y < state.base.height; y++) {
       for (let x = 0; x < state.base.width; x++) {
         if (getCell(state.base, x, y) !== BaseCellKind.Floor) continue;
-        if (canPlaceStation(state, 'workbench', x, y, bench.id).ok) {
+        if (canPlaceStation(state, 'workbench', x, y, bench.id, bench.rotation).ok) {
           if (x !== bench.cellX || y !== bench.cellY) {
             spot = { x, y };
             break outer;

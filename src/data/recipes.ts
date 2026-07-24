@@ -60,10 +60,10 @@ export const CRAFT_RECIPES: CraftRecipe[] = [
   {
     id: 'craft_cercado',
     name: 'Cercado',
-    goldCost: 20,
+    goldCost: 8,
     ingredients: [
-      { lootId: 'madeira_petrificada', quantity: 4 },
-      { lootId: 'fibra_musgo', quantity: 3 },
+      { lootId: 'fibra_musgo', quantity: 2 },
+      { lootId: 'madeira_petrificada', quantity: 1 },
     ],
     output: { kind: 'station', stationId: 'habitat_pen' },
   },

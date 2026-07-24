@@ -4,6 +4,7 @@ import type { GameState } from '../types.ts';
 import type { BaseChestState } from '../types.ts';
 import { getStation } from '../data/baseStations.ts';
 import { emptyWeaponSlots } from './weaponArmory.ts';
+import { addLootToSlots, clampTransferQuantity, normalizeItemStacks } from './itemStacks.ts';
 
 export const CHEST_SLOT_COUNT = 12;
 
@@ -23,6 +24,10 @@ export function createChestState(id: string, cellX: number, cellY: number): Base
     slots: Array.from({ length: CHEST_SLOT_COUNT }, () => null),
     weaponSlots: emptyWeaponSlots(),
   };
+}
+
+export function normalizeChestStacks(chest: BaseChestState): void {
+  chest.slots = normalizeItemStacks(chest.slots, CHEST_SLOT_COUNT) as BaseChestState['slots'];
 }
 
 export function countLootInChest(chest: BaseChestState, lootId: string): number {
@@ -46,30 +51,13 @@ export function addLootToChest(chest: BaseChestState, lootId: string, quantity: 
   const def = LOOT_TABLE[lootId];
   if (!def || quantity <= 0) return 0;
 
-  let remaining = quantity;
-
-  for (let i = 0; i < chest.slots.length && remaining > 0; i++) {
-    const slot = chest.slots[i];
-    if (slot && slot.id === lootId) {
-      slot.quantity += remaining;
-      return quantity;
-    }
-  }
-
-  for (let i = 0; i < chest.slots.length && remaining > 0; i++) {
-    if (chest.slots[i]) continue;
-    const take = remaining;
-    chest.slots[i] = {
-      kind: 'loot',
-      id: lootId,
-      name: def.name,
-      baseValue: def.baseValue,
-      quantity: take,
-    };
-    remaining -= take;
-  }
-
-  return quantity - remaining;
+  return addLootToSlots(chest.slots, {
+    kind: 'loot',
+    id: lootId,
+    name: def.name,
+    baseValue: def.baseValue,
+    quantity,
+  }, quantity);
 }
 
 export function removeLootFromChest(chest: BaseChestState, lootId: string, quantity: number): boolean {
@@ -85,15 +73,20 @@ export function removeLootFromChest(chest: BaseChestState, lootId: string, quant
   return remaining === 0;
 }
 
-export function transferLootToBag(state: GameState, chest: BaseChestState, chestIndex: number): boolean {
+export function transferLootToBag(
+  state: GameState,
+  chest: BaseChestState,
+  chestIndex: number,
+  requestedQuantity?: number,
+): boolean {
   const slot = chest.slots[chestIndex];
   if (!slot) return false;
 
-  const bagIdx = state.bag.findIndex((s) => s === null);
-  if (bagIdx === -1) return false;
-
-  state.bag[bagIdx] = { ...slot };
-  chest.slots[chestIndex] = null;
+  const quantity = clampTransferQuantity(requestedQuantity ?? slot.quantity, slot.quantity);
+  const moved = addLootToSlots(state.bag, slot, quantity);
+  if (moved !== quantity) return false;
+  slot.quantity -= moved;
+  if (slot.quantity <= 0) chest.slots[chestIndex] = null;
   return true;
 }
 
@@ -101,15 +94,16 @@ export function transferLootToChest(
   state: GameState,
   chest: BaseChestState,
   bagIndex: number,
+  requestedQuantity?: number,
 ): boolean {
   const entry = state.bag[bagIndex];
   if (!entry || entry.kind !== 'loot') return false;
 
-  const emptyChest = chest.slots.findIndex((s) => s === null);
-  if (emptyChest === -1) return false;
-
-  chest.slots[emptyChest] = { ...entry };
-  state.bag[bagIndex] = null;
+  const quantity = clampTransferQuantity(requestedQuantity ?? entry.quantity, entry.quantity);
+  const moved = addLootToSlots(chest.slots, entry, quantity);
+  if (moved !== quantity) return false;
+  entry.quantity -= moved;
+  if (entry.quantity <= 0) state.bag[bagIndex] = null;
   return true;
 }
 
@@ -122,11 +116,11 @@ export function chestUsedSlots(chest: BaseChestState): number {
 }
 
 export function bagHasLootSpace(state: GameState): boolean {
-  return state.bag.some((s) => s === null);
+  return state.bag.some((s) => s === null || s.kind === 'loot');
 }
 
 export function chestHasSpace(chest: BaseChestState): boolean {
-  return chest.slots.some((s) => s === null);
+  return chest.slots.some((s) => s === null || s.kind === 'loot');
 }
 
 export function chestWeaponHasSpace(chest: BaseChestState): boolean {

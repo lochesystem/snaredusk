@@ -23,6 +23,8 @@ export interface BiomeDef {
   bossSpeciesId: string;
   bossPortalHint: string;
   enemySpecies: readonly string[];
+  /** Peso relativo de spawn em salas de combate. Ausente = 1 para cada espécie. */
+  enemySpawnWeights?: Partial<Record<string, number>>;
   chestLoot: readonly string[];
   decorKind: DecorKind;
   hazardKind: BiomeHazardKind;
@@ -48,6 +50,13 @@ export const BIOMES: Record<BiomeId, BiomeDef> = {
       'cogumante',
       'ferrao_fungico',
     ],
+    enemySpawnWeights: {
+      esporo_dorminhoco: 4,
+      lumimorcego: 4,
+      carapaca_musgo: 4,
+      ferrao_fungico: 4,
+      cogumante: 1,
+    },
     chestLoot: [
       'cogumelo_comum',
       'fibra_musgo',
@@ -137,4 +146,22 @@ export function getBiomeDef(id: BiomeId): BiomeDef {
 
 export function listBiomes(): BiomeDef[] {
   return BIOME_ORDER.map((id) => BIOMES[id]);
+}
+
+/** Sorteia espécie inimiga com pesos do bioma (uniforme quando não definido). */
+export function rollEnemySpecies(
+  biome: BiomeDef,
+  rng: () => number = Math.random,
+): string {
+  const pool = biome.enemySpecies.map((id) => ({
+    id,
+    weight: biome.enemySpawnWeights?.[id] ?? 1,
+  }));
+  const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
+  let roll = rng() * total;
+  for (const entry of pool) {
+    roll -= entry.weight;
+    if (roll <= 0) return entry.id;
+  }
+  return pool[0]!.id;
 }

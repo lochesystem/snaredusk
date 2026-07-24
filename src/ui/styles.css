@@ -1921,6 +1921,7 @@ button:hover {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin-bottom: 14px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(155, 111, 70, 0.36);
 }
@@ -3136,6 +3137,46 @@ button:hover {
 
 .chest-modal-content {
   width: min(900px, 94vw);
+}
+
+.quantity-picker-content {
+  width: min(420px, 92vw);
+}
+
+.quantity-picker-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.quantity-picker-field {
+  display: grid;
+  gap: 6px;
+  color: #cbbba2;
+  font-size: 13px;
+}
+
+.quantity-picker-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 2px solid #61472f;
+  border-radius: 2px;
+  color: #f3dfba;
+  background: #151217;
+  font: inherit;
+}
+
+.quantity-picker-confirm {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.bag-chip-selected-qty {
+  color: #d9b36e;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .chest-modal-columns .inventory-grid {

@@ -17,6 +17,7 @@ import { migrateLegacyHabitatCreatures } from './habitat.ts';
 import { normalizeBaseGrid } from '../world/baseGrid.ts';
 import { normalizeWeaponArmory } from './weaponArmory.ts';
 import { normalizeBuildHotbar } from './buildHotbar.ts';
+import { addLootToSlots, normalizeItemStacks } from './itemStacks.ts';
 
 const SAVE_VERSION = 9;
 
@@ -174,12 +175,10 @@ function normalizeWeaponHotbar(
 }
 
 function padBag(bag: (GameState['bag'][number] | null)[] | undefined): GameState['bag'] {
-  const slots = createEmptyBag();
-  if (!bag) return slots;
-  for (let i = 0; i < Math.min(bag.length, slots.length); i++) {
-    slots[i] = bag[i] ?? null;
-  }
-  return slots;
+  // Saves comuns continuam com 12 slots. Saves especiais de QA podem declarar
+  // uma bolsa maior para reunir todo o catálogo sem alterar o novo jogo.
+  const slotCount = Math.max(createEmptyBag().length, bag?.length ?? 0);
+  return normalizeItemStacks(bag, slotCount) as GameState['bag'];
 }
 
 function padSpecialBag(
@@ -238,6 +237,9 @@ export function hasSave(): boolean {
 
 export function addToBag(state: GameState, entry: GameState['bag'][number]): boolean {
   if (!entry) return false;
+  if (entry.kind === 'loot') {
+    return addLootToSlots(state.bag, entry, entry.quantity) === entry.quantity;
+  }
   const idx = state.bag.findIndex((s) => s === null);
   if (idx === -1) return false;
   state.bag[idx] = entry;

@@ -1,7 +1,7 @@
 import type { BaseGridState, BasePlacement } from '../types.ts';
 import { BASE_CELL_SIZE, BASE_MAP_HEIGHT, BASE_MAP_WIDTH } from '../engine/constants.ts';
 import { canRotateStation, getStationFootprint } from '../data/baseStations.ts';
-import { createChestState } from '../systems/baseChest.ts';
+import { createChestState, normalizeChestStacks } from '../systems/baseChest.ts';
 
 export const BaseCellKind = {
   Void: 0,
@@ -38,14 +38,16 @@ export function createDefaultBaseGrid(): BaseGridState {
   }
 
   const placements: BasePlacement[] = [
-    { id: 'bench_default', stationId: 'workbench', cellX: startX + 4, cellY: startY + 5, rotation: 0 },
-    { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 6, cellY: startY + 5, rotation: 0 },
-    { id: 'bed_default', stationId: 'bed', cellX: startX + 2, cellY: startY + 2, rotation: 0 },
-    { id: 'portal_default', stationId: 'dungeon_portal', cellX: startX + 3, cellY: startY, rotation: 0 },
-    { id: 'ladder_default', stationId: 'shop_ladder', cellX: startX + 9, cellY: startY, rotation: 0 },
+    // Layout inicial organizado: portal centralizado ao norte, baú isolado à
+    // esquerda e utilidades alinhadas verticalmente na parede direita.
+    { id: 'bench_default', stationId: 'workbench', cellX: startX + 11, cellY: startY + 4, rotation: 1 },
+    { id: 'chest_default', stationId: 'chest_wood', cellX: startX + 1, cellY: startY, rotation: 0 },
+    { id: 'bed_default', stationId: 'bed', cellX: startX + 11, cellY: startY + 2, rotation: 0 },
+    { id: 'portal_default', stationId: 'dungeon_portal', cellX: startX + 5, cellY: startY - 2, rotation: 0 },
+    { id: 'ladder_default', stationId: 'shop_ladder', cellX: startX + 11, cellY: startY, rotation: 0 },
   ];
 
-  const chests = [createChestState('chest_default', startX + 6, startY + 5)];
+  const chests = [createChestState('chest_default', startX + 1, startY)];
 
   return {
     width: BASE_MAP_WIDTH,
@@ -249,7 +251,11 @@ export function normalizeBaseGrid(partial: BaseGridState | undefined): BaseGridS
     }));
   const chests = (partial.chests ?? def.chests).map((chest) => {
     const placement = placements.find((p) => p.id === chest.id && p.stationId === 'chest_wood');
-    return placement ? { ...chest, cellX: placement.cellX, cellY: placement.cellY } : chest;
+    const normalized = placement
+      ? { ...chest, cellX: placement.cellX, cellY: placement.cellY }
+      : { ...chest };
+    normalizeChestStacks(normalized);
+    return normalized;
   });
 
   return {

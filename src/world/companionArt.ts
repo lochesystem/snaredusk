@@ -5,9 +5,12 @@ import {
   getCompanionVisual,
 } from './companionAssets.ts';
 
-const IDLE_SPEED = 4 / 60;
-const WALK_SPEED = 8 / 60;
-const ATTACK_SPEED = 12 / 60;
+// Idle is intentionally cadenced: the fourth frame contains the blink or
+// species-specific accent, so a slower loop reads as breathing instead of a
+// constant twitch. Locomotion and attacks stay more responsive.
+const IDLE_SPEED = 2.25 / 60;
+const WALK_SPEED = 7 / 60;
+const ATTACK_SPEED = 10 / 60;
 
 export interface CompanionSprite extends Container {
   zOffset: number;

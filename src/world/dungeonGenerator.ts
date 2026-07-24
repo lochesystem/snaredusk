@@ -1,5 +1,5 @@
 import type { BiomeId } from '../data/biomes.ts';
-import { getBiomeDef } from '../data/biomes.ts';
+import { getBiomeDef, rollEnemySpecies } from '../data/biomes.ts';
 import type { Rect } from '../types.ts';
 
 export const PLAYER_RADIUS = 10;
@@ -585,7 +585,7 @@ function pickEnemySpawns(
     if (room.type === 'combat' && room.index !== 0) {
       const count = randInt(rng, 1, 2);
       for (let i = 0; i < count; i++) {
-        const speciesId = biome.enemySpecies[randInt(rng, 0, biome.enemySpecies.length - 1)]!;
+        const speciesId = rollEnemySpecies(biome, rng);
         const pt = pickClearPoint(room, 36);
         if (!pt) continue;
         placed.push(pt);

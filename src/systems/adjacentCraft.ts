@@ -5,47 +5,33 @@ import { getStation } from '../data/baseStations.ts';
 import { countLootInChest, removeLootFromChest } from './baseChest.ts';
 import { countLootInBag, grantCraftOutput } from './craft.ts';
 
-export type ChestDirection = 'north' | 'east' | 'south' | 'west';
+export type ChestDirection = 'base';
 
-export interface AdjacentChest {
+export interface WorkbenchChest {
   chest: BaseChestState;
   direction: ChestDirection;
 }
 
-const DIR_ORDER: ChestDirection[] = ['north', 'east', 'south', 'west'];
-
-export function getAdjacentChestsForWorkbench(
+/**
+ * A bancada acessa o armazenamento da base inteira. Isso permite organizar os
+ * móveis visualmente sem obrigar o jogador a colar todos os baús na oficina.
+ */
+export function getWorkbenchChests(
   state: GameState,
-  benchCellX: number,
-  benchCellY: number,
-): AdjacentChest[] {
-  const bench = getStation('workbench');
-  const cellsByDirection: Record<ChestDirection, { x: number; y: number }[]> = {
-    north: Array.from({ length: bench.width }, (_, dx) => ({ x: benchCellX + dx, y: benchCellY - 1 })),
-    east: Array.from({ length: bench.height }, (_, dy) => ({ x: benchCellX + bench.width, y: benchCellY + dy })),
-    south: Array.from({ length: bench.width }, (_, dx) => ({ x: benchCellX + dx, y: benchCellY + bench.height })),
-    west: Array.from({ length: bench.height }, (_, dy) => ({ x: benchCellX - 1, y: benchCellY + dy })),
-  };
-  const result: AdjacentChest[] = [];
-  for (const dir of DIR_ORDER) {
-    const placement = state.base.placements.find((p) =>
-      p.stationId === 'chest_wood'
-      && cellsByDirection[dir].some((cell) => p.cellX === cell.x && p.cellY === cell.y));
-    if (!placement) continue;
-    const chest = state.base.chests.find((c) => c.id === placement.id);
-    if (chest) result.push({ chest, direction: dir });
-  }
-  return result;
+  _benchCellX: number,
+  _benchCellY: number,
+): WorkbenchChest[] {
+  return state.base.chests.map((chest) => ({ chest, direction: 'base' }));
 }
 
 export function countLootInSources(
   state: GameState,
   lootId: string,
-  adjacentChests: AdjacentChest[],
+  workbenchChests: WorkbenchChest[],
   allowBag: boolean,
 ): number {
   let total = 0;
-  for (const { chest } of adjacentChests) {
+  for (const { chest } of workbenchChests) {
     total += countLootInChest(chest, lootId);
   }
   if (allowBag) total += countLootInBag(state, lootId);
@@ -56,6 +42,7 @@ export interface CraftConsumePlan {
   lootId: string;
   quantity: number;
   source: ChestDirection | 'bag';
+  chestId?: string;
 }
 
 export interface CraftPreview {
@@ -81,7 +68,7 @@ export function getCraftPreviewFromSources(
     && state.ownedWeapons.includes(recipe.output.weaponId);
   if (owned) return { canCraft: false, owned: true, missing: [], consumePlan: [] };
 
-  const adjacent = getAdjacentChestsForWorkbench(state, benchCellX, benchCellY);
+  const workbenchChests = getWorkbenchChests(state, benchCellX, benchCellY);
   const missing: string[] = [];
   const consumePlan: CraftConsumePlan[] = [];
 
@@ -101,12 +88,17 @@ export function getCraftPreviewFromSources(
     let need = ing.quantity;
     const name = LOOT_TABLE[ing.lootId]?.name ?? ing.lootId;
 
-    for (const { chest, direction } of adjacent) {
+    for (const { chest, direction } of workbenchChests) {
       if (need <= 0) break;
       const have = countLootInChest(chest, ing.lootId);
       const take = Math.min(have, need);
       if (take > 0) {
-        consumePlan.push({ lootId: ing.lootId, quantity: take, source: direction });
+        consumePlan.push({
+          lootId: ing.lootId,
+          quantity: take,
+          source: direction,
+          chestId: chest.id,
+        });
         need -= take;
       }
     }
@@ -131,7 +123,11 @@ export function getCraftPreviewFromSources(
   };
 }
 
-function consumeFromPlan(state: GameState, plan: CraftConsumePlan[], adjacent: AdjacentChest[]): boolean {
+function consumeFromPlan(
+  state: GameState,
+  plan: CraftConsumePlan[],
+  workbenchChests: WorkbenchChest[],
+): boolean {
   for (const item of plan) {
     if (item.source === 'bag') {
       let remaining = item.quantity;
@@ -147,7 +143,8 @@ function consumeFromPlan(state: GameState, plan: CraftConsumePlan[], adjacent: A
       continue;
     }
 
-    const chest = adjacent.find((a) => a.direction === item.source)?.chest;
+    const chest = workbenchChests.find(({ chest: candidate }) =>
+      candidate.id === item.chestId)?.chest;
     if (!chest || !removeLootFromChest(chest, item.lootId, item.quantity)) return false;
   }
   return true;
@@ -164,10 +161,10 @@ export function craftWeaponFromWorkbench(
   if (!preview.canCraft) return false;
 
   const recipe = getRecipe(recipeId)!;
-  const adjacent = getAdjacentChestsForWorkbench(state, benchCellX, benchCellY);
+  const workbenchChests = getWorkbenchChests(state, benchCellX, benchCellY);
 
   state.gold -= recipe.goldCost;
-  if (!consumeFromPlan(state, preview.consumePlan, adjacent)) return false;
+  if (!consumeFromPlan(state, preview.consumePlan, workbenchChests)) return false;
 
   grantCraftOutput(state, recipe);
   return true;
@@ -176,10 +173,7 @@ export function craftWeaponFromWorkbench(
 export function formatConsumePlan(plan: CraftConsumePlan[]): string {
   if (plan.length === 0) return '';
   const dirLabel: Record<ChestDirection | 'bag', string> = {
-    north: 'baú norte',
-    east: 'baú leste',
-    south: 'baú sul',
-    west: 'baú oeste',
+    base: 'baú da base',
     bag: 'bolsa',
   };
   return plan

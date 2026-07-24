@@ -2,19 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { defaultGameState } from '../src/types.ts';
 import {
   craftWeaponFromWorkbench,
-  getAdjacentChestsForWorkbench,
+  getWorkbenchChests,
   getCraftPreviewFromSources,
 } from '../src/systems/adjacentCraft.ts';
 
 describe('adjacentCraft', () => {
-  it('encontra baú adjacente à bancada default', () => {
+  it('encontra os baús da base mesmo separados da bancada', () => {
     const state = defaultGameState();
     const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
-    const adjacent = getAdjacentChestsForWorkbench(state, bench.cellX, bench.cellY);
-    expect(adjacent.length).toBeGreaterThanOrEqual(1);
+    const chests = getWorkbenchChests(state, bench.cellX, bench.cellY);
+    expect(chests.map(({ chest }) => chest.id)).toContain('chest_default');
   });
 
-  it('crafta picareta com materiais no baú adjacente', () => {
+  it('crafta picareta com materiais em um baú da base', () => {
     const state = defaultGameState();
     const bench = state.base.placements.find((p) => p.stationId === 'workbench')!;
     const chest = state.base.chests[0];

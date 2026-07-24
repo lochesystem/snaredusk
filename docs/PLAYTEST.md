@@ -40,9 +40,9 @@ npm run build
 |---|------|-----|-------|
 | 2.0 | **WASD** na base: chão/rocha/parede usam **tiles 32×32** (se `public/assets/base/tileset.json` existir) | ☐ | |
 | 2.2 | **[E]** em rocha adjacente escava (gasta stamina) | ☐ | |
-| 2.3 | **Construir** → colocar baú e bancada lado a lado | ☐ | |
+| 2.3 | **Construir** → colocar ou mover baú e bancada livremente | ☐ | |
 | 2.4 | Depositar loot no **baú** ([E] no baú) | ☐ | |
-| 2.5 | **[E]** na **bancada** → craft com materiais do baú adjacente | ☐ | |
+| 2.5 | **[E]** na **bancada** → craft com materiais de qualquer baú da base | ☐ | |
 | 2.6 | **Orbes** na barra → comprar orbes | ☐ | |
 | 2.7 | **Bolsa** → colocar criatura no habitat | ☐ | |
 | 2.9 | **[E] na cama** → dormir só após voltar da masmorra; dia avança, loot na bolsa | ☐ | |
@@ -90,7 +90,7 @@ npm run build
 
 | # | Ação | OK? | Notas |
 |---|------|-----|-------|
-| 5b.1 | Craftar arma na **bancada** (materiais no baú adjacente) | ☐ | |
+| 5b.1 | Craftar arma na **bancada** (materiais em um baú da base) | ☐ | |
 | 5b.2 | Equipar no modal da **bancada** | ☐ | |
 | 5b.3 | **Esquiva** com R; barra **STA** no HUD desce e regenera | ☐ | |
 

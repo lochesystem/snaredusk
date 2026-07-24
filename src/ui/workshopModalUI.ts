@@ -4,7 +4,7 @@ import { listRecipes, equipWeapon } from '../systems/craft.ts';
 import {
   craftWeaponFromWorkbench,
   formatConsumePlan,
-  getAdjacentChestsForWorkbench,
+  getWorkbenchChests,
   getCraftPreviewFromSources,
 } from '../systems/adjacentCraft.ts';
 import {
@@ -56,8 +56,8 @@ export function isWorkshopModalOpen(): boolean {
 
 function renderArmorySection(state: GameState, callbacks: WorkshopModalCallbacks, armory: HTMLElement): void {
   armory.innerHTML = '';
-  const adjacentChests = getAdjacentChestsForWorkbench(state, benchCellX, benchCellY);
-  const canDeposit = adjacentChests.some(({ chest }) => chestWeaponHasSpace(chest));
+  const workbenchChests = getWorkbenchChests(state, benchCellX, benchCellY);
+  const canDeposit = workbenchChests.some(({ chest }) => chestWeaponHasSpace(chest));
 
   const slotsHeading = document.createElement('p');
   slotsHeading.className = 'panel-hint';
@@ -132,9 +132,9 @@ function renderArmorySection(state: GameState, callbacks: WorkshopModalCallbacks
       chestBtn.className = 'party-pick';
       chestBtn.textContent = 'No baú';
       chestBtn.addEventListener('click', () => {
-        const target = adjacentChests.find(({ chest }) => chestWeaponHasSpace(chest));
+        const target = workbenchChests.find(({ chest }) => chestWeaponHasSpace(chest));
         if (!target || !depositWeaponToChest(state, target.chest, weaponId)) {
-          callbacks.showToast('Baú adjacente sem espaço para armas');
+          callbacks.showToast('Nenhum baú da base tem espaço para armas');
           return;
         }
         callbacks.onChange();
@@ -225,9 +225,9 @@ function renderArmorySection(state: GameState, callbacks: WorkshopModalCallbacks
       chestBtn.className = 'party-pick';
       chestBtn.textContent = 'No baú';
       chestBtn.addEventListener('click', () => {
-        const target = adjacentChests.find(({ chest }) => chestWeaponHasSpace(chest));
+        const target = workbenchChests.find(({ chest }) => chestWeaponHasSpace(chest));
         if (!target || !depositWeaponToChest(state, target.chest, weaponId)) {
-          callbacks.showToast('Baú adjacente sem espaço para armas');
+          callbacks.showToast('Nenhum baú da base tem espaço para armas');
           return;
         }
         callbacks.onChange();

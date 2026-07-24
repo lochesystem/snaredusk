@@ -94,7 +94,13 @@
 
     <div id="audio-settings-modal" class="modal hidden" aria-hidden="true">
       <div class="modal-content audio-settings-content">
-        <h3>Opções de áudio</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Preferências</p>
+            <h3>Opções de áudio</h3>
+          </div>
+          <button id="audio-settings-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <label class="audio-setting-row">
           <span class="audio-setting-label">Música</span>
           <input id="audio-music-volume" type="range" min="0" max="100" value="55" />
@@ -109,7 +115,6 @@
           <input id="audio-mute" type="checkbox" />
           <span>Silenciar tudo</span>
         </label>
-        <button id="audio-settings-close" type="button">Fechar</button>
       </div>
     </div>
 
@@ -117,8 +122,14 @@
 
     <div id="chest-modal" class="modal hidden">
       <div class="modal-content chest-modal-content">
-        <h3>Baú</h3>
-        <p class="panel-hint">Clique para mover loot entre baú e bolsa. Armas guardadas aqui são retiradas pelo arsenal da bancada.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Armazenamento</p>
+            <h3>Baú</h3>
+          </div>
+          <button id="chest-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
+        <p class="panel-hint">Clique no loot para mover 1, tudo ou uma quantidade escolhida. Shift+clique move uma unidade. Armas guardadas aqui são retiradas pelo arsenal da bancada.</p>
         <div class="chest-modal-columns">
           <div>
             <h4 class="subheading">Baú — loot</h4>
@@ -131,7 +142,6 @@
             <div id="chest-bag-grid" class="inventory-grid"></div>
           </div>
         </div>
-        <button id="chest-modal-close" type="button">Fechar</button>
       </div>
     </div>
 
@@ -144,7 +154,7 @@
           </div>
           <button id="workshop-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
         </div>
-        <p class="panel-hint">Escolha uma receita. Materiais são puxados dos baús adjacentes.</p>
+        <p class="panel-hint">Escolha uma receita. Materiais são puxados dos baús da base.</p>
         <div class="workshop-craft-layout">
           <div>
             <h4 class="subheading">Receitas</h4>
@@ -159,43 +169,63 @@
 
     <div id="party-modal" class="modal hidden">
       <div class="modal-content">
-        <h3>Companheiro</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Vínculos</p>
+            <h3>Companheiro</h3>
+          </div>
+          <button id="party-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <p id="party-modal-current" class="party-current"></p>
         <div id="party-modal-picks" class="party-picks"></div>
-        <button id="party-modal-close" type="button">Fechar</button>
       </div>
     </div>
 
     <div id="dungeon-modal" class="modal hidden">
       <div class="modal-content">
-        <h3>Destino — Masmorra</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Expedição</p>
+            <h3>Destino — Masmorra</h3>
+          </div>
+          <button id="dungeon-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <div id="dungeon-modal-biomes" class="biome-picks"></div>
         <button id="dungeon-modal-enter" type="button">Entrar na masmorra</button>
-        <button id="dungeon-modal-close" type="button">Fechar</button>
       </div>
     </div>
 
     <div id="orbs-modal" class="modal hidden">
       <div class="modal-content">
-        <h3>Mercador de Orbes</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Mercador</p>
+            <h3>Mercador de Orbes</h3>
+          </div>
+          <button id="orbs-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <p class="panel-hint">Mira prepara Orbes de Vínculo para captura na masmorra.</p>
         <div class="merchant-actions">
           <button id="btn-buy-orb-1" type="button">Orbe ×1 — 25 ouro</button>
           <button id="btn-buy-orb-3" type="button">Orbes ×3 — 70 ouro</button>
         </div>
-        <button id="orbs-modal-close" type="button">Fechar</button>
       </div>
     </div>
 
     <div id="habitat-pen-modal" class="modal hidden">
       <div class="modal-content">
-        <h3 id="habitat-pen-title">Habitat</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Criaturas</p>
+            <h3 id="habitat-pen-title">Habitat</h3>
+          </div>
+          <button id="habitat-pen-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <p id="habitat-pen-summary" class="panel-hint"></p>
         <h4 class="subheading">Nesta área</h4>
         <div id="habitat-pen-in" class="party-picks"></div>
         <h4 class="subheading">Adicionar</h4>
         <div id="habitat-pen-available" class="party-picks"></div>
-        <button id="habitat-pen-close" type="button">Fechar</button>
       </div>
     </div>
 
@@ -289,16 +319,27 @@
 
     <div id="abandon-modal" class="modal hidden">
       <div class="modal-content">
-        <h3>Desistir da masmorra?</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Expedição</p>
+            <h3>Desistir da masmorra?</h3>
+          </div>
+          <button id="abandon-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <p class="panel-hint">Você abandona a masmorra e perde todo o loot da bolsa.</p>
         <button id="abandon-confirm" type="button">Voltar à base</button>
-        <button id="abandon-cancel" type="button">Continuar explorando</button>
       </div>
     </div>
 
     <div id="price-modal" class="modal hidden">
       <div class="modal-content">
-        <h3 id="price-modal-title">Definir preço</h3>
+        <div class="modal-title-row">
+          <div>
+            <p class="modal-kicker">Loja</p>
+            <h3 id="price-modal-title">Definir preço</h3>
+          </div>
+          <button id="price-modal-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
+        </div>
         <p id="price-modal-hint"></p>
         <div class="price-row">
           <button id="price-down">−</button>
@@ -306,7 +347,6 @@
           <button id="price-up">+</button>
         </div>
         <button id="price-confirm">Confirmar</button>
-        <button id="price-cancel">Cancelar</button>
       </div>
     </div>
 

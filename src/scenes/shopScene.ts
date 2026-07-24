@@ -35,6 +35,8 @@ import {
   type CustomerSprite,
 } from '../world/placeholderArt.ts';
 import { getShopTileTexture } from '../world/shopAssets.ts';
+import { addToBag } from '../systems/saveManager.ts';
+import { bagEntryTotalValue } from '../systems/inventory.ts';
 
 const CUSTOMER_SPEED = 72;
 const LOOK_MIN = 1.1;
@@ -105,6 +107,7 @@ export class ShopScene {
   private playerY = 0;
   private carriedGfx: Container | null = null;
   private selectedBagIndex = -1;
+  private selectedBagQuantity = 0;
   private camera = new Camera();
   private customers: LiveCustomer[] = [];
   private customerQueue: ShopCustomerPlan[] = [];
@@ -230,9 +233,12 @@ export class ShopScene {
         itemName.y = labelY;
       } else {
         item = createLootIcon(listing.entry.id);
-        const shortName = listing.entry.name.length > 15
+        const baseName = listing.entry.name.length > 15
           ? `${listing.entry.name.slice(0, 14)}…`
           : listing.entry.name;
+        const shortName = listing.entry.quantity > 1
+          ? `${baseName} ×${listing.entry.quantity}`
+          : baseName;
         itemName = new Text({
           text: shortName,
           style: { fontFamily: 'monospace', fontSize: 6, fill: 0xf0e6d3 },
@@ -315,14 +321,22 @@ export class ShopScene {
     }
   }
 
-  setSelectedBag(index: number): void {
+  setSelectedBag(index: number, quantity?: number): void {
     this.selectedBagIndex = index;
+    const entry = index >= 0 ? this.cb.getState().bag[index] : null;
+    this.selectedBagQuantity = entry?.kind === 'loot'
+      ? Math.max(1, Math.min(quantity ?? entry.quantity, entry.quantity))
+      : entry ? 1 : 0;
     this.updateCarriedVisual(this.cb.getState());
     this.updateHint();
   }
 
   getSelectedBag(): number {
     return this.selectedBagIndex;
+  }
+
+  getSelectedBagQuantity(): number {
+    return this.selectedBagQuantity;
   }
 
   isShopDayActive(): boolean {
@@ -434,10 +448,12 @@ export class ShopScene {
       const entry = state.bag[this.selectedBagIndex];
       if (!entry) {
         this.selectedBagIndex = -1;
+        this.selectedBagQuantity = 0;
         return;
       }
       if (listing) {
         this.selectedBagIndex = -1;
+        this.selectedBagQuantity = 0;
         this.updateCarriedVisual(state);
         this.cb.showToast('Seleção cancelada — retirando item da prateleira');
       } else {
@@ -455,12 +471,10 @@ export class ShopScene {
     }
 
     if (listing) {
-      const idx = state.bag.findIndex((s) => s === null);
-      if (idx === -1) {
+      if (!addToBag(state, { ...listing.entry })) {
         this.cb.showToast('Bolsa cheia');
         return;
       }
-      state.bag[idx] = listing.entry;
       this.clearListing(state, nearSlot);
       this.cb.onStateChange();
       this.syncFromState(state);
@@ -474,10 +488,19 @@ export class ShopScene {
     bagIndex: number,
     entry: BagEntry,
   ): void {
-    state.bag[bagIndex] = null;
+    let listingEntry: BagEntry;
+    if (entry.kind === 'loot') {
+      const quantity = Math.max(1, Math.min(this.selectedBagQuantity || entry.quantity, entry.quantity));
+      listingEntry = { ...entry, quantity };
+      entry.quantity -= quantity;
+      if (entry.quantity <= 0) state.bag[bagIndex] = null;
+    } else {
+      listingEntry = { ...entry };
+      state.bag[bagIndex] = null;
+    }
     const listing: ShopListing = {
-      entry,
-      price: entry.baseValue,
+      entry: listingEntry,
+      price: bagEntryTotalValue(listingEntry),
       slotIndex: slot.index,
       isCage: slot.kind === 'cage',
     };
@@ -487,10 +510,11 @@ export class ShopScene {
       state.shopShelves[slot.index] = listing;
     }
     this.selectedBagIndex = -1;
+    this.selectedBagQuantity = 0;
     this.cb.onStateChange();
     this.syncFromState(state);
     this.cb.openPriceModal(slot.kind, slot.index);
-    if (entry.kind === 'creature' && slot.kind === 'cage') {
+    if (listingEntry.kind === 'creature' && slot.kind === 'cage') {
       this.cb.onCreatureStocked?.();
     }
   }
@@ -695,7 +719,8 @@ export class ShopScene {
     const state = this.cb.getState();
     if (this.selectedBagIndex >= 0) {
       const entry = state.bag[this.selectedBagIndex];
-      this.cb.setHint(entry ? `Carregando: ${entry.name} — vá até um slot e pressione E` : 'WASD mover · E colocar/retirar · Clique no item para preço');
+      const quantity = entry?.kind === 'loot' ? ` ×${this.selectedBagQuantity}` : '';
+      this.cb.setHint(entry ? `Carregando: ${entry.name}${quantity} — vá até um slot e pressione E` : 'WASD mover · E colocar/retirar · Clique no item para preço');
       return;
     }
     this.cb.setHint('WASD mover · Selecione item na bolsa · E colocar/retirar · Clique no expositor para preço');

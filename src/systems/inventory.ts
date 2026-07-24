@@ -7,6 +7,10 @@ export function formatBagEntry(entry: BagEntry): string {
   return entry.nickname ? `${entry.name} (${entry.nickname})` : entry.name;
 }
 
+export function bagEntryTotalValue(entry: BagEntry): number {
+  return entry.baseValue * (entry.kind === 'loot' ? entry.quantity : 1);
+}
+
 export interface DiscardResult {
   ok: boolean;
   message: string;

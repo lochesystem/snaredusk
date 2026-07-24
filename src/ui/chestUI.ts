@@ -9,6 +9,7 @@ import {
 } from '../systems/baseChest.ts';
 import { withdrawWeaponFromChest } from '../systems/weaponArmory.ts';
 import { createCreatureSprite, createLootIcon, createWeaponIcon } from '../world/placeholderArt.ts';
+import { openQuantityPicker } from './quantityPicker.ts';
 
 export interface ChestUICallbacks {
   getState: () => GameState;
@@ -87,14 +88,27 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
     if (slot) {
       appendIcon(btn, () => createLootIcon(slot.id), `loot-${slot.id}`, slot.name);
       appendLabel(btn, slot.name, slot.quantity);
-      btn.title = 'Mover para bolsa';
-      btn.addEventListener('click', () => {
-        if (transferLootToBag(state, chest, index)) {
-          callbacks.onChange();
-          renderChestModal(callbacks);
-        } else {
-          callbacks.showToast('Bolsa cheia');
+      btn.title = 'Clique para escolher quantidade · Shift+clique move 1';
+      btn.addEventListener('click', (event) => {
+        const transfer = (quantity: number) => {
+          if (transferLootToBag(state, chest, index, quantity)) {
+            callbacks.onChange();
+            renderChestModal(callbacks);
+          } else {
+            callbacks.showToast('Bolsa cheia');
+          }
+        };
+        if (event.shiftKey || slot.quantity <= 1) {
+          transfer(1);
+          return;
         }
+        openQuantityPicker({
+          title: 'Retirar do baú',
+          itemName: slot.name,
+          max: slot.quantity,
+          actionLabel: 'Colocar na bolsa',
+          onConfirm: transfer,
+        });
       });
     } else {
       btn.classList.add('empty');
@@ -141,14 +155,27 @@ export function renderChestModal(callbacks: ChestUICallbacks): void {
     if (entry && entry.kind === 'loot') {
       appendIcon(btn, () => createLootIcon(entry.id), `loot-${entry.id}`, entry.name);
       appendLabel(btn, entry.name, entry.quantity);
-      btn.title = 'Depositar no baú';
-      btn.addEventListener('click', () => {
-        if (transferLootToChest(state, chest, index)) {
-          callbacks.onChange();
-          renderChestModal(callbacks);
-        } else {
-          callbacks.showToast('Baú cheio ou item inválido');
+      btn.title = 'Clique para escolher quantidade · Shift+clique move 1';
+      btn.addEventListener('click', (event) => {
+        const transfer = (quantity: number) => {
+          if (transferLootToChest(state, chest, index, quantity)) {
+            callbacks.onChange();
+            renderChestModal(callbacks);
+          } else {
+            callbacks.showToast('Baú cheio ou item inválido');
+          }
+        };
+        if (event.shiftKey || entry.quantity <= 1) {
+          transfer(1);
+          return;
         }
+        openQuantityPicker({
+          title: 'Depositar no baú',
+          itemName: entry.name,
+          max: entry.quantity,
+          actionLabel: 'Guardar',
+          onConfirm: transfer,
+        });
       });
     } else if (entry && entry.kind === 'creature') {
       const species = getSpecies(entry.speciesId);
