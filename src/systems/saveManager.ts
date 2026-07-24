@@ -19,8 +19,26 @@ import { normalizeWeaponArmory } from './weaponArmory.ts';
 import { normalizeBuildHotbar } from './buildHotbar.ts';
 import { addLootToSlots, normalizeItemStacks } from './itemStacks.ts';
 import { normalizeHoodEquipment } from './hoodEquipment.ts';
+import { BIOME_ORDER } from '../data/biomes.ts';
+import { WEAPONS } from '../data/weapons.ts';
+import { PLAYER_MAX_HP, PLAYER_MAX_STAMINA } from '../engine/constants.ts';
 
 const SAVE_VERSION = 9;
+const TUTORIAL_STEPS = new Set([
+  'welcome',
+  'go_portal',
+  'dungeon_move',
+  'dungeon_attack',
+  'dungeon_capture',
+  'dungeon_exit',
+  'return_home',
+  'done',
+  'build_habitat',
+  'place_creature',
+  'shop_stock',
+  'shop_sell',
+  'buy_orbes',
+]);
 
 interface SavePayloadV9 {
   version: number;
@@ -56,10 +74,95 @@ export function serializeState(state: GameState): string {
   return JSON.stringify(payload);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function finiteNumber(
+  value: unknown,
+  fallback: number,
+  min = -Infinity,
+  max = Infinity,
+): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, value))
+    : fallback;
+}
+
+function finiteInteger(
+  value: unknown,
+  fallback: number,
+  min = -Infinity,
+  max = Infinity,
+): number {
+  return Math.floor(finiteNumber(value, fallback, min, max));
+}
+
+function booleanValue(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+function sanitizeBagEntry(value: unknown): GameState['bag'][number] {
+  if (!isRecord(value)) return null;
+  if (value.kind === 'loot') {
+    if (
+      typeof value.id !== 'string'
+      || typeof value.name !== 'string'
+      || typeof value.quantity !== 'number'
+      || !Number.isFinite(value.quantity)
+      || value.quantity <= 0
+    ) {
+      return null;
+    }
+    return {
+      kind: 'loot',
+      id: value.id,
+      name: value.name,
+      baseValue: finiteNumber(value.baseValue, 0, 0),
+      quantity: Math.max(1, Math.floor(value.quantity)),
+    };
+  }
+  if (value.kind === 'creature') {
+    if (typeof value.speciesId !== 'string' || typeof value.name !== 'string') return null;
+    return {
+      kind: 'creature',
+      speciesId: value.speciesId,
+      name: value.name,
+      baseValue: finiteNumber(value.baseValue, 0, 0),
+      ...(typeof value.nickname === 'string' ? { nickname: value.nickname } : {}),
+      ...(typeof value.penId === 'string' ? { penId: value.penId } : {}),
+    };
+  }
+  return null;
+}
+
+function sanitizeBag(value: unknown): GameState['bag'] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map(sanitizeBagEntry);
+}
+
+function sanitizeCreature(value: unknown): GameState['partyCompanion'] {
+  const entry = sanitizeBagEntry(value);
+  return entry?.kind === 'creature' ? entry : null;
+}
+
+function sanitizeBase(value: unknown): GameState['base'] | undefined {
+  if (!isRecord(value) || !Array.isArray(value.cells)) return undefined;
+  return value as unknown as GameState['base'];
+}
+
 export function deserializeState(raw: string): GameState | null {
   try {
-    const payload = JSON.parse(raw) as { version: number; state: LegacyGameState };
-    if (!payload.state) return null;
+    const decoded: unknown = JSON.parse(raw);
+    if (!isRecord(decoded) || !Number.isInteger(decoded.version) || !isRecord(decoded.state)) {
+      return null;
+    }
+    const payload = decoded as unknown as { version: number; state: LegacyGameState };
     if (payload.version === 1) return normalizeState(migrateV1(payload.state));
     if (payload.version === 2) return normalizeState(migrateV2(payload.state));
     if (payload.version === 3) return normalizeState(payload.state);
@@ -112,44 +215,92 @@ function migrateV1(partial: LegacyGameState): GameState {
 
 function normalizeState(partial: LegacyGameState): GameState {
   const base = defaultGameState();
-  const level = partial.shopLevel ?? base.shopLevel;
+  const level = finiteInteger(partial.shopLevel, base.shopLevel, 1, 5);
   const def = getShopLevelDef(level);
   const hoodEquipment = normalizeHoodEquipment(partial.ownedHoods, partial.equippedHoodId);
+  const ownedWeapons = stringArray(partial.ownedWeapons)
+    .filter((id, index, all) => Boolean(WEAPONS[id]) && all.indexOf(id) === index);
+  if (!ownedWeapons.includes(STARTING_WEAPON_ID)) ownedWeapons.unshift(STARTING_WEAPON_ID);
+  const equippedWeaponId = typeof partial.equippedWeaponId === 'string'
+    && ownedWeapons.includes(partial.equippedWeaponId)
+    && WEAPONS[partial.equippedWeaponId]
+    ? partial.equippedWeaponId
+    : STARTING_WEAPON_ID;
+  const validBiomes = stringArray(partial.unlockedBiomes)
+    .filter((id): id is BiomeId => BIOME_ORDER.includes(id as BiomeId));
+  const activeBiome = BIOME_ORDER.includes(partial.activeBiome as BiomeId)
+    ? partial.activeBiome as BiomeId
+    : base.activeBiome;
+  const habitat = Array.isArray(partial.habitat)
+    ? partial.habitat.map(sanitizeCreature).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    : [];
+  const bestiary = stringArray(partial.bestiary).filter(
+    (id, index, all) => all.indexOf(id) === index,
+  );
+  const bossFlags = isRecord(partial.biomeBossDefeated)
+    ? Object.fromEntries(BIOME_ORDER.map((id) => [id, partial.biomeBossDefeated?.[id] === true]))
+    : {};
+  const tutorialComplete = booleanValue(partial.tutorialComplete, true);
+  const tutorialStep = typeof partial.tutorialStep === 'string' && TUTORIAL_STEPS.has(partial.tutorialStep)
+    ? partial.tutorialStep
+    : tutorialComplete ? 'done' : base.tutorialStep;
+  const craftedStations = isRecord(partial.craftedStations)
+    ? Object.fromEntries(
+        Object.entries(partial.craftedStations)
+          .filter(([, quantity]) => typeof quantity === 'number' && Number.isFinite(quantity))
+          .map(([id, quantity]) => [id, Math.max(0, Math.floor(quantity as number))]),
+      )
+    : { ...base.craftedStations };
 
   const normalized: GameState = {
     ...base,
     ...partial,
+    gold: finiteInteger(partial.gold, base.gold, 0),
+    orbs: finiteInteger(partial.orbs, base.orbs, 0),
+    playerHp: finiteNumber(partial.playerHp, base.playerHp, 0, PLAYER_MAX_HP),
+    playerStamina: finiteNumber(
+      partial.playerStamina,
+      base.playerStamina,
+      0,
+      PLAYER_MAX_STAMINA,
+    ),
+    playerDef: finiteInteger(partial.playerDef, base.playerDef, 0),
     shopLevel: level,
-    playerStamina: partial.playerStamina ?? base.playerStamina,
-    playerDef: partial.playerDef ?? base.playerDef,
     ...hoodEquipment,
-    equippedWeaponId: partial.equippedWeaponId ?? base.equippedWeaponId,
-    ownedWeapons: partial.ownedWeapons?.length ? partial.ownedWeapons : base.ownedWeapons,
-    weaponStash: partial.weaponStash ?? [],
-    weaponHotbar: normalizeWeaponHotbar(partial.weaponHotbar, partial.ownedWeapons ?? base.ownedWeapons),
-    bag: padBag(partial.bag),
-    dungeonSpecial: padSpecialBag(partial.dungeonSpecial),
-    shopShelves: padShelves(partial.shopShelves, def.shelfCount),
-    shopCages: padCages(partial.shopCages, partial.shopCage, def.cageCount),
-    shopDayUsed: partial.shopDayUsed ?? false,
-    dayNumber: partial.dayNumber ?? 1,
-    dungeonUsedToday: partial.dungeonUsedToday ?? false,
-    dungeonReturnedToday: partial.dungeonReturnedToday ?? false,
-    partyCompanion: partial.partyCompanion ?? null,
-    habitat: partial.habitat ?? [],
-    bestiary: partial.bestiary ?? [],
-    dungeonCleared: partial.dungeonCleared ?? false,
-    activeBiome: partial.activeBiome ?? base.activeBiome,
-    unlockedBiomes: partial.unlockedBiomes?.length ? [...partial.unlockedBiomes] : [...base.unlockedBiomes],
-    biomeBossDefeated: { ...partial.biomeBossDefeated },
-    hasSporeKey: partial.hasSporeKey ?? false,
-    hasPrismaticKey: partial.hasPrismaticKey ?? false,
-    base: normalizeBaseGrid(partial.base),
-    craftedStations: { ...partial.craftedStations },
+    equippedWeaponId,
+    ownedWeapons,
+    weaponStash: stringArray(partial.weaponStash).filter((id) => ownedWeapons.includes(id)),
+    weaponHotbar: normalizeWeaponHotbar(
+      Array.isArray(partial.weaponHotbar) ? partial.weaponHotbar : undefined,
+      ownedWeapons,
+    ),
+    bag: padBag(sanitizeBag(partial.bag)),
+    dungeonSpecial: padSpecialBag(Array.isArray(partial.dungeonSpecial) ? partial.dungeonSpecial : undefined),
+    shopShelves: padShelves(Array.isArray(partial.shopShelves) ? partial.shopShelves : undefined, def.shelfCount),
+    shopCages: padCages(
+      Array.isArray(partial.shopCages) ? partial.shopCages : undefined,
+      isRecord(partial.shopCage) ? partial.shopCage as LegacyGameState['shopCage'] : undefined,
+      def.cageCount,
+    ),
+    shopDayUsed: booleanValue(partial.shopDayUsed, false),
+    dayNumber: finiteInteger(partial.dayNumber, 1, 1),
+    dungeonUsedToday: booleanValue(partial.dungeonUsedToday, false),
+    dungeonReturnedToday: booleanValue(partial.dungeonReturnedToday, false),
+    partyCompanion: sanitizeCreature(partial.partyCompanion),
+    habitat,
+    bestiary,
+    dungeonCleared: booleanValue(partial.dungeonCleared, false),
+    activeBiome,
+    unlockedBiomes: validBiomes.length > 0 ? validBiomes : [...base.unlockedBiomes],
+    biomeBossDefeated: bossFlags,
+    hasSporeKey: booleanValue(partial.hasSporeKey, false),
+    hasPrismaticKey: booleanValue(partial.hasPrismaticKey, false),
+    base: normalizeBaseGrid(sanitizeBase(partial.base)),
+    craftedStations,
     buildHotbar: normalizeBuildHotbar(partial.buildHotbar),
-    tutorialComplete: partial.tutorialComplete ?? true,
-    tutorialStep: partial.tutorialStep ?? 'done',
-    shopGoldSold: partial.shopGoldSold ?? 0,
+    tutorialComplete,
+    tutorialStep,
+    shopGoldSold: finiteInteger(partial.shopGoldSold, 0, 0),
   };
   if (normalized.dungeonCleared) {
     normalized.biomeBossDefeated.floresta = true;

@@ -9,14 +9,16 @@ Fases de produção do GDD ao release jogável. Cada fase tem entregáveis, crit
 ```mermaid
 flowchart LR
   f0["Fase 0 GDD\nconcluída"] --> f1["Fase 1 Slice\nconcluída"]
-  f1 --> f2["Fase 2 Core\n~75%"]
-  f2 --> f3["Fase 3 Polish\n~25%"]
+  f1 --> f2["Fase 2 Core\n~92%"]
+  f2 --> f3["Fase 3 Polish\n~72%"]
   f3 --> f4["Fase 4 Release\nparcial"]
 ```
 
-**Versão atual:** `v0.5.0` — [jogo público](https://lochesystem.github.io/snaredusk/)
+**Versão pública:** `v0.5.0` — [jogo público](https://lochesystem.github.io/snaredusk/)
 
-**Estimativa restante Fase 2:** 2–3 semanas (1 dev, part-time ~20h/semana).
+**Build local:** pós-`v0.5.0`, candidato à próxima release.
+
+**Estimativa restante Fase 2:** 1 ciclo de playtest completo + decisão de escopo de sentinelas/bestiário.
 
 ---
 
@@ -26,8 +28,8 @@ flowchart LR
 |------|--------|-------|
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
-| 2 — Core loop | **~85%** | Tutorial, reputação e companheiro único completos; sentinelas seguem pendentes |
-| 3 — Polish | **~55%** | Sprites v2+, UI customizada e tilesets/props dos três biomas em integração |
+| 2 — Core loop | **~92%** | Economia e saves auditados; falta playtest completo e fechar escopo de sentinelas/bestiário |
+| 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
 ---
@@ -91,16 +93,16 @@ flowchart LR
 | **Hazards de bioma** | Esporos, gelo, veneno | **Feito** | Vinheta, inércia, poças de veneno |
 | **Procedural** | 8–11 salas, 6 tipos de sala | **Feito** | Combate, tesouro, evento, descanso, mercador, chefe |
 | **Combate variado** | Armas, projéteis, escudos, esquiva | **Forte** | Hotbar 1/2, stamina, Shift dash, 6 armas, mira de alcance |
-| **Bolsa / inventário** | 12 slots + gestão | **Feito** | Grid redesenhado, descarte, modal na masmorra, aba Especiais |
+| **Bolsa / inventário** | 12 slots + gestão | **Feito** | Pilhas, transferência unitária/tudo/quantidade, descarte, modal e aba Especiais |
 | **Chave da arena** | Limpar fase → portão do chefe | **Feito** | Mata/captura todos → chave; some ao voltar à base |
 | **Portal pós-chefe** | Só após baú épico | **Feito** | Não exige limpar masmorra inteira |
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
-| **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | 20 receitas, construções prontas, orbes, materiais e armas; armazenamento integrado da base |
+| **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | **23 receitas**, construções consumíveis, orbes, materiais, armas e capuzes; armazenamento integrado |
 | **Companheiro** | 1 companheiro ativo | **Feito (MVP)** | Escopo fechado em 1 slot para preservar clareza da ação; IA de idle, seguir e atacar |
 | **Bestiário** | UI + bônus família | **Mínimo** | Registro no save + contador na base; sem tela dedicada |
 | **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
 | **Loot** | 30 itens | **Feito** | **30/30** em `LOOT_TABLE` |
-| **Receitas** | 20 receitas | **Feito** | **20/20** |
+| **Receitas** | 20 receitas | **Feito** | **23/20** |
 | **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia; dormir após voltar ou fechar loja |
 | **Sentinelas** | 1 por bioma, passivos | **Pendente** | — |
 | **Base escavável** | Grid, escavação, baús, craft integrado | **Feito (v0.4)** | Tileset v2, estações v3, landmarks movíveis, rotação (R) |
@@ -112,11 +114,11 @@ flowchart LR
 
 - [ ] 8–12 horas de conteúdo jogável (estimativa atual: ~4–6 h)
 - [x] Todos os chefes derrotáveis com progressão de equipamento
-- [ ] Economia sem inflação em 10 ciclos dia/noite (teste Vitest)
+- [x] Economia sem inflação em 10 ciclos dia/noite (3 perfis determinísticos)
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**268 testes**, 57 arquivos)
+- [x] Suite Vitest abrangente (**283 testes**, 61 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -134,11 +136,9 @@ tests/
   baseBuild.test.ts          # colocação, rotação de estações
   habitatProduction.test.ts  # yield passivo
   dayCycle.test.ts           # endDay, flags masmorra/dia
+  economy.test.ts            # 10 ciclos, 3 perfis, orbes/craft/reputação/upgrades
+  save.test.ts               # round-trip, v1–v8, corrupção e localStorage
   … (+ combat, craft, customers, etc.)
-
-Pendente:
-  economy.test.ts            # sinks de ouro em 10 ciclos
-  save.test.ts               # migrações de save
 ```
 
 ---
@@ -151,10 +151,10 @@ Pendente:
 
 | Área | Escopo | Status |
 |------|--------|--------|
-| **Arte jogador** | Sprites pintados + animações de ataque | **Parcial** | v2 idle/walk/attack implementados |
+| **Arte jogador** | Sprites pintados + animações de ataque | **Forte** | Modelo v7 + 3 capuzes temáticos em idle/walk/ataques |
 | **Arte base** | Tileset + estações + FX escavação | **Parcial** | tileset v2, estações v3, landmarks v3 |
 | **Arte loja** | Tileset, props, clientes | **Parcial** | Tileset v1, clientes animados, tábuas no chão |
-| **Arte biomas** | 3 biomas com criaturas e ambientação própria | **Parcial** | Floresta/Cristal/Termal com tilesets v2+; props temáticos e pedras integrados |
+| **Arte biomas** | 3 biomas com criaturas e ambientação própria | **Forte** | Tilesets v2+, props orgânicos, criaturas/chefes e interactables animados |
 | **Tileset masmorra** | Paredes alinhadas (faixas 14 px) | Parcial (Floresta OK) |
 | **Tela de título** | Arte + atmosfera | **Feito** | Background v2 |
 | **Layout UI** | Fullscreen base/masmorra/loja | **Feito** | HUD overlay na loja |
@@ -163,7 +163,7 @@ Pendente:
 | **Parallax** | 4 camadas por bioma | Pendente |
 | **SFX / Música** | Web Audio + placeholders | **Parcial** | SFX combate/UI; música por bioma |
 | **Boss HUD + fases** | Barra topo + 50% HP | **Feito** |
-| **UI** | 9-slice panels, animações | Parcial |
+| **UI** | Painéis, inventário, craft e animações | **Forte** | Padrão minimalista e fechamento por ×; revisão final responsiva pendente |
 
 ---
 
@@ -199,11 +199,13 @@ Pendente:
 3. ~~**Reputação na loja**~~ — níveis 1–3
 4. ~~**Conteúdo**~~ — +6 criaturas, +13 loots, +18 receitas
 5. ~~**Companheiro único**~~ — escopo fechado; IA e animações próprias
-6. **Ambientação dos biomas** — densidade, composição e variedade de props
-7. **Sentinelas** — decidir se permanecem no MVP
-8. **Bestiário UI**
-9. `economy.test.ts` — validar sinks de ouro
-10. **Polish arte** — iluminação, parallax e consistência final
+6. ~~**Ambientação inicial dos biomas**~~ — props orgânicos e colisões por tipo
+7. ~~**Economia de 10 ciclos**~~ — conservador, normal e eficiente
+8. ~~**Suíte completa de save**~~ — migrações, corrupção, round-trip e localStorage
+9. **Playtest completo** — novo jogo → três chefes → craft temático
+10. **Sentinelas** — decidir se vão para pós-release
+11. **Bestiário UI simplificado**
+12. **Polish final** — áudio, responsividade e consistência visual
 
 ---
 
@@ -211,10 +213,10 @@ Pendente:
 
 | Risco | Mitigação |
 |-------|-----------|
-| Economia sem teste de 10 ciclos | Implementar `economy.test.ts` |
-| Arte ainda mistura placeholder + v2 | Fase 3 focada em pipeline único por bioma |
-| ROADMAP desatualizado | Revisar a cada release (última: v0.5.0) |
+| Duração de 8–12 h ainda não validada | Playtest completo com telemetria manual por etapa |
+| Build público atrás do local | Agrupar mudanças em uma próxima release testável |
+| Arte residual ainda usa fallback seguro | Remover apenas após auditoria visual dos três biomas |
 
 ---
 
-*Roadmap v0.7 — revisado 2026-07-24 (companheiro único como escopo final; ambientação dos biomas priorizada).*
+*Roadmap v0.8 — revisado 2026-07-24 (economia/save auditados; próximo marco é playtest completo).*

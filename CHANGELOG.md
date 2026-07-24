@@ -4,7 +4,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ## [Unreleased]
 
-_Nada pendente de release._
+### Adicionado
+
+- **Economia de 10 ciclos:** simulação determinística dos perfis conservador, normal e eficiente usando loja, craft, orbes, reputação e upgrades reais
+- **Suíte completa de save:** round-trip do estado, migrações v1–v8, `localStorage`, JSON inválido e normalização de dados corrompidos
+- Testes: `economy.test.ts` e `save.test.ts` (**283 testes**, 61 arquivos)
+
+### Corrigido
+
+- Saves com ouro/HP/stamina/dia fora dos limites são normalizados sem perder o restante do progresso
+- Armas, capuzes, biomas, tutorial, bolsa e layout da base inválidos recebem fallbacks seguros
+- Saves antigos sem campos do tutorial continuam pulando o tutorial, como antes
 
 ## [0.5.0] — 2026-07-23
 
