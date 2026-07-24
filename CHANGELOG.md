@@ -11,12 +11,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   disponibilidade como companheiro e progresso por bioma/total
 - Acesso ao Bestiário pela barra da base e pelo Inventário; chefes são
   registrados automaticamente ao serem derrotados
-- Testes do Bestiário; suíte atualizada para **288 testes em 62 arquivos**
+- Testes do Bestiário; suíte atualizada para **297 testes em 63 arquivos**
+- **Fundação das expedições:** `ActiveExpedition` com bioma, seed, andar, fase,
+  perks, ofertas, elites derrotadas e checkpoint de HP, stamina e bolsa
+- Save v10 com retomada determinística pelo Continue e migração segura de saves
+  v1–v9; fechar no meio de uma sala retorna ao começo do mesmo andar
+- Ciclo de vida separado para extração, morte, abandono e vitória, sempre
+  limpando perks e andamento antes de salvar o retorno à base
+- Testes de expedição e smoke test no Chrome para retomada/abandono
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado
 - **Economia de 10 ciclos:** simulação determinística dos perfis conservador, normal e eficiente usando loja, craft, orbes, reputação e upgrades reais
-- **Suíte completa de save:** round-trip do estado, migrações v1–v8, `localStorage`, JSON inválido e normalização de dados corrompidos
+- **Suíte completa de save:** round-trip do estado, migrações v1–v9, `localStorage`, JSON inválido e normalização de dados corrompidos
 - Testes: `economy.test.ts` e `save.test.ts`
 
 ### Corrigido
@@ -24,6 +31,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Saves com ouro/HP/stamina/dia fora dos limites são normalizados sem perder o restante do progresso
 - Armas, capuzes, biomas, tutorial, bolsa e layout da base inválidos recebem fallbacks seguros
 - Saves antigos sem campos do tutorial continuam pulando o tutorial, como antes
+- Expedições corrompidas são descartadas isoladamente sem invalidar ouro,
+  inventário, base ou demais dados do save
 
 ## [0.5.0] — 2026-07-23
 

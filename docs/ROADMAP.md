@@ -10,7 +10,7 @@ Fases de produção do GDD ao release jogável. Cada fase tem entregáveis, crit
 flowchart LR
   f0["Fase 0 GDD\nconcluída"] --> f1["Fase 1 Slice\nconcluída"]
   f1 --> f2["Fase 2 Core\n~92%"]
-  f2 --> f25["Fase 2.5 Expedições\nplanejada"]
+  f2 --> f25["Fase 2.5 Expedições\nem progresso"]
   f25 --> f3["Fase 3 Polish\n~72%"]
   f3 --> f4["Fase 4 Release\nparcial"]
 ```
@@ -19,8 +19,8 @@ flowchart LR
 
 **Build local:** pós-`v0.5.0`, candidato à próxima release.
 
-**Próximo marco:** fundação do estado/save de expedição, seguida pelo vertical
-slice roguelite da Floresta.
+**Próximo marco:** vertical slice roguelite da Floresta: três andares compactos,
+elites, escolha de perks e arena final.
 
 ---
 
@@ -31,7 +31,7 @@ slice roguelite da Floresta.
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
 | 2 — Core loop | **~92%** | Economia, saves e Bestiário simplificado concluídos |
-| 2.5 — Expedições roguelite | **Planejada** | 3 andares, elites, perks, extração e arena própria por chefe |
+| 2.5 — Expedições roguelite | **Em progresso** | Bestiário e fundação de estado/save concluídos; próximo: vertical slice da Floresta |
 | 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
@@ -121,7 +121,7 @@ slice roguelite da Floresta.
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**288 testes**, 62 arquivos)
+- [x] Suite Vitest abrangente (**297 testes**, 63 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -140,13 +140,14 @@ tests/
   habitatProduction.test.ts  # yield passivo
   dayCycle.test.ts           # endDay, flags masmorra/dia
   economy.test.ts            # 10 ciclos, 3 perfis, orbes/craft/reputação/upgrades
-  save.test.ts               # round-trip, v1–v8, corrupção e localStorage
+  save.test.ts               # round-trip v10, migração v1–v9, corrupção e localStorage
+  expedition.test.ts         # checkpoint, seed, perks e caminhos de encerramento
   … (+ combat, craft, customers, etc.)
 ```
 
 ---
 
-## Fase 2.5 — Expedições roguelite (planejada)
+## Fase 2.5 — Expedições roguelite (em progresso)
 
 **Objetivo:** ampliar duração, risco e variedade das runs sem substituir o loop de
 base, loja e craft.
@@ -158,8 +159,8 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 | Etapa | Entrega | Status |
 |-------|---------|--------|
 | 1 | Bestiário simplificado | **Feita** |
-| 2 | Estado, save e retomada de expedição | **Próxima** |
-| 3 | Floresta: 3 andares, elites, perks e arena | Planejada |
+| 2 | Estado, save e retomada de expedição | **Feita** |
+| 3 | Floresta: 3 andares, elites, perks e arena | **Próxima** |
 | 4 | Balanceamento do vertical slice | Planejada |
 | 5 | Cristal e Termal | Planejada |
 | 6 | Drops de elite e longevidade | Planejada |
@@ -171,7 +172,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 - [ ] Extração segura após cada elite.
 - [ ] Três escolhas de perk sem repetição.
 - [ ] Elites existentes com afixos legíveis.
-- [ ] Continue retoma a mesma seed e o mesmo andar.
+- [x] Continue retoma a mesma seed e o mesmo andar.
 - [ ] Chave do próximo bioma vem apenas do chefe.
 - [ ] Expedição completa dura aproximadamente 25–40 minutos.
 - [ ] Novo jogo → três chefes sem softlocks.

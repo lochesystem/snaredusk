@@ -80,11 +80,23 @@ describe('saveManager', () => {
     };
     state.craftedStations.habitat_pen = 3;
     state.buildHotbar = ['habitat_pen', 'workbench', null, 'bed'];
+    state.activeExpedition = {
+      biomeId: 'cristal',
+      seed: 74123,
+      floor: 2,
+      phase: 'reward',
+      perks: ['fio_afiado'],
+      perkOffers: ['passo_leve', 'guardiao'],
+      defeatedEliteSpecies: ['estilhaco_vivo'],
+      checkpointHp: 57,
+      checkpointStamina: 80,
+      checkpointBag: state.bag.map((entry) => entry ? { ...entry } : null),
+    };
 
     const payload = JSON.parse(serializeState(state));
     const loaded = deserializeState(JSON.stringify(payload));
 
-    expect(payload.version).toBe(9);
+    expect(payload.version).toBe(10);
     expect(loaded).not.toBeNull();
     expect(loaded).toMatchObject({
       gold: 734,
@@ -105,6 +117,15 @@ describe('saveManager', () => {
       activeBiome: 'cristal',
       craftedStations: { habitat_pen: 3 },
       buildHotbar: ['habitat_pen', 'workbench', null, 'bed'],
+      activeExpedition: {
+        biomeId: 'cristal',
+        seed: 74123,
+        floor: 2,
+        phase: 'reward',
+        perks: ['fio_afiado'],
+        perkOffers: ['passo_leve', 'guardiao'],
+        checkpointHp: 57,
+      },
     });
     expect(loaded?.bag[0]).toMatchObject({ id: 'fibra_musgo', quantity: 7 });
     expect(loaded?.bag[1]).toMatchObject({ speciesId: 'lumimorcego' });
@@ -115,8 +136,8 @@ describe('saveManager', () => {
     });
   });
 
-  it('migra saves das versões 2–8 preenchendo campos introduzidos depois', () => {
-    for (let version = 2; version <= 8; version++) {
+  it('migra saves das versões 2–9 preenchendo campos introduzidos depois', () => {
+    for (let version = 2; version <= 9; version++) {
       const loaded = deserializeState(JSON.stringify({
         version,
         state: {
@@ -132,6 +153,7 @@ describe('saveManager', () => {
       expect(loaded?.ownedWeapons).toContain('faca_enferrujada');
       expect(loaded?.unlockedBiomes).toContain('floresta');
       expect(loaded?.base.placements.some((p) => p.stationId === 'dungeon_portal')).toBe(true);
+      expect(loaded?.activeExpedition).toBeNull();
     }
   });
 
@@ -163,14 +185,14 @@ describe('saveManager', () => {
 
   it('rejeita JSON quebrado, payload incompleto e versão futura desconhecida', () => {
     expect(deserializeState('{quebrado')).toBeNull();
-    expect(deserializeState(JSON.stringify({ version: 9 }))).toBeNull();
+    expect(deserializeState(JSON.stringify({ version: 10 }))).toBeNull();
     expect(deserializeState(JSON.stringify({ version: 99, state: {} }))).toBeNull();
     expect(deserializeState(JSON.stringify([]))).toBeNull();
   });
 
   it('normaliza valores perigosos sem impedir a recuperação do restante do save', () => {
     const loaded = deserializeState(JSON.stringify({
-      version: 9,
+      version: 10,
       state: {
         ...defaultGameState(),
         gold: -200,
@@ -214,6 +236,27 @@ describe('saveManager', () => {
     expect(loaded?.bag[0]).toMatchObject({ id: 'fibra_musgo', quantity: 3 });
     expect(loaded?.craftedStations).toMatchObject({ bed: 0, habitat_pen: 2 });
     expect(loaded?.base.placements.some((p) => p.stationId === 'bed')).toBe(true);
+  });
+
+  it('descarta somente uma expedição corrompida e preserva o restante do save', () => {
+    const state = defaultGameState();
+    state.gold = 777;
+    const loaded = deserializeState(JSON.stringify({
+      version: 10,
+      state: {
+        ...state,
+        activeExpedition: {
+          biomeId: 'floresta',
+          seed: 'aleatória',
+          floor: 99,
+          phase: 'combate',
+          checkpointBag: [],
+        },
+      },
+    }));
+
+    expect(loaded?.gold).toBe(777);
+    expect(loaded?.activeExpedition).toBeNull();
   });
 
   it('persiste no localStorage pela mesma chave usada pelo Continue', () => {

@@ -7,6 +7,11 @@ import { ShopScene } from './scenes/shopScene.ts';
 import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
+import {
+  beginExpedition,
+  endExpedition,
+  restoreExpeditionCheckpoint,
+} from './systems/expedition.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
 import { endDay, canSleepToday, canEnterDungeonToday, markDungeonReturned, resumeDayAtBase } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
@@ -463,8 +468,9 @@ export class Game {
       const loaded = loadGame();
       if (loaded) {
         this.state = loaded;
-        if (resumeDayAtBase(this.state)) saveGame(this.state);
-        this.startGame();
+        const resumeExpedition = this.state.activeExpedition !== null;
+        if (!resumeExpedition && resumeDayAtBase(this.state)) saveGame(this.state);
+        this.startGame(resumeExpedition);
       }
     });
   }
@@ -638,9 +644,13 @@ export class Game {
     }
   }
 
-  private startGame(): void {
+  private startGame(resumeExpedition = false): void {
     document.getElementById('title-screen')?.classList.add('hidden');
     this.setRenderLoop(true);
+    if (resumeExpedition) {
+      void this.enterDungeon({ resume: true });
+      return;
+    }
     this.showScreen('base');
     saveGame(this.state);
     this.maybeStartTutorial();
@@ -864,13 +874,20 @@ export class Game {
     }
   }
 
-  private async enterDungeon(): Promise<void> {
+  private async enterDungeon(options?: { resume?: boolean }): Promise<void> {
+    const resume = options?.resume === true && this.state.activeExpedition !== null;
+    if (resume) restoreExpeditionCheckpoint(this.state);
     if (!isBiomeUnlocked(this.state, this.state.activeBiome)) {
+      if (resume) {
+        endExpedition(this.state, 'abandon');
+        saveGame(this.state);
+        this.showScreen('base');
+      }
       this.showToast('Bioma ainda bloqueado');
       return;
     }
     const tutorialRun = shouldUseTutorialDungeon(this.state);
-    if (!tutorialRun && !canEnterDungeonToday(this.state)) {
+    if (!resume && !tutorialRun && !canEnterDungeonToday(this.state)) {
       this.showToast('Você já foi à masmorra hoje — durma para um novo dia');
       return;
     }
@@ -888,28 +905,37 @@ export class Game {
     document.getElementById('app')?.classList.remove('layout-base', 'layout-shop');
     document.getElementById('app')?.classList.add('layout-dungeon');
     this.destroyDungeon();
-    this.state.playerHp = PLAYER_MAX_HP;
-    this.state.playerStamina = PLAYER_MAX_STAMINA;
+    if (!resume) {
+      this.state.playerHp = PLAYER_MAX_HP;
+      this.state.playerStamina = PLAYER_MAX_STAMINA;
+    }
     clearDungeonSpecial(this.state);
     syncWeaponHotbar(this.state);
-    const seed = Date.now();
+    const seed = resume
+      ? this.state.activeExpedition!.seed
+      : Date.now();
+    if (!resume && !tutorialRun) {
+      beginExpedition(this.state, this.state.activeBiome, seed);
+    }
     const layout = tutorialRun ? generateTutorialDungeon(this.state.activeBiome) : undefined;
 
     hideTutorialDialog();
 
     this.dungeon = new DungeonScene(this.state, this.input, {
       onReturnToBase: (payload) => {
-        markDungeonReturned(this.state);
-        saveGame(this.state);
         this.pendingDungeonExit = payload;
       },
-      onStateChange: () => saveGame(this.state),
+      // Uma expedição persiste somente nos checkpoints de entrada/transição.
+      // Fechar no meio de uma sala volta ao começo do andar sem duplicar loot.
+      onStateChange: () => {
+        if (!this.state.activeExpedition) saveGame(this.state);
+      },
       showToast: (m) => this.showToast(m),
       updateHud: () => this.updateHud(),
       onTutorialEvent: (event) => this.onDungeonTutorialEvent(event),
     }, { seed, layout, tutorialRun });
 
-    if (!tutorialRun) {
+    if (!tutorialRun && !resume) {
       this.state.dungeonUsedToday = true;
     }
     saveGame(this.state);
@@ -1010,6 +1036,12 @@ export class Game {
     closeBestiaryModal();
     clearDungeonSpecial(this.state);
     markDungeonReturned(this.state);
+    if (this.state.activeExpedition) {
+      endExpedition(
+        this.state,
+        payload.reason === 'portal' ? 'victory' : payload.reason,
+      );
+    }
 
     if (payload.reason === 'death') {
       await playDeathTransition({

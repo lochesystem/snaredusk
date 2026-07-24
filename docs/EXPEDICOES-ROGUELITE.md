@@ -4,7 +4,7 @@ Especificação do novo formato de masmorra de Snaredusk. Este documento descrev
 design aprovado para planejamento; a implementação deve seguir as etapas abaixo e
 ser validada primeiro na Floresta Fúngica.
 
-**Status:** planejado  
+**Status:** em implementação — etapas 1 e 2 concluídas
 **Escopo:** Bestiário simplificado + expedições de três andares + arena final  
 **Princípio:** aumentar duração e variedade sem transformar o jogo num roguelike
 pesado ou apagar o loop de base, craft e loja.
@@ -249,6 +249,9 @@ interface ActiveExpedition {
   perks: PerkId[];
   perkOffers: PerkId[];
   defeatedEliteSpecies: string[];
+  checkpointHp: number;
+  checkpointStamina: number;
+  checkpointBag: (BagEntry | null)[];
 }
 ```
 
@@ -297,19 +300,24 @@ Cada etapa só começa quando a anterior estiver validada.
 **Aceite:** as 18 posições aparecem corretamente; capturas antigas do save são
 respeitadas; uma criatura nova é revelada sem recarregar o jogo.
 
-### Etapa 2 — Fundação da expedição
+### Etapa 2 — Fundação da expedição — concluída
 
 **Objetivo:** criar estado, save e ciclo de vida sem alterar ainda o combate.
 
-- [ ] Adicionar `ActiveExpedition` ao estado.
-- [ ] Migrar e validar o novo save.
-- [ ] Criar início, retomada, extração, morte e abandono.
-- [ ] Travar seed e andar no Continue.
-- [ ] Separar resultado da expedição do retorno comum à base.
-- [ ] Testar todos os caminhos de limpeza/retomada.
+- [x] Adicionar `ActiveExpedition` ao estado.
+- [x] Migrar e validar o novo save.
+- [x] Criar início, retomada, extração, morte e abandono.
+- [x] Travar seed e andar no Continue.
+- [x] Separar resultado da expedição do retorno comum à base.
+- [x] Testar todos os caminhos de limpeza/retomada.
 
 **Aceite:** fechar o navegador numa transição e usar Continue restaura a mesma
 expedição; nenhum caminho deixa perks ou andar presos no save.
+
+**Validação:** save v10 com migração v1–v9; checkpoint copia bolsa, HP e stamina
+do início do andar; alterações no meio da sala não sobrescrevem esse checkpoint.
+Smoke test no Chrome confirmou retomada com a mesma seed e abandono limpando a
+expedição antes do retorno à base.
 
 ### Etapa 3 — Vertical slice da Floresta
 

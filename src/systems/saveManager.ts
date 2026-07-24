@@ -6,6 +6,7 @@ import {
   createShopCages,
   createShopShelves,
   defaultGameState,
+  type ActiveExpedition,
   type GameState,
 } from '../types.ts';
 import { getShopShelfCapacity, syncShopShelfCapacity } from './reputation.ts';
@@ -23,7 +24,7 @@ import { BIOME_ORDER } from '../data/biomes.ts';
 import { WEAPONS } from '../data/weapons.ts';
 import { PLAYER_MAX_HP, PLAYER_MAX_STAMINA } from '../engine/constants.ts';
 
-const SAVE_VERSION = 9;
+const SAVE_VERSION = 10;
 const TUTORIAL_STEPS = new Set([
   'welcome',
   'go_portal',
@@ -40,12 +41,12 @@ const TUTORIAL_STEPS = new Set([
   'buy_orbes',
 ]);
 
-interface SavePayloadV9 {
+interface SavePayloadV10 {
   version: number;
   state: GameState;
 }
 
-interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedHoodId' | 'ownedHoods' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'craftedStations' | 'buildHotbar' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday'> {
+interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'playerStamina' | 'playerDef' | 'equippedHoodId' | 'ownedHoods' | 'equippedWeaponId' | 'ownedWeapons' | 'weaponStash' | 'activeBiome' | 'unlockedBiomes' | 'biomeBossDefeated' | 'hasSporeKey' | 'hasPrismaticKey' | 'base' | 'craftedStations' | 'buildHotbar' | 'dayNumber' | 'dungeonUsedToday' | 'dungeonReturnedToday' | 'activeExpedition'> {
   shopCage?: GameState['shopCages'][number];
   shopCages?: GameState['shopCages'];
   shopLevel?: number;
@@ -67,10 +68,11 @@ interface LegacyGameState extends Omit<GameState, 'shopCages' | 'shopLevel' | 'p
   dayNumber?: number;
   dungeonUsedToday?: boolean;
   dungeonReturnedToday?: boolean;
+  activeExpedition?: ActiveExpedition | null;
 }
 
 export function serializeState(state: GameState): string {
-  const payload: SavePayloadV9 = { version: SAVE_VERSION, state };
+  const payload: SavePayloadV10 = { version: SAVE_VERSION, state };
   return JSON.stringify(payload);
 }
 
@@ -156,6 +158,53 @@ function sanitizeBase(value: unknown): GameState['base'] | undefined {
   return value as unknown as GameState['base'];
 }
 
+function sanitizeExpedition(value: unknown): ActiveExpedition | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) return null;
+  if (!BIOME_ORDER.includes(value.biomeId as BiomeId)) return null;
+  if (
+    typeof value.seed !== 'number'
+    || !Number.isSafeInteger(value.seed)
+    || value.seed < 0
+  ) {
+    return null;
+  }
+  if (value.floor !== 1 && value.floor !== 2 && value.floor !== 3 && value.floor !== 4) {
+    return null;
+  }
+  if (value.phase !== 'exploring' && value.phase !== 'reward' && value.phase !== 'boss') {
+    return null;
+  }
+  if (
+    typeof value.checkpointHp !== 'number'
+    || !Number.isFinite(value.checkpointHp)
+    || typeof value.checkpointStamina !== 'number'
+    || !Number.isFinite(value.checkpointStamina)
+    || !Array.isArray(value.checkpointBag)
+  ) {
+    return null;
+  }
+  const sanitizedBag = sanitizeBag(value.checkpointBag);
+  if (!sanitizedBag) return null;
+  return {
+    biomeId: value.biomeId as BiomeId,
+    seed: value.seed,
+    floor: value.floor,
+    phase: value.phase,
+    perks: [...new Set(stringArray(value.perks))],
+    perkOffers: [...new Set(stringArray(value.perkOffers))],
+    defeatedEliteSpecies: [...new Set(stringArray(value.defeatedEliteSpecies))],
+    checkpointHp: finiteNumber(value.checkpointHp, PLAYER_MAX_HP, 0, PLAYER_MAX_HP),
+    checkpointStamina: finiteNumber(
+      value.checkpointStamina,
+      PLAYER_MAX_STAMINA,
+      0,
+      PLAYER_MAX_STAMINA,
+    ),
+    checkpointBag: padBag(sanitizedBag),
+  };
+}
+
 export function deserializeState(raw: string): GameState | null {
   try {
     const decoded: unknown = JSON.parse(raw);
@@ -171,6 +220,7 @@ export function deserializeState(raw: string): GameState | null {
     if (payload.version === 6) return normalizeState(payload.state);
     if (payload.version === 7) return normalizeState(payload.state);
     if (payload.version === 8) return normalizeState(payload.state);
+    if (payload.version === 9) return normalizeState(payload.state);
     if (payload.version === SAVE_VERSION) return normalizeState(payload.state);
     return null;
   } catch {
@@ -284,6 +334,7 @@ function normalizeState(partial: LegacyGameState): GameState {
     ),
     shopDayUsed: booleanValue(partial.shopDayUsed, false),
     dayNumber: finiteInteger(partial.dayNumber, 1, 1),
+    activeExpedition: sanitizeExpedition(partial.activeExpedition),
     dungeonUsedToday: booleanValue(partial.dungeonUsedToday, false),
     dungeonReturnedToday: booleanValue(partial.dungeonReturnedToday, false),
     partyCompanion: sanitizeCreature(partial.partyCompanion),
@@ -313,6 +364,12 @@ function normalizeState(partial: LegacyGameState): GameState {
     normalized.craftedStations.habitat_pen = 1;
   }
   syncBiomeUnlocks(normalized);
+  if (
+    normalized.activeExpedition
+    && !normalized.unlockedBiomes.includes(normalized.activeExpedition.biomeId)
+  ) {
+    normalized.activeExpedition = null;
+  }
   migrateLegacyHabitatCreatures(normalized);
   normalizeWeaponArmory(normalized);
   syncShopShelfCapacity(normalized);

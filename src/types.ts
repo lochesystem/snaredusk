@@ -86,6 +86,28 @@ export interface BaseGridState {
   habitatZone?: BaseHabitatZone;
 }
 
+export type ExpeditionFloor = 1 | 2 | 3 | 4;
+export type ExpeditionPhase = 'exploring' | 'reward' | 'boss';
+
+/**
+ * Estado persistente de uma run roguelite.
+ *
+ * O checkpoint representa o começo do andar, não um frame no meio do combate.
+ * Isso permite retomar com segurança sem serializar inimigos e projéteis.
+ */
+export interface ActiveExpedition {
+  biomeId: BiomeId;
+  seed: number;
+  floor: ExpeditionFloor;
+  phase: ExpeditionPhase;
+  perks: string[];
+  perkOffers: string[];
+  defeatedEliteSpecies: string[];
+  checkpointHp: number;
+  checkpointStamina: number;
+  checkpointBag: (BagEntry | null)[];
+}
+
 export interface ShopListing {
   entry: BagEntry;
   price: number;
@@ -133,6 +155,8 @@ export interface GameState {
   shopDayUsed: boolean;
   /** Dia do ciclo (começa em 1). Avança apenas ao dormir na cama. */
   dayNumber: number;
+  /** Run roguelite em andamento; nulo quando o jogador está na base. */
+  activeExpedition: ActiveExpedition | null;
   /** Já entrou na masmorra neste dia (máx. 1 run). */
   dungeonUsedToday: boolean;
   /** Voltou da masmorra hoje — necessário para dormir. */
@@ -217,6 +241,7 @@ export function defaultGameState(): GameState {
     shopCages: createShopCages(1),
     shopDayUsed: false,
     dayNumber: 1,
+    activeExpedition: null,
     dungeonUsedToday: false,
     dungeonReturnedToday: false,
     partyCompanion: null,
