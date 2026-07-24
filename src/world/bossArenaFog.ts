@@ -14,6 +14,8 @@ interface FogWisp {
   ry: number;
   phase: number;
   drift: number;
+  rotation: number;
+  contour: number[];
 }
 
 interface FogPalette {
@@ -38,7 +40,7 @@ export function calcFogOpacity(state: BossFogState, dissipateT: number): number 
   return 1 - easeOutCubic(dissipateT / BOSS_FOG_DISSIPATE_SEC);
 }
 
-function buildWisps(seed: number, count = 18): FogWisp[] {
+function buildWisps(seed: number, count = 32): FogWisp[] {
   let s = seed >>> 0;
   const rand = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -49,13 +51,71 @@ function buildWisps(seed: number, count = 18): FogWisp[] {
     wisps.push({
       nx: rand(),
       ny: rand(),
-      rx: 0.08 + rand() * 0.16,
-      ry: 0.06 + rand() * 0.12,
+      rx: 0.035 + rand() * 0.075,
+      ry: 0.025 + rand() * 0.055,
       phase: rand() * Math.PI * 2,
-      drift: 0.4 + rand() * 0.9,
+      drift: 0.18 + rand() * 0.42,
+      rotation: (rand() - 0.5) * 0.8,
+      contour: Array.from({ length: 10 }, () => 0.72 + rand() * 0.42),
     });
   }
   return wisps;
+}
+
+/**
+ * Desenha uma nuvem fechada com contorno suavemente irregular. Os três passes
+ * funcionam como uma borda difusa sem depender de blur (que borra o pixel art).
+ */
+function drawOrganicWisp(
+  gfx: Graphics,
+  wisp: FogWisp,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  time: number,
+  color: number,
+  alpha: number,
+): void {
+  const pointCount = wisp.contour.length;
+  const cosR = Math.cos(wisp.rotation);
+  const sinR = Math.sin(wisp.rotation);
+
+  for (let layer = 0; layer < 3; layer++) {
+    const scale = 1.24 - layer * 0.17;
+    const points: { x: number; y: number }[] = [];
+
+    for (let i = 0; i < pointCount; i++) {
+      const angle = (i / pointCount) * Math.PI * 2;
+      const breathe = 1 + Math.sin(time * 0.48 + wisp.phase + i * 1.71) * 0.055;
+      const radius = wisp.contour[i] * scale * breathe;
+      const localX = Math.cos(angle) * rx * radius;
+      const localY = Math.sin(angle) * ry * radius;
+      points.push({
+        x: cx + localX * cosR - localY * sinR,
+        y: cy + localX * sinR + localY * cosR,
+      });
+    }
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    gfx.moveTo((last.x + first.x) * 0.5, (last.y + first.y) * 0.5);
+    for (let i = 0; i < pointCount; i++) {
+      const current = points[i];
+      const next = points[(i + 1) % pointCount];
+      gfx.quadraticCurveTo(
+        current.x,
+        current.y,
+        (current.x + next.x) * 0.5,
+        (current.y + next.y) * 0.5,
+      );
+    }
+    gfx.closePath();
+    gfx.fill({
+      color,
+      alpha: alpha * (layer === 0 ? 0.16 : layer === 1 ? 0.28 : 0.46),
+    });
+  }
 }
 
 export class BossArenaFog {
@@ -142,23 +202,32 @@ export class BossArenaFog {
     this.gfx.clear();
 
     this.gfx.roundRect(x, y, w, h, 6);
-    this.gfx.fill({ color: palette.base, alpha: 0.72 * opacity });
+    this.gfx.fill({ color: palette.base, alpha: 0.68 * opacity });
 
     for (const wisp of this.wisps) {
-      const pulse = 0.75 + Math.sin(this.animTime * 1.6 + wisp.phase) * 0.25;
-      const driftY = Math.sin(this.animTime * wisp.drift + wisp.phase) * 8 * (1 + dissolveBoost * 2);
-      const driftX = Math.cos(this.animTime * wisp.drift * 0.7 + wisp.phase) * 5;
-      const expand = 1 + dissolveBoost * 0.45;
+      const pulse = 0.93 + Math.sin(this.animTime * 0.55 + wisp.phase) * 0.07;
+      const driftY = Math.sin(this.animTime * wisp.drift + wisp.phase) * 11 * (1 + dissolveBoost * 2);
+      const driftX = Math.cos(this.animTime * wisp.drift * 0.63 + wisp.phase) * 14;
+      const expand = 1 + dissolveBoost * 0.7;
       const cx = x + wisp.nx * w + driftX;
-      const cy = y + wisp.ny * h + driftY - dissolveBoost * 28;
+      const cy = y + wisp.ny * h + driftY - dissolveBoost * 34;
       const rx = w * wisp.rx * expand * pulse;
       const ry = h * wisp.ry * expand * pulse;
-      this.gfx.ellipse(cx, cy, rx, ry);
-      this.gfx.fill({ color: palette.wisp, alpha: 0.22 * opacity * pulse });
+      drawOrganicWisp(
+        this.gfx,
+        wisp,
+        cx,
+        cy,
+        rx,
+        ry,
+        this.animTime,
+        palette.wisp,
+        0.38 * opacity * pulse,
+      );
     }
 
     this.gfx.roundRect(x, y, w, h, 6);
-    this.gfx.fill({ color: palette.base, alpha: 0.28 * opacity });
+    this.gfx.fill({ color: palette.base, alpha: 0.2 * opacity });
 
     this.gfx.roundRect(x, y, w, h, 6);
     this.gfx.stroke({ width: 1, color: palette.wisp, alpha: 0.15 * opacity });
