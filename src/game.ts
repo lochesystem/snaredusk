@@ -20,6 +20,7 @@ import { ensurePlayerSpritesPreloaded } from './world/playerAssets.ts';
 import { ensureShopAssetsPreloaded } from './world/shopAssets.ts';
 import { ensureCustomerSpritesPreloaded } from './world/customerAssets.ts';
 import { ensureWeaponIconsPreloaded } from './world/weaponAssets.ts';
+import { ensureInteractableSpritesPreloaded } from './world/interactableAssets.ts';
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
@@ -854,6 +855,7 @@ export class Game {
       ensureCompanionSpritesPreloaded(),
       ensurePlayerSpritesPreloaded(),
       ensureEnvironmentPreloaded(this.state.activeBiome),
+      ensureInteractableSpritesPreloaded(),
     ]);
     this.pendingDungeonExit = null;
     this.destroyBase();

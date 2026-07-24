@@ -30,6 +30,10 @@ import { getShopPropTexture } from './shopAssets.ts';
 import { CUSTOMER_WALK_ANIM_SPEED, getCustomerWalkFrames } from './customerAssets.ts';
 import { getWeaponIconTexture } from './weaponAssets.ts';
 import {
+  getInteractableFrames,
+  type InteractableKind,
+} from './interactableAssets.ts';
+import {
   drawEnergyOrb,
   drawKnifeBlade,
   drawPickaxeHead,
@@ -359,10 +363,38 @@ export function createStaircaseSprite(rotation: 0 | 1 | 2 | 3 = 0): Container {
   return root;
 }
 
-export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', used = false): Container {
+export function createInteractableSprite(kind: InteractableKind, used = false): Container {
   const root = new Container();
+  const frames = getInteractableFrames(kind);
+  const alpha = used ? 0.38 : 1;
+
+  if (frames.length > 0) {
+    const sprite = new AnimatedSprite(frames);
+    const anchorY = kind === 'rest' ? 58 / 64 : kind === 'event' ? 59 / 64 : 61 / 64;
+    sprite.anchor.set(0.5, anchorY);
+    sprite.roundPixels = true;
+    sprite.animationSpeed = (kind === 'merchant' ? 3 : 4) / 60;
+    sprite.alpha = alpha;
+    if (used) {
+      sprite.gotoAndStop(0);
+    } else {
+      sprite.play();
+    }
+    root.addChild(sprite);
+
+    const label = createPixelText(
+      kind === 'rest' ? 'Descanso' : kind === 'event' ? 'Evento' : 'Mercador',
+      9,
+      0xf0e6d3,
+    );
+    label.alpha = alpha;
+    label.anchor.set(0.5);
+    label.y = kind === 'merchant' ? -62 : -54;
+    root.addChild(label);
+    return root;
+  }
+
   const g = new Graphics();
-  const alpha = used ? 0.35 : 1;
   const accent =
     kind === 'rest' ? 0x5dbb63 : kind === 'event' ? 0x8a6ab8 : 0xe8a84a;
 
