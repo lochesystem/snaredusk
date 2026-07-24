@@ -357,23 +357,6 @@ export function createStaircaseSprite(rotation: 0 | 1 | 2 | 3 = 0): Container {
   return root;
 }
 
-function roomTypeTint(type?: string): number {
-  switch (type) {
-    case 'treasure':
-      return 0xc4a040;
-    case 'rest':
-      return 0x5dbb63;
-    case 'event':
-      return 0x8a6ab8;
-    case 'merchant':
-      return 0xe8a84a;
-    case 'boss':
-      return 0xe85d4a;
-    default:
-      return 0x3d5c3a;
-  }
-}
-
 export function createInteractableSprite(kind: 'rest' | 'event' | 'merchant', used = false): Container {
   const root = new Container();
   const g = new Graphics();
@@ -503,12 +486,6 @@ export function drawDungeonLayoutVector(
       g.fill(theme.floor);
     }
 
-    for (const room of rooms) {
-      const r = room.rect;
-      const tint = roomTypeTint(room.type);
-      g.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
-      g.fill({ color: tint, alpha: 0.22 });
-    }
   }
 
   for (const obs of obstacles) {
@@ -586,7 +563,18 @@ export function drawDungeonLayoutVector(
     }
 
     for (const obs of obstacles) {
-      if (obs.kind !== 'rock') continue;
+      if (obs.kind === 'hole') continue;
+      if (obs.kind === 'crystal') {
+        const h = obs.radius * 1.75;
+        g.moveTo(obs.x, obs.y - h);
+        g.lineTo(obs.x + obs.radius, obs.y + obs.radius * 0.55);
+        g.lineTo(obs.x, obs.y + obs.radius);
+        g.lineTo(obs.x - obs.radius, obs.y + obs.radius * 0.55);
+        g.closePath();
+        g.fill(0x8f72db);
+        g.stroke({ width: 1, color: 0xcbdcff, alpha: 0.65 });
+        continue;
+      }
       g.roundRect(obs.x - obs.radius, obs.y - obs.radius * 0.8, obs.radius * 2, obs.radius * 1.6, 4);
       g.fill(theme.rock);
       g.roundRect(obs.x - obs.radius + 2, obs.y - obs.radius * 0.8 + 2, obs.radius * 1.4, obs.radius * 0.9, 3);

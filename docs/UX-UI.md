@@ -328,7 +328,7 @@ sequenceDiagram
 │  │  [ENTRAR]    │  │  Precisa chave│  │  Precisa chave│  │
 │  └──────────────┘  └──────────────┘  └──────────────┘   │
 ├──────────────────────────────────────────────────────────┤
-│  Party: [🦇] [🍄]     Sentinela ativa: Lumimorcego       │
+│  Companheiro: [🦇]    Sentinela ativa: Lumimorcego       │
 │  Arma: Picareta T2    Orbes: 3                          │
 │                    [CONFIRMAR]                           │
 └──────────────────────────────────────────────────────────┘

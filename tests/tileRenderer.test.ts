@@ -5,6 +5,7 @@ import {
   ceilingBandSegments,
   collectDoorJambCorners,
   cornerIdAt,
+  decorPropScale,
   resolveWallOrientation,
   rockPropFootY,
   spawnDungeonPropSprites,
@@ -83,6 +84,14 @@ describe('tileRenderer dungeon', () => {
 
   it('rockPropFootY alinha pé da pedra ao fallback vetorial', () => {
     expect(rockPropFootY(100, 10)).toBe(108);
+  });
+
+  it('mantém props de ambiente legíveis em vez de reduzi-los a 3–5 pixels', () => {
+    expect(decorPropScale(2)).toBeCloseTo(0.6);
+    expect(decorPropScale(3)).toBeCloseTo(0.72);
+    expect(decorPropScale(4)).toBeCloseTo(0.84);
+    expect(decorPropScale(5)).toBeCloseTo(0.96);
+    expect(decorPropScale(6)).toBeCloseTo(1.08);
   });
 
   it('buildDungeonFloorLayer fallback sem tileset', () => {

@@ -82,11 +82,11 @@ describe('dungeonGenerator', () => {
     }
   });
 
-  it('portal is never blocked by rocks', () => {
+  it('portal is never blocked by solid environmental props', () => {
     for (let seed = 1; seed <= 300; seed++) {
       const layout = generateDungeon(seed);
       for (const obs of layout.obstacles) {
-        if (obs.kind !== 'rock') continue;
+        if (obs.kind === 'hole') continue;
         const dx = layout.portal.x - obs.x;
         const dy = layout.portal.y - obs.y;
         const minDist = obs.radius + PLAYER_RADIUS + 8;
@@ -127,14 +127,14 @@ describe('dungeonGenerator', () => {
     expect(Math.abs(bossSpawn.y - cy)).toBeLessThan(2);
   });
 
-  it('enemy spawns never overlap rocks or walls', () => {
+  it('enemy spawns never overlap solid props or walls', () => {
     for (let seed = 1; seed <= 500; seed++) {
       const layout = generateDungeon(seed);
       for (const spawn of layout.enemySpawns) {
         expect(collidesCircle(spawn.x, spawn.y, ENEMY_RADIUS, layout.walls)).toBe(false);
         expect(isOnWalkableFloor(spawn.x, spawn.y, ENEMY_RADIUS, layout.floors)).toBe(true);
         for (const obs of layout.obstacles) {
-          if (obs.kind !== 'rock') continue;
+          if (obs.kind === 'hole') continue;
           const dx = spawn.x - obs.x;
           const dy = spawn.y - obs.y;
           const minDist = obs.radius + ENEMY_RADIUS + 6;

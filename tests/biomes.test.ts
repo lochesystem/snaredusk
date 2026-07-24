@@ -64,13 +64,15 @@ describe('dungeonGenerator biomes', () => {
     expect(cristal.enemySpawns.find((s) => s.isBoss)?.speciesId).toBe('matriarca_prismatica');
   });
 
-  it('usa criaturas e decor do bioma cristal', () => {
+  it('usa criaturas e formações sólidas do bioma cristal', () => {
     const layout = generateDungeon(99, 'cristal');
     const species = new Set(layout.enemySpawns.filter((s) => !s.isBoss).map((s) => s.speciesId));
     for (const id of species) {
       expect(['prismarin', 'lumicascalho', 'eco_quartzo', 'gema_viva', 'refrator']).toContain(id);
     }
-    expect(layout.decor.every((d) => d.kind === 'crystal')).toBe(true);
+    expect(layout.obstacles.some((o) => o.kind === 'crystal')).toBe(true);
+    expect(layout.obstacles.some((o) => o.kind === 'rock')).toBe(true);
+    expect(layout.decor).toHaveLength(0);
   });
 
   it('gera chefe e decor do bioma termal', () => {
@@ -81,7 +83,21 @@ describe('dungeonGenerator biomes', () => {
     for (const id of species) {
       expect(['salamandra', 'vaporoso', 'caranguejo_termal', 'lodo_vivo', 'fenix_bruma']).toContain(id);
     }
+    expect(layout.decor.some((d) => d.kind === 'thermal')).toBe(true);
     expect(layout.decor.every((d) => d.kind === 'thermal')).toBe(true);
+    expect(layout.obstacles.some((o) => o.kind === 'rock')).toBe(true);
+  });
+
+  it('gera cogumelos atravessáveis em grupos e pedras sólidas na floresta', () => {
+    const layout = generateDungeon(123, 'floresta');
+    expect(layout.decor.length).toBeGreaterThan(layout.rooms.length * 3);
+    expect(layout.decor.every((d) => d.kind === 'mushroom')).toBe(true);
+    expect(layout.obstacles.some((o) => o.kind === 'rock')).toBe(true);
+
+    const nearbyPairs = layout.decor.filter((decor, index) =>
+      layout.decor.slice(index + 1).some((other) =>
+        Math.hypot(decor.x - other.x, decor.y - other.y) < 34)).length;
+    expect(nearbyPairs).toBeGreaterThan(3);
   });
 
   it('cogumante aparece com taxa baixa na floresta', () => {

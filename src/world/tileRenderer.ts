@@ -8,7 +8,6 @@ import { BASE_CELL_SIZE } from '../engine/constants.ts';
 import {
   chestPropFrameName,
   decorPropFrameName,
-  ENV_TILE_SIZE,
   CEILING_BAND_VISIBLE_PX,
   getBaseTileTexture,
   getBiomePropTexture,
@@ -404,19 +403,6 @@ export function buildDungeonFloorLayer(
     }
   }
 
-  for (const room of layout.rooms) {
-    const r = room.rect;
-    const tint = roomTypeTint(room.type);
-    const alpha = biomeId === 'termal'
-      ? room.type === 'combat' ? 0 : 0.07
-      : 0.22;
-    if (alpha <= 0) continue;
-    const overlay = new Graphics();
-    overlay.rect(r.x + 6, r.y + 6, r.width - 12, r.height - 12);
-    overlay.fill({ color: tint, alpha });
-    root.addChild(overlay);
-  }
-
   for (const obs of layout.obstacles) {
     if (obs.kind !== 'hole') continue;
     if (holeTex) {
@@ -474,23 +460,6 @@ export function buildDungeonFloorLayer(
   return root;
 }
 
-function roomTypeTint(type?: string): number {
-  switch (type) {
-    case 'treasure':
-      return 0xc4a040;
-    case 'event':
-      return 0x8a6ab8;
-    case 'rest':
-      return 0x5dbb63;
-    case 'merchant':
-      return 0x6a8ab8;
-    case 'boss':
-      return 0x9a4a6a;
-    default:
-      return 0x3d5c3a;
-  }
-}
-
 export function createDecorPropSprite(
   biomeId: BiomeId,
   kind: string,
@@ -502,11 +471,22 @@ export function createDecorPropSprite(
   if (!texture) return null;
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, 1);
-  const scale = size / ENV_TILE_SIZE;
+  const scale = decorPropScale(size);
   sprite.scale.set(scale);
+  if (variant >= 2) sprite.scale.x *= -1;
   sprite.roundPixels = true;
   (sprite as Sprite & { zOffset?: number }).zOffset = 0.35;
   return sprite;
+}
+
+/**
+ * `DungeonDecor.size` nasceu como raio do fallback vetorial (3–5 px), não como
+ * tamanho final do sprite. Converter diretamente por 32 reduzia os props a
+ * quase nada. Esta faixa mantém os atlas 32×32 legíveis sem bloquear a sala.
+ */
+export function decorPropScale(size: number): number {
+  const normalized = Math.max(0, Math.min(4, size - 2));
+  return 0.6 + normalized * 0.12;
 }
 
 /** Pé da pedra alinhado ao fallback vetorial (roundRect em placeholderArt). */
@@ -514,11 +494,17 @@ export function rockPropFootY(obsY: number, radius: number): number {
   return obsY + radius * 0.8;
 }
 
-export function createRockPropSprite(biomeId: BiomeId, _radius: number): Sprite | null {
+export function createRockPropSprite(
+  biomeId: BiomeId,
+  radius: number,
+  variant = 0,
+): Sprite | null {
   const texture = getBiomePropTexture(biomeId, 'rock');
   if (!texture) return null;
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, 1);
+  const scale = Math.max(0.72, Math.min(1.08, 0.72 + (radius - 8) * 0.045));
+  sprite.scale.set(variant % 2 === 0 ? scale : -scale, scale);
   sprite.roundPixels = true;
   (sprite as Sprite & { zOffset?: number }).zOffset = 0.4;
   return sprite;
@@ -556,8 +542,15 @@ export function spawnDungeonPropSprites(
   }
 
   for (const obs of layout.obstacles) {
-    if (obs.kind !== 'rock') continue;
-    const sprite = createRockPropSprite(biomeId, obs.radius);
+    if (obs.kind === 'hole') continue;
+    const sprite = obs.kind === 'crystal'
+      ? createDecorPropSprite(
+        biomeId,
+        'crystal',
+        obs.variant ?? 0,
+        Math.max(2, Math.min(6, 2 + Math.round((obs.radius - 7) / 2))),
+      )
+      : createRockPropSprite(biomeId, obs.radius, obs.variant ?? 0);
     if (!sprite) continue;
     sprite.x = obs.x;
     sprite.y = rockPropFootY(obs.y, obs.radius);

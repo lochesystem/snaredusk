@@ -54,7 +54,7 @@ export interface DungeonInteractable {
 }
 
 export interface DungeonDecor {
-  kind: 'mushroom' | 'crystal' | 'thermal';
+  kind: 'mushroom' | 'thermal';
   x: number;
   y: number;
   size: number;
@@ -62,13 +62,15 @@ export interface DungeonDecor {
 }
 
 export interface DungeonObstacle {
-  kind: 'rock' | 'hole';
+  kind: 'rock' | 'crystal' | 'hole';
   x: number;
   y: number;
   radius: number;
   roomIndex: number;
   /** Segundos restantes para obstáculos temporários (estalactites). */
   ttl?: number;
+  /** Variante visual para formações ambientais. */
+  variant?: number;
 }
 
 export interface DungeonChest {
@@ -327,7 +329,16 @@ function buildDungeon(seed: number, biomeId: BiomeId): DungeonLayout {
   const chests: DungeonChest[] = [];
 
   for (const room of rooms) {
-    populateRoomDecor(room, rng, decor, reserved, safeZones, biome.decorKind);
+    populateRoomDecor(
+      room,
+      rng,
+      decor,
+      obstacles,
+      reserved,
+      safeZones,
+      biome.decorKind,
+      biomeId,
+    );
     if (room.type === 'combat' || (room.type === 'boss' && biomeId === 'cristal')) {
       populateRoomObstacles(room, rng, obstacles, reserved, safeZones, biomeId);
     }
@@ -682,23 +693,219 @@ function populateRoomDecor(
   room: RoomLayout,
   rng: Rng,
   decor: DungeonDecor[],
+  obstacles: DungeonObstacle[],
   reserved: { x: number; y: number }[],
   safeZones: SafeZone[],
-  decorKind: DungeonDecor['kind'],
+  decorKind: 'mushroom' | 'crystal' | 'thermal',
+  biomeId: BiomeId,
 ): void {
-  const count = randInt(rng, 4, 8);
-  for (let i = 0; i < count; i++) {
-    const pt = randomInteriorPoint(room, rng, reserved, 22, safeZones);
-    if (!pt) continue;
-    reserved.push(pt);
-    decor.push({
-      kind: decorKind,
-      x: pt.x,
-      y: pt.y,
-      size: 3 + randInt(rng, 0, 2),
-      variant: randInt(rng, 0, 2),
-    });
+  // Primeiro entram as âncoras sólidas, preferencialmente nas bordas. A camada
+  // atravessável cresce ao redor delas depois, deixando o centro respirar.
+  const rockClusters = biomeId === 'cristal'
+    ? randInt(rng, 1, 2)
+    : randInt(rng, 1, room.type === 'boss' ? 3 : 2);
+  populateBlockingClusters(
+    room,
+    rng,
+    obstacles,
+    reserved,
+    safeZones,
+    'rock',
+    rockClusters,
+  );
+
+  if (decorKind === 'mushroom' || decorKind === 'thermal') {
+    populatePassableClusters(
+      room,
+      rng,
+      decor,
+      obstacles,
+      reserved,
+      safeZones,
+      decorKind,
+    );
+  } else {
+    const crystalClusters = randInt(rng, 2, room.type === 'boss' ? 4 : 3);
+    populateBlockingClusters(
+      room,
+      rng,
+      obstacles,
+      reserved,
+      safeZones,
+      'crystal',
+      crystalClusters,
+    );
   }
+}
+
+function populatePassableClusters(
+  room: RoomLayout,
+  rng: Rng,
+  decor: DungeonDecor[],
+  obstacles: DungeonObstacle[],
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+  kind: DungeonDecor['kind'],
+): void {
+  const solidAnchors = obstacles.filter((obstacle) =>
+    obstacle.roomIndex === room.index && obstacle.kind !== 'hole');
+  const clusterCount = randInt(rng, 2, room.type === 'boss' ? 4 : 3);
+  for (let cluster = 0; cluster < clusterCount; cluster++) {
+    const center = pickPassableClusterCenter(
+      room,
+      rng,
+      reserved,
+      safeZones,
+      solidAnchors,
+    );
+    if (!center) continue;
+    const members = randInt(rng, 4, 7);
+    for (let member = 0; member < members; member++) {
+      const angle = rng() * Math.PI * 2;
+      const distance = member === 0 ? 0 : 7 + rng() * 27;
+      const x = member === 0 ? center.x : center.x + Math.cos(angle) * distance;
+      const y = member === 0 ? center.y : center.y + Math.sin(angle) * distance * 0.68;
+      if (!canPlaceDecorPoint(room, x, y, reserved, 6, safeZones)) continue;
+      const point = { x, y };
+      reserved.push(point);
+      decor.push({
+        kind,
+        x,
+        y,
+        size: member === 0 ? randInt(rng, 5, 6) : randInt(rng, 2, 4),
+        variant: randInt(rng, 0, 3),
+      });
+    }
+  }
+}
+
+function populateBlockingClusters(
+  room: RoomLayout,
+  rng: Rng,
+  obstacles: DungeonObstacle[],
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+  kind: 'rock' | 'crystal',
+  clusterCount: number,
+): void {
+  for (let cluster = 0; cluster < clusterCount; cluster++) {
+    const radius = kind === 'crystal'
+      ? 12 + randInt(rng, 0, 4)
+      : 11 + randInt(rng, 0, 4);
+    const center = rng() < 0.72
+      ? randomEdgeInteriorPoint(room, rng, reserved, 52, safeZones, radius)
+      : randomInteriorPoint(room, rng, reserved, 52, safeZones, radius);
+    if (!center) continue;
+
+    const members = rng() < 0.58 ? 2 : 1;
+    for (let member = 0; member < members; member++) {
+      const angle = rng() * Math.PI * 2;
+      const distance = member === 0 ? 0 : radius * (1.05 + rng() * 0.32);
+      const x = center.x + Math.cos(angle) * distance;
+      const y = center.y + Math.sin(angle) * distance * 0.7;
+      if (!canPlaceDecorPoint(room, x, y, [], 0, safeZones, radius)) continue;
+      const point = { x, y };
+      reserved.push(point);
+      obstacles.push({
+        kind,
+        x,
+        y,
+        radius: member === 0 ? radius : Math.max(7, radius - randInt(rng, 3, 5)),
+        roomIndex: room.index,
+        variant: randInt(rng, 0, 3),
+      });
+    }
+  }
+}
+
+function pickPassableClusterCenter(
+  room: RoomLayout,
+  rng: Rng,
+  reserved: { x: number; y: number }[],
+  safeZones: SafeZone[],
+  solidAnchors: DungeonObstacle[],
+): { x: number; y: number } | null {
+  if (solidAnchors.length > 0 && rng() < 0.62) {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const anchor = solidAnchors[randInt(rng, 0, solidAnchors.length - 1)]!;
+      const angle = rng() * Math.PI * 2;
+      const distance = anchor.radius + 15 + rng() * 22;
+      const x = anchor.x + Math.cos(angle) * distance;
+      const y = anchor.y + Math.sin(angle) * distance * 0.72;
+      if (canPlaceDecorPoint(room, x, y, reserved, 12, safeZones)) return { x, y };
+    }
+  }
+
+  if (rng() < 0.7) {
+    const edge = randomEdgeInteriorPoint(room, rng, reserved, 38, safeZones);
+    if (edge) return edge;
+  }
+  return randomInteriorPoint(room, rng, reserved, 38, safeZones);
+}
+
+function randomEdgeInteriorPoint(
+  room: RoomLayout,
+  rng: Rng,
+  reserved: { x: number; y: number }[],
+  minDist: number,
+  safeZones: SafeZone[],
+  obstacleRadius = 0,
+): { x: number; y: number } | null {
+  const r = room.rect;
+  const inset = WALL_THICKNESS + 24 + obstacleRadius;
+  const spreadX = Math.max(1, r.width - inset * 2);
+  const spreadY = Math.max(1, r.height - inset * 2);
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const side = randInt(rng, 0, 3);
+    const along = 0.12 + rng() * 0.76;
+    const depth = rng() * 18;
+    let x: number;
+    let y: number;
+    if (side === 0) {
+      x = r.x + inset + spreadX * along;
+      y = r.y + inset + depth;
+    } else if (side === 1) {
+      x = r.x + r.width - inset - depth;
+      y = r.y + inset + spreadY * along;
+    } else if (side === 2) {
+      x = r.x + inset + spreadX * along;
+      y = r.y + r.height - inset - depth;
+    } else {
+      x = r.x + inset + depth;
+      y = r.y + inset + spreadY * along;
+    }
+    if (canPlaceDecorPoint(
+      room,
+      x,
+      y,
+      reserved,
+      minDist,
+      safeZones,
+      obstacleRadius,
+    )) {
+      return { x, y };
+    }
+  }
+  return null;
+}
+
+function canPlaceDecorPoint(
+  room: RoomLayout,
+  x: number,
+  y: number,
+  reserved: { x: number; y: number }[],
+  minDist: number,
+  safeZones: SafeZone[],
+  obstacleRadius = 0,
+): boolean {
+  const r = room.rect;
+  const pad = WALL_THICKNESS + 20 + obstacleRadius;
+  if (x < r.x + pad || x > r.x + r.width - pad) return false;
+  if (y < r.y + pad || y > r.y + r.height - pad) return false;
+  if (!isAwayFromDoors(x, y, room, 56)) return false;
+  if (!isOutsideSafeZones(x, y, safeZones, obstacleRadius)) return false;
+  return isFarFromAll(x, y, reserved, minDist);
 }
 
 function populateRoomObstacles(
@@ -1066,7 +1273,7 @@ function isPortalWalkable(layout: DungeonLayout): boolean {
   const { x, y } = layout.portal;
   if (!isPointWalkable(layout, x, y)) return false;
   for (const obs of layout.obstacles) {
-    if (obs.kind !== 'rock') continue;
+    if (obs.kind === 'hole') continue;
     const dx = x - obs.x;
     const dy = y - obs.y;
     if (dx * dx + dy * dy < (obs.radius + PLAYER_RADIUS + 8) ** 2) return false;
@@ -1078,7 +1285,7 @@ function isSpawnWalkable(layout: DungeonLayout): boolean {
   const { x, y } = layout.spawn;
   if (!isPointWalkable(layout, x, y)) return false;
   for (const obs of layout.obstacles) {
-    if (obs.kind !== 'rock') continue;
+    if (obs.kind === 'hole') continue;
     const dx = x - obs.x;
     const dy = y - obs.y;
     if (dx * dx + dy * dy < (obs.radius + PLAYER_RADIUS + 4) ** 2) return false;
@@ -1090,10 +1297,12 @@ function isPointWalkable(layout: DungeonLayout, x: number, y: number, radius = P
   if (!isOnWalkableFloorPoint(x, y, radius, layout.floors)) return false;
   if (collidesCirclePoint(x, y, radius, layout.walls)) return false;
   for (const obs of layout.obstacles) {
-    if (obs.kind !== 'hole') continue;
     const dx = x - obs.x;
     const dy = y - obs.y;
-    if (dx * dx + dy * dy < (obs.radius + radius * 0.6) ** 2) return false;
+    const clearance = obs.kind === 'hole'
+      ? obs.radius + radius * 0.6
+      : obs.radius + radius * 0.5;
+    if (dx * dx + dy * dy < clearance ** 2) return false;
   }
   return true;
 }

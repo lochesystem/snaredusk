@@ -22,7 +22,7 @@ Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GD
 | **Minimapa** | Sim (explorado + portal) | Sim (+ salas secretas com sentinela) |
 | **Criaturas** | 12 espécies (9 capturáveis + 3 chefes); sprites v1+ | 18 catalogadas |
 | **Captura** | Orbe Q, taxa por HP, mira de alcance | Igual + upgrades e tipos |
-| **Party / sentinelas** | 1 companheiro com IA | 2 companheiros + 1 sentinela/bioma |
+| **Companheiro / sentinelas** | 1 companheiro com IA | 1 companheiro ativo + sentinela passiva opcional por bioma |
 | **Loja** | 5 níveis, 6 arquétipos, 4 faixas, reputação 1–3, tileset visual, clientes animados | 5 níveis, 6 arquétipos, 4 faixas |
 | **Base** | Grid escavável, estações rotacionáveis (R), craft conectado aos baús, habitat com cercados | Escavação, oficina, craft, baús |
 | **Ciclo dia/noite** | Cama, 1 masmorra/dia, produção habitat ao dormir | Dormir, loja diurna, evento entardecer |
@@ -367,13 +367,13 @@ penalidade_raridade = 0% (comum) | −5% (incomum) | −15% (raro) | −30% (len
 
 ---
 
-## 6. Party e sentinelas
+## 6. Companheiro e sentinelas
 
-### Party de combate
+### Companheiro de combate
 
 - Escolhida no **Painel de Companheiros** antes de entrar na masmorra
-- Máximo 2 (início) ou 3 (com upgrade)
-- Criatura em party **não** pode ser sentinela simultaneamente
+- Máximo **1 companheiro ativo**; este é o escopo final para manter combate e tela legíveis
+- Criatura acompanhante **não** pode ser sentinela simultaneamente
 
 ### Sentinelas de bioma
 

@@ -29,6 +29,21 @@ describe('pathfinding', () => {
     expect(moved.x).not.toBe(20);
   });
 
+  it('contorna cristais sólidos como contorna pedras', () => {
+    const crystals = [{
+      kind: 'crystal' as const,
+      x: 100,
+      y: 60,
+      radius: 18,
+      roomIndex: 0,
+      variant: 1,
+    }];
+    const grid = buildNavGrid(floors, [], crystals);
+    const path = findPathOnGrid(grid, 20, 60, 180, 60);
+    expect(path.length).toBeGreaterThan(1);
+    expect(path.every((point) => Math.hypot(point.x - 100, point.y - 60) >= 18)).toBe(true);
+  });
+
   it('replana quando o alvo muda', () => {
     expect(shouldReplanPath(100, 0, 0, 0, [{ x: 1, y: 1 }], 0, 0, 1)).toBe(true);
     expect(shouldReplanPath(10, 10, 10, 10, [{ x: 20, y: 20 }], 0, 0, 1)).toBe(false);

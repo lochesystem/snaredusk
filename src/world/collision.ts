@@ -41,7 +41,7 @@ export function isInHole(
   return false;
 }
 
-/** Rochas bloqueiam movimento (inclui estalactites caídas). */
+/** Formações sólidas bloqueiam movimento (rochas, cristais e estalactites). */
 export function isInRock(
   cx: number,
   cy: number,
@@ -49,7 +49,7 @@ export function isInRock(
   obstacles: DungeonObstacle[],
 ): boolean {
   for (const obs of obstacles) {
-    if (obs.kind !== 'rock') continue;
+    if (obs.kind === 'hole') continue;
     const dx = cx - obs.x;
     const dy = cy - obs.y;
     if (dx * dx + dy * dy < (obs.radius + radius * 0.5) ** 2) return true;

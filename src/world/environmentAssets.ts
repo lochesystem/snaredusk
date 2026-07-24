@@ -272,6 +272,7 @@ export function getWallCornerTexture(biomeId: BiomeId): Texture | null {
 
 export function decorPropFrameName(kind: string, variant: number): string {
   const suffix = variant % 2 === 0 ? 'a' : 'b';
+  if (kind === 'rock') return 'rock';
   if (kind === 'crystal') return `crystal_${suffix}`;
   if (kind === 'thermal') return `thermal_${suffix}`;
   return `mushroom_${suffix}`;

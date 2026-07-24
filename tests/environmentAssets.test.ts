@@ -14,6 +14,7 @@ describe('environmentAssets', () => {
     expect(decorPropFrameName('mushroom', 1)).toBe('mushroom_b');
     expect(decorPropFrameName('crystal', 2)).toBe('crystal_a');
     expect(decorPropFrameName('thermal', 3)).toBe('thermal_b');
+    expect(decorPropFrameName('rock', 3)).toBe('rock');
   });
 
   it('mapeia baús para frames corretos', () => {

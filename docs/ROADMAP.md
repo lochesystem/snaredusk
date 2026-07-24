@@ -26,8 +26,8 @@ flowchart LR
 |------|--------|-------|
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
-| 2 — Core loop | **~75%** | Tutorial Mira completo; reputação; falta party 2 slots e sentinelas |
-| 3 — Polish | **~25%** | Sprites v2 player/base/loja; tilesets bioma 1–3 em progresso |
+| 2 — Core loop | **~85%** | Tutorial, reputação e companheiro único completos; sentinelas seguem pendentes |
+| 3 — Polish | **~55%** | Sprites v2+, UI customizada e tilesets/props dos três biomas em integração |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
 ---
@@ -96,7 +96,7 @@ flowchart LR
 | **Portal pós-chefe** | Só após baú épico | **Feito** | Não exige limpar masmorra inteira |
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
 | **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | 20 receitas, construções prontas, orbes, materiais e armas; armazenamento integrado da base |
-| **Party** | 2 companheiros ativos | **Parcial** | 1 slot com IA (seguir, atacar); falta 2º slot |
+| **Companheiro** | 1 companheiro ativo | **Feito (MVP)** | Escopo fechado em 1 slot para preservar clareza da ação; IA de idle, seguir e atacar |
 | **Bestiário** | UI + bônus família | **Mínimo** | Registro no save + contador na base; sem tela dedicada |
 | **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
 | **Loot** | 30 itens | **Feito** | **30/30** em `LOOT_TABLE` |
@@ -116,7 +116,7 @@ flowchart LR
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**252 testes**, 56 arquivos)
+- [x] Suite Vitest abrangente (**268 testes**, 57 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -154,7 +154,7 @@ Pendente:
 | **Arte jogador** | Sprites pintados + animações de ataque | **Parcial** | v2 idle/walk/attack implementados |
 | **Arte base** | Tileset + estações + FX escavação | **Parcial** | tileset v2, estações v3, landmarks v3 |
 | **Arte loja** | Tileset, props, clientes | **Parcial** | Tileset v1, clientes animados, tábuas no chão |
-| **Arte biomas** | 3 biomas com sprites de criatura | **Parcial** | Floresta/Cristal/Termal com tilesets v2+ |
+| **Arte biomas** | 3 biomas com criaturas e ambientação própria | **Parcial** | Floresta/Cristal/Termal com tilesets v2+; props temáticos e pedras integrados |
 | **Tileset masmorra** | Paredes alinhadas (faixas 14 px) | Parcial (Floresta OK) |
 | **Tela de título** | Arte + atmosfera | **Feito** | Background v2 |
 | **Layout UI** | Fullscreen base/masmorra/loja | **Feito** | HUD overlay na loja |
@@ -198,10 +198,12 @@ Pendente:
 2. ~~**Tutorial com Mira**~~ — fluxo completo (masmorra + habitat + loja + orbes)
 3. ~~**Reputação na loja**~~ — níveis 1–3
 4. ~~**Conteúdo**~~ — +6 criaturas, +13 loots, +18 receitas
-5. **Party 2 slots** + **sentinelas**
-6. **Bestiário UI**
-7. `economy.test.ts` — validar sinks de ouro
-8. **Polish arte** — normal maps, parallax, sprites finais bioma 2–3
+5. ~~**Companheiro único**~~ — escopo fechado; IA e animações próprias
+6. **Ambientação dos biomas** — densidade, composição e variedade de props
+7. **Sentinelas** — decidir se permanecem no MVP
+8. **Bestiário UI**
+9. `economy.test.ts` — validar sinks de ouro
+10. **Polish arte** — iluminação, parallax e consistência final
 
 ---
 
@@ -215,4 +217,4 @@ Pendente:
 
 ---
 
-*Roadmap v0.6 — revisado 2026-07-23 (v0.5.0: arte v2, loja visual, tutorial completo).*
+*Roadmap v0.7 — revisado 2026-07-24 (companheiro único como escopo final; ambientação dos biomas priorizada).*
