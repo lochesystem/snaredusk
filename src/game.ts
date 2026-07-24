@@ -1201,6 +1201,9 @@ export class Game {
     const orbs = document.getElementById('hud-orbs');
     const stamina = document.getElementById('hud-stamina');
     const staminaFill = document.getElementById('hud-stamina-fill');
+    const barrierRow = document.getElementById('hud-barrier-row');
+    const barrierValue = document.getElementById('hud-barrier');
+    const barrierFill = document.getElementById('hud-barrier-fill');
     const w = getEquippedWeapon(this.state.equippedWeaponId);
     const hpVal = Math.max(0, Math.min(100, this.state.playerHp));
     const staVal = Math.max(0, Math.min(PLAYER_MAX_STAMINA, Math.round(this.state.playerStamina)));
@@ -1218,6 +1221,17 @@ export class Game {
       const pct = (staVal / PLAYER_MAX_STAMINA) * 100;
       staminaFill.style.width = `${pct}%`;
       staminaFill.classList.toggle('low', staVal < staLowThreshold);
+    }
+
+    const barrier = this.dungeon?.getPlayerBarrierHud() ?? null;
+    if (barrierRow && barrierValue && barrierFill) {
+      if (barrier) {
+        barrierRow.classList.remove('hidden');
+        barrierValue.textContent = String(Math.ceil(barrier.hp));
+        barrierFill.style.width = `${Math.max(0, Math.min(100, (barrier.hp / barrier.maxHp) * 100))}%`;
+      } else {
+        barrierRow.classList.add('hidden');
+      }
     }
 
     const petWrap = document.getElementById('hud-pet');

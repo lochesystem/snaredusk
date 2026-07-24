@@ -25,8 +25,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   5–7/7–10/9–12 inimigos, validada em 100 seeds por andar
 - **Recompensa entre andares:** ao usar a passagem, o jogador pode extrair toda
   a bolsa para a base ou escolher uma entre três bênçãos para prosseguir
-- Sete perks funcionais no primeiro lote, com ofertas determinísticas e sem
-  repetição: dano, recarga, defesa, cura, movimento e dois bônus de companheiro
+- Pool completo com 12 perks funcionais, ofertas determinísticas e sem
+  repetição de escolhas
+- Golpe Pesado, Caçador de Elite, Barreira Inicial, Laço Preciso e Orbe
+  Persistente adicionam troca entre dano/cadência, bônus contra alvos especiais,
+  escudo por andar, chance de captura e recuperação de Orbe
+- Barreira Inicial possui linha azul própria na HUD, absorção centralizada e
+  feedback visual ao receber dano ou se romper
 - Prosseguir recupera 5% do HP máximo e toda a stamina; Segundo Fôlego acrescenta
   outros 5% de cura, e a escolha fica persistida no checkpoint
 - O mercador da expedição vende um Elixir do Caminhante por encontro: cura
@@ -40,7 +45,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Curva inicial de HP, ataque e velocidade aplicada por andar; Cristal, Termal
   e tutorial preservam o fluxo anterior
 - Testes da geração, perks, cura do mercador e ciclo visual dos baús; suíte
-  atualizada para **319 testes em 68 arquivos**
+  atualizada para **326 testes em 68 arquivos**
 - **Elites de encerramento dos andares:** uma espécie diferente por piso
   desperta na sala marcada após a derrota dos inimigos comuns, com escala,
   aura, barra dourada, título e anúncio próprios

@@ -104,7 +104,10 @@ import {
   type MerchantHealingOffer,
 } from '../systems/merchantHealing.ts';
 import {
+  absorbDamageWithBarrier,
+  getExpeditionOutgoingDamageMultiplier,
   getExpeditionPerkModifiers,
+  rollFailedOrbRefund,
   type ExpeditionPerkModifiers,
 } from '../systems/expeditionPerks.ts';
 import {
@@ -370,6 +373,8 @@ export class DungeonScene {
   private playerY = 0;
   private playerHp: number;
   private playerStamina: number;
+  private playerBarrierHp = 0;
+  private playerBarrierMax = 0;
   private invincibleTimer = 0;
   private dodgeTimer = 0;
   private attackCd = 0;
@@ -452,6 +457,10 @@ export class DungeonScene {
     }
     this.playerHp = state.playerHp;
     this.playerStamina = state.playerStamina;
+    if (this.expeditionStage !== 'none') {
+      this.playerBarrierMax = this.perkModifiers.floorBarrierHp;
+      this.playerBarrierHp = this.playerBarrierMax;
+    }
     this.layout = config.layout ?? generateDungeon(config.seed, state.activeBiome);
     const biome = getBiomeDef(this.layout.biomeId);
     this.pathfinder = new DungeonPathfinder(
@@ -1135,9 +1144,12 @@ export class DungeonScene {
     }
 
     if (damage > 0) {
-      this.recordPlayerHit(this.hazardKillerLabel());
-      this.playerHp = Math.max(0, this.playerHp - damage);
-      drawDamageNumber(this.fxLayer, damage, this.playerX, this.playerY - 20, this.fxRunner);
+      this.applyPlayerDamage(
+        damage,
+        this.hazardKillerLabel(),
+        null,
+        -20,
+      );
     }
   }
 
@@ -1343,10 +1355,7 @@ export class DungeonScene {
             p.damage,
             this.state.playerDef + this.perkModifiers.playerDefenseBonus,
           );
-          this.recordPlayerHit(p.sourceName ?? 'Um projétil');
-          this.playerHp = Math.max(0, this.playerHp - dmg);
-          drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
-          playSfx('combat.hurt');
+          this.applyPlayerDamage(dmg, p.sourceName ?? 'Um projétil');
           hit = true;
         }
         if (hit) {
@@ -1462,10 +1471,18 @@ export class DungeonScene {
     if (enemy.dead || enemy.fled) return;
     if (enemy.isElite && !enemy.eliteAwakened) return;
     enemy.aggroed = true;
-    const sourceMultiplier = source === 'companion'
-      ? this.perkModifiers.companionDamageMultiplier
-      : this.perkModifiers.weaponDamageMultiplier;
-    const modifiedDamage = Math.max(1, Math.round(rawDmg * sourceMultiplier));
+    const damageMultiplier = getExpeditionOutgoingDamageMultiplier(
+      this.perkModifiers,
+      {
+        source,
+        isElite: enemy.isElite,
+        isBoss: enemy.isBoss,
+      },
+    );
+    const modifiedDamage = Math.max(
+      1,
+      Math.round(rawDmg * damageMultiplier),
+    );
     const behavior = getEnemyBehavior(enemy.behaviorId);
     const afterShield = applyShieldDamage(enemy, modifiedDamage, behavior);
     this.updateEnemyStatusBars(enemy);
@@ -1724,10 +1741,11 @@ export class DungeonScene {
             mech.heatWaveDamage,
             this.state.playerDef + this.perkModifiers.playerDefenseBonus,
           );
-          this.recordPlayerHit(this.enemyDisplayName(enemy));
-          this.playerHp = Math.max(0, this.playerHp - dmg);
-          drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
-          playSfx('boss.heatwave');
+          this.applyPlayerDamage(
+            dmg,
+            this.enemyDisplayName(enemy),
+            'boss.heatwave',
+          );
           spawnHeatWaveVfx(this.fxLayer, enemy.x, enemy.y, this.fxRunner);
         }
 
@@ -1774,10 +1792,7 @@ export class DungeonScene {
           result.playerDamage,
           this.state.playerDef + this.perkModifiers.playerDefenseBonus,
         );
-        this.recordPlayerHit(this.enemyDisplayName(enemy));
-        this.playerHp = Math.max(0, this.playerHp - dmg);
-        drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
-        playSfx('combat.hurt');
+        this.applyPlayerDamage(dmg, this.enemyDisplayName(enemy));
       }
 
       enemy.container.x = enemy.x;
@@ -1911,7 +1926,11 @@ export class DungeonScene {
   }
 
   private launchOrb(target: LiveEnemy): void {
-    const rollInput = { targetHp: target.hp, targetMaxHp: target.maxHp };
+    const rollInput = {
+      targetHp: target.hp,
+      targetMaxHp: target.maxHp,
+      bonusChance: this.perkModifiers.captureChanceBonus,
+    };
     const plan = planCaptureSequence(rollInput);
     const container = createCaptureOrbBall();
     container.x = this.playerX;
@@ -2113,11 +2132,21 @@ export class DungeonScene {
 
   private finishCaptureFail(enemy: LiveEnemy, plan: CaptureSequencePlan): void {
     const species = getSpecies(enemy.speciesId);
+    if (rollFailedOrbRefund(this.perkModifiers.failedOrbRefundChance)) {
+      this.state.orbs += 1;
+      this.callbacks.showToast(
+        `Orbe Persistente recuperou o Orbe! Captura de ${species.name} falhou (${formatCapturePercent(plan.chance)})`,
+      );
+      this.callbacks.onStateChange();
+    } else {
+      this.callbacks.showToast(
+        `${species.name} escapou do Orbe (${formatCapturePercent(plan.chance)})`,
+      );
+    }
     enemy.captureLocked = false;
     enemy.container.alpha = 1;
     enemy.aggroed = true;
     playSfx('capture.fail');
-    this.callbacks.showToast(`${species.name} escapou da Orbe! (${formatCapturePercent(plan.chance)})`);
   }
 
   private clearActiveCapture(): void {
@@ -2754,6 +2783,44 @@ export class DungeonScene {
     if (trimmed) this.lastKillerName = trimmed;
   }
 
+  private applyPlayerDamage(
+    damage: number,
+    sourceName: string,
+    sound: 'combat.hurt' | 'boss.heatwave' | null = 'combat.hurt',
+    numberOffsetY = -24,
+  ): number {
+    const result = absorbDamageWithBarrier(this.playerBarrierHp, damage);
+    this.playerBarrierHp = result.barrierHp;
+    this.recordPlayerHit(sourceName);
+
+    if (result.absorbed > 0) {
+      drawDamageNumber(
+        this.fxLayer,
+        result.absorbed,
+        this.playerX,
+        this.playerY + numberOffsetY - 7,
+        this.fxRunner,
+        0x72c7ff,
+      );
+      if (result.broken) {
+        this.callbacks.showToast('A Barreira Inicial se rompeu!');
+      }
+    }
+    if (result.hpDamage > 0) {
+      this.playerHp = Math.max(0, this.playerHp - result.hpDamage);
+      drawDamageNumber(
+        this.fxLayer,
+        result.hpDamage,
+        this.playerX,
+        this.playerY + numberOffsetY,
+        this.fxRunner,
+      );
+    }
+    if (sound) playSfx(sound);
+    this.callbacks.updateHud();
+    return result.hpDamage;
+  }
+
   private countMatriarcaMinions(): number {
     return this.enemies.filter((e) => e.isMinion && !e.dead).length;
   }
@@ -2776,10 +2843,7 @@ export class DungeonScene {
     if (!safe) return;
 
     if (this.invincibleTimer <= 0) {
-      this.playerHp = Math.max(0, this.playerHp - PIT_FALL_DAMAGE);
-      drawDamageNumber(this.fxLayer, PIT_FALL_DAMAGE, this.playerX, this.playerY - 20, this.fxRunner);
-      playSfx('combat.hurt');
-      this.recordPlayerHit('Um buraco');
+      this.applyPlayerDamage(PIT_FALL_DAMAGE, 'Um buraco');
     }
 
     this.playerX = safe.x;
@@ -2840,10 +2904,7 @@ export class DungeonScene {
         impact.damage,
         this.state.playerDef + this.perkModifiers.playerDefenseBonus,
       );
-      this.playerHp = Math.max(0, this.playerHp - dmg);
-      drawDamageNumber(this.fxLayer, dmg, this.playerX, this.playerY - 24, this.fxRunner);
-      playSfx('combat.hurt');
-      this.recordPlayerHit('Estalactite');
+      this.applyPlayerDamage(dmg, 'Estalactite');
     }
 
     const rock: DungeonObstacle = {
@@ -2974,6 +3035,14 @@ export class DungeonScene {
     return {
       hp: Math.max(0, Math.ceil(this.companion.hp)),
       maxHp: this.companion.maxHp,
+    };
+  }
+
+  getPlayerBarrierHud(): { hp: number; maxHp: number } | null {
+    if (this.playerBarrierMax <= 0 || this.playerBarrierHp <= 0) return null;
+    return {
+      hp: this.playerBarrierHp,
+      maxHp: this.playerBarrierMax,
     };
   }
 

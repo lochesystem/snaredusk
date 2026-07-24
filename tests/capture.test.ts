@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canTargetForCapture,
+  CAPTURE_MAX_CHANCE,
   CAPTURE_MIN_SHAKES,
   planCaptureSequence,
   rollCaptureChance,
@@ -25,6 +26,19 @@ describe('capture', () => {
     expect(low).toBeGreaterThan(mid);
     expect(mid).toBeGreaterThan(full);
     expect(low).toBeGreaterThan(0.5);
+  });
+
+  it('aplica bônus de chance sem ultrapassar o limite de captura', () => {
+    expect(rollCaptureChance({
+      targetHp: 100,
+      targetMaxHp: 100,
+      bonusChance: 0.1,
+    })).toBeCloseTo(0.15);
+    expect(rollCaptureChance({
+      targetHp: 1,
+      targetMaxHp: 100,
+      bonusChance: 0.5,
+    })).toBe(CAPTURE_MAX_CHANCE);
   });
 
   it('rollCaptureSuccess respects rng', () => {

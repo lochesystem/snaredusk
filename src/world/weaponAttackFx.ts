@@ -62,6 +62,10 @@ function isAngleInSweep(targetA: number, startA: number, endA: number, padding: 
   return a >= startA - padding && a <= endA + padding;
 }
 
+function angleDistance(a: number, b: number): number {
+  return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+}
+
 /** Hitbox alinhada ao arco/varredura da animação melee. */
 export function isTargetInMeleeSweep(
   originX: number,
@@ -72,6 +76,7 @@ export function isTargetInMeleeSweep(
   style: MeleeSweepStyle,
   range: number,
   targetRadius = ENEMY_HIT_RADIUS,
+  arcAngle?: number,
 ): boolean {
   const sweep = MELEE_SWEEP[style];
   const startA = aimAngle + sweep.startOffset;
@@ -87,7 +92,24 @@ export function isTargetInMeleeSweep(
   if (dist < innerR) return false;
 
   const targetA = Math.atan2(dy, dx);
-  return isAngleInSweep(targetA, startA, endA, sweep.anglePadding);
+  const intersectsAnimatedSweep = isAngleInSweep(
+    targetA,
+    startA,
+    endA,
+    sweep.anglePadding,
+  );
+  if (intersectsAnimatedSweep) return true;
+
+  if (arcAngle === undefined) return false;
+
+  // O raio corporal conta como parte do alvo. Isso deixa o combate corpo a
+  // corpo tolerante quando o inimigo está colado ao jogador, sem permitir
+  // que um golpe acerte criaturas realmente atrás dele.
+  const targetAngularRadius = dist > 0
+    ? Math.asin(Math.min(1, targetRadius / dist))
+    : Math.PI / 2;
+  const bodyPadding = Math.min(0.42, targetAngularRadius);
+  return angleDistance(targetA, aimAngle) <= arcAngle / 2 + bodyPadding;
 }
 
 function easeOutCubic(t: number): number {
@@ -281,7 +303,7 @@ export function tickWeaponAttackFx(
 
   const t = 1 - fx.life / fx.duration;
   fx.root.x = x;
-  fx.root.y = y - 4;
+  fx.root.y = y;
 
   if (fx.style === 'knife') updateKnifeFx(fx, t);
   else if (fx.style === 'pickaxe') updatePickaxeFx(fx, t);

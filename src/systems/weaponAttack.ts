@@ -36,6 +36,7 @@ export function findMeleeHits(
       style,
       weapon.range,
       t.hitRadius,
+      weapon.arcAngle,
     )) {
       continue;
     }

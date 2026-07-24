@@ -973,8 +973,9 @@ export function drawDamageNumber(
   x: number,
   y: number,
   fx: FxRunner,
+  color = 0xffffff,
 ): void {
-  const t = createPixelText(String(amount), 11, 0xffffff, { fontWeight: 'bold' });
+  const t = createPixelText(String(amount), 11, color, { fontWeight: 'bold' });
   t.anchor.set(0.5);
   t.x = x;
   t.y = y;

@@ -17,6 +17,7 @@ export interface CaptureRollInput {
   targetHp: number;
   targetMaxHp: number;
   rarityPenalty?: number;
+  bonusChance?: number;
 }
 
 
@@ -30,14 +31,22 @@ export function canTargetForCapture(hp: number, maxHp: number): boolean {
  * HP 100% → ~5% · HP 50% → ~25% · HP 25% → ~50% · HP 10% → ~70%
  */
 export function rollCaptureChance(input: CaptureRollInput): number {
-  const { targetHp, targetMaxHp, rarityPenalty = 0 } = input;
+  const {
+    targetHp,
+    targetMaxHp,
+    rarityPenalty = 0,
+    bonusChance = 0,
+  } = input;
   if (!canTargetForCapture(targetHp, targetMaxHp)) return 0;
 
   const hpRatio = targetHp / targetMaxHp;
   const weakness = 1 - hpRatio;
   const rate = CAPTURE_MIN_CHANCE + weakness * weakness * CAPTURE_HP_CURVE;
 
-  return Math.max(CAPTURE_MIN_CHANCE, Math.min(CAPTURE_MAX_CHANCE, rate - rarityPenalty));
+  return Math.max(
+    CAPTURE_MIN_CHANCE,
+    Math.min(CAPTURE_MAX_CHANCE, rate - rarityPenalty + bonusChance),
+  );
 }
 
 export function formatCaptureChance(input: CaptureRollInput): string {

@@ -328,7 +328,7 @@ expedição antes do retorno à base.
 - [x] Implementar Implacável, Tempestade e Bastião.
 - [x] Aplicar escalonamento de andar.
 - [x] Criar tela de extração/continuação.
-- [ ] Implementar os 12 perks iniciais. *(7 funcionais no primeiro lote)*
+- [x] Implementar os 12 perks iniciais.
 - [x] Criar arena manual do Rei das Esporas.
 - [ ] Entregar chave somente no baú épico.
 
@@ -350,9 +350,13 @@ meio da exploração. Nome, barra dourada, aura e anúncio identificam o afixo:
 Implacável acelera o ritmo de combate, Tempestade lança uma rajada em leque e
 Bastião acrescenta defesa e escudo.
 
-O primeiro lote contém sete perks já conectados ao combate: Fio Afiado, Mãos
-Rápidas, Casca Reforçada, Segundo Fôlego, Passo Leve, Vínculo Feroz e Guardião.
-Os cinco perks restantes continuam no escopo da Etapa 3.
+O pool inicial de doze perks está conectado ao jogo. Além de Fio Afiado, Mãos
+Rápidas, Casca Reforçada, Segundo Fôlego, Passo Leve, Vínculo Feroz e Guardião,
+Golpe Pesado troca cadência por dano, Caçador de Elite amplia o dano do jogador
+contra elites e chefes, Barreira Inicial concede 20 pontos de escudo a cada
+andar, Laço Preciso soma 10 pontos percentuais à captura e Orbe Persistente tem
+35% de chance de devolver o Orbe após uma falha. A barreira possui leitura
+própria na HUD e todos os efeitos são derivados pelo sistema central de perks.
 
 O mercador ambulante também oferece uma compra única de cura por encontro. O
 Elixir do Caminhante recupera de 5% a 10% do HP máximo e custa uma fração

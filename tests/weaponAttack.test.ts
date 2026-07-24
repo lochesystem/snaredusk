@@ -23,6 +23,34 @@ describe('weaponAttack', () => {
     expect(isTargetInMeleeSweep(0, -4, 0, -20, 0, 'knife', 34, 10)).toBe(false);
   });
 
+  it('knife hits an adjacent enemy inside the weapon arc, not only at maximum reach', () => {
+    const weapon = WEAPONS.faca_enferrujada!;
+    const hits = findMeleeHits(0, 0, 0, weapon, [
+      {
+        id: 'close',
+        x: 7,
+        y: 12,
+        def: 0,
+        dead: false,
+        fled: false,
+        captureLocked: false,
+        hitRadius: 10,
+      },
+      {
+        id: 'behind',
+        x: -10,
+        y: 0,
+        def: 0,
+        dead: false,
+        fled: false,
+        captureLocked: false,
+        hitRadius: 10,
+      },
+    ]);
+    expect(hits.map((hit) => hit.id)).toContain('close');
+    expect(hits.map((hit) => hit.id)).not.toContain('behind');
+  });
+
   it('hits the visible edge of a large crystal enemy', () => {
     const weapon = WEAPONS.faca_enferrujada!;
     const hits = findMeleeHits(0, 0, 0, weapon, [
@@ -57,6 +85,13 @@ describe('weaponAttack', () => {
     while (alive) alive = tickWeaponAttackFx(fx, 0.02, 0, 0);
     expect(fx.root.rotation).toBeCloseTo(aim, 2);
     expect(fx.blades![0]!.rotation).toBeCloseTo(0, 2);
+  });
+
+  it('keeps the visual effect on the same origin used by the hitbox', () => {
+    const fx = createWeaponAttackFx('knife', 0, 34, 0xffffff);
+    tickWeaponAttackFx(fx, 0.01, 12, 18);
+    expect(fx.root.x).toBe(12);
+    expect(fx.root.y).toBe(18);
   });
 
   it('knife hits multiple overlapping targets with unique ids', () => {
