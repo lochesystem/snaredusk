@@ -10,7 +10,8 @@ Fases de produção do GDD ao release jogável. Cada fase tem entregáveis, crit
 flowchart LR
   f0["Fase 0 GDD\nconcluída"] --> f1["Fase 1 Slice\nconcluída"]
   f1 --> f2["Fase 2 Core\n~92%"]
-  f2 --> f3["Fase 3 Polish\n~72%"]
+  f2 --> f25["Fase 2.5 Expedições\nplanejada"]
+  f25 --> f3["Fase 3 Polish\n~72%"]
   f3 --> f4["Fase 4 Release\nparcial"]
 ```
 
@@ -18,7 +19,8 @@ flowchart LR
 
 **Build local:** pós-`v0.5.0`, candidato à próxima release.
 
-**Estimativa restante Fase 2:** 1 ciclo de playtest completo + decisão de escopo de sentinelas/bestiário.
+**Próximo marco:** Bestiário simplificado, seguido pelo vertical slice da nova
+expedição roguelite na Floresta.
 
 ---
 
@@ -28,7 +30,8 @@ flowchart LR
 |------|--------|-------|
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
-| 2 — Core loop | **~92%** | Economia e saves auditados; falta playtest completo e fechar escopo de sentinelas/bestiário |
+| 2 — Core loop | **~92%** | Economia e saves auditados; Bestiário será concluído na próxima trilha |
+| 2.5 — Expedições roguelite | **Planejada** | 3 andares, elites, perks, extração e arena própria por chefe |
 | 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
@@ -99,12 +102,12 @@ flowchart LR
 | **Loja** | 5 níveis, clientes, faixas | **Forte** | Tileset + props, clientes animados, reputação, painel bolsa recolhível |
 | **Craft / oficina** | 20 receitas | **Feito (conteúdo MVP)** | **23 receitas**, construções consumíveis, orbes, materiais, armas e capuzes; armazenamento integrado |
 | **Companheiro** | 1 companheiro ativo | **Feito (MVP)** | Escopo fechado em 1 slot para preservar clareza da ação; IA de idle, seguir e atacar |
-| **Bestiário** | UI + bônus família | **Mínimo** | Registro no save + contador na base; sem tela dedicada |
+| **Bestiário** | UI + bônus família | **Próxima etapa** | Registro já existe; UI simplificada vem antes das expedições |
 | **Criaturas** | 18 espécies | **Feito** | **18/18** (5 capturáveis + chefe por bioma); sprites v1+ nos 3 biomas |
 | **Loot** | 30 itens | **Feito** | **30/30** em `LOOT_TABLE` |
 | **Receitas** | 20 receitas | **Feito** | **23/20** |
 | **Ciclo dia/noite** | Dormir, loja, entardecer | **Parcial (MVP)** | Cama + `dayNumber`; 1 masmorra/dia; dormir após voltar ou fechar loja |
-| **Sentinelas** | 1 por bioma, passivos | **Pendente** | — |
+| **Sentinelas** | 1 por bioma, passivos | **Pós-release** | Fora do escopo atual; mantém 1 companheiro e combate limpo |
 | **Base escavável** | Grid, escavação, baús, craft integrado | **Feito (v0.4)** | Tileset v2, estações v3, landmarks movíveis, rotação (R) |
 | **Produção habitat** | Recursos passivos | **Parcial (MVP)** | Yield fixo por espécie; humor/fome depois |
 | **Popularidade / reputação** | Níveis 1–3 | **Feito (MVP)** | Ouro vendido; +1 prateleira (nív. 2); colecionador (nív. 3) |
@@ -140,6 +143,38 @@ tests/
   save.test.ts               # round-trip, v1–v8, corrupção e localStorage
   … (+ combat, craft, customers, etc.)
 ```
+
+---
+
+## Fase 2.5 — Expedições roguelite (planejada)
+
+**Objetivo:** ampliar duração, risco e variedade das runs sem substituir o loop de
+base, loja e craft.
+
+Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
+
+### Marcos
+
+| Etapa | Entrega | Status |
+|-------|---------|--------|
+| 1 | Bestiário simplificado | Próxima |
+| 2 | Estado, save e retomada de expedição | Planejada |
+| 3 | Floresta: 3 andares, elites, perks e arena | Planejada |
+| 4 | Balanceamento do vertical slice | Planejada |
+| 5 | Cristal e Termal | Planejada |
+| 6 | Drops de elite e longevidade | Planejada |
+| 7 | QA completo e release | Planejada |
+
+### Critérios de done
+
+- [ ] Três andares compactos por bioma e uma arena final.
+- [ ] Extração segura após cada elite.
+- [ ] Três escolhas de perk sem repetição.
+- [ ] Elites existentes com afixos legíveis.
+- [ ] Continue retoma a mesma seed e o mesmo andar.
+- [ ] Chave do próximo bioma vem apenas do chefe.
+- [ ] Expedição completa dura aproximadamente 25–40 minutos.
+- [ ] Novo jogo → três chefes sem softlocks.
 
 ---
 
@@ -202,10 +237,12 @@ tests/
 6. ~~**Ambientação inicial dos biomas**~~ — props orgânicos e colisões por tipo
 7. ~~**Economia de 10 ciclos**~~ — conservador, normal e eficiente
 8. ~~**Suíte completa de save**~~ — migrações, corrupção, round-trip e localStorage
-9. **Playtest completo** — novo jogo → três chefes → craft temático
-10. **Sentinelas** — decidir se vão para pós-release
-11. **Bestiário UI simplificado**
-12. **Polish final** — áudio, responsividade e consistência visual
+9. **Bestiário UI simplificado** — primeira etapa da nova trilha
+10. **Fundação da expedição** — estado, save, extração e retomada
+11. **Vertical slice da Floresta** — 3 andares, elites, perks e arena
+12. **Balancear e replicar** — Cristal e Termal somente após validar a Floresta
+13. **Playtest completo** — novo jogo → três expedições → craft temático
+14. **Polish final** — áudio, responsividade e consistência visual
 
 ---
 
@@ -213,10 +250,12 @@ tests/
 
 | Risco | Mitigação |
 |-------|-----------|
-| Duração de 8–12 h ainda não validada | Playtest completo com telemetria manual por etapa |
+| Três andares virarem repetição, não longevidade | Validar Floresta antes de replicar e ligar reruns a Bestiário/receitas/drops |
+| Expedição ficar longa demais | Andares de 5–8 salas e meta total de 25–40 min |
+| Save quebrar entre andares | Checkpoint só em transições, seed fixa e migração coberta por testes |
 | Build público atrás do local | Agrupar mudanças em uma próxima release testável |
 | Arte residual ainda usa fallback seguro | Remover apenas após auditoria visual dos três biomas |
 
 ---
 
-*Roadmap v0.8 — revisado 2026-07-24 (economia/save auditados; próximo marco é playtest completo).*
+*Roadmap v0.9 — revisado 2026-07-24 (Bestiário e expedições roguelite divididos em etapas).*

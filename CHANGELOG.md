@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Adicionado
 
+- **Planejamento de expedições roguelite:** especificação de três andares,
+  elites, perks temporários, extração, arenas de chefe e implementação em sete
+  etapas, começando pelo Bestiário simplificado
 - **Economia de 10 ciclos:** simulação determinística dos perfis conservador, normal e eficiente usando loja, craft, orbes, reputação e upgrades reais
 - **Suíte completa de save:** round-trip do estado, migrações v1–v8, `localStorage`, JSON inválido e normalização de dados corrompidos
 - Testes: `economy.test.ts` e `save.test.ts` (**283 testes**, 61 arquivos)

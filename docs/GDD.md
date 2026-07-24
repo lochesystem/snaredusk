@@ -19,16 +19,16 @@ Tabela de referência rápida: o que o **código de hoje** faz vs. o que este GD
 | **Obstáculos / decor** | Rochas, buracos, props por bioma, hazards | Hazards por bioma |
 | **Baús** | Raros na masmorra, tecla E | Salas tesouro + armadilhas |
 | **Portal** | Ativa após limpar inimigos; landmarks movíveis na base | Custo escalonado por uso na run |
-| **Minimapa** | Sim (explorado + portal) | Sim (+ salas secretas com sentinela) |
-| **Criaturas** | 12 espécies (9 capturáveis + 3 chefes); sprites v1+ | 18 catalogadas |
+| **Minimapa** | Sim (explorado + portal) | Sim; salas secretas ficam para pós-release |
+| **Criaturas** | 18 espécies (15 comuns + 3 chefes); sprites v1+ | 18 catalogadas |
 | **Captura** | Orbe Q, taxa por HP, mira de alcance | Igual + upgrades e tipos |
-| **Companheiro / sentinelas** | 1 companheiro com IA | 1 companheiro ativo + sentinela passiva opcional por bioma |
+| **Companheiro / sentinelas** | 1 companheiro com IA | 1 companheiro ativo; sentinelas adiadas para pós-release |
 | **Loja** | 5 níveis, 6 arquétipos, 4 faixas, reputação 1–3, tileset visual, clientes animados | 5 níveis, 6 arquétipos, 4 faixas |
 | **Base** | Grid escavável, estações rotacionáveis (R), craft conectado aos baús, habitat com cercados | Escavação, oficina, craft, baús |
 | **Ciclo dia/noite** | Cama, 1 masmorra/dia, produção habitat ao dormir | Dormir, loja diurna, evento entardecer |
-| **Craft / economia** | 2 receitas, compra de orbes, reputação | 20 receitas, sinks de ouro |
+| **Craft / economia** | 23 receitas, compra de orbes, reputação | 20+ receitas, sinks de ouro |
 | **Tutorial** | Mira: masmorra → habitat → loja → orbes (skippável) | 15 min guiado |
-| **Save** | localStorage v7+ (tutorial, reputação, biomas) | Igual + progresso por bioma |
+| **Save** | localStorage v9 (tutorial, reputação, biomas) | Igual + progresso de expedição |
 | **Áudio** | SFX Web Audio + música por bioma | SFX + 4 tracks finais |
 | **Arte** | Sprites v2 player/base/loja; tilesets bioma 1–3 | Sprites pintados + normal maps |
 
@@ -147,6 +147,12 @@ flowchart TD
 ## 3. Masmorra
 
 ### Estrutura geral
+
+> **Redesign planejado:** a masmorra passará a usar três andares procedurais,
+> elites, perks temporários, extração entre andares e uma arena final separada.
+> Regras, etapas e critérios de aceite estão em
+> [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md). Até essa trilha ser
+> implementada, o build continua usando a run única descrita abaixo.
 
 - **3 biomas** no MVP, cada um com tema visual, inimigos, loot e criaturas exclusivas
 - Salas conectadas por **grafo procedural** (não labirinto infinito)
@@ -377,15 +383,19 @@ penalidade_raridade = 0% (comum) | −5% (incomum) | −15% (raro) | −30% (len
 
 ### Sentinelas de bioma
 
+> **Pós-release:** sentinelas não fazem parte do escopo atual. A tabela abaixo é
+> mantida como referência de design futuro; as expedições roguelite serão
+> balanceadas sem depender desses bônus.
+
 Monstros atribuídos como **Sentinela** ficam no habitat mas aplicam passivo **em todo o bioma** correspondente.
 
 | Regra | Valor |
 |-------|-------|
-| Sentinelas simultâneas (MVP) | 1 por bioma |
+| Sentinelas simultâneas (pós-release) | 1 por bioma |
 | Trocar sentinela | Grátis na base; custa 1 ciclo de descanso da criatura |
 | Sentinela exausta | Passivo desativado até descanso |
 
-### Tabela de sentinelas MVP (exemplos)
+### Tabela futura de sentinelas (exemplos)
 
 | Criatura | Bioma | Passivo |
 |----------|-------|---------|
