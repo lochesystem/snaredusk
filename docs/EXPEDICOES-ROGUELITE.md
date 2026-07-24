@@ -323,14 +323,24 @@ expedição antes do retorno à base.
 
 **Objetivo:** validar a experiência inteira em um único bioma.
 
-- [ ] Gerar três andares compactos sem chefe.
+- [x] Gerar três andares compactos sem chefe.
 - [ ] Criar elite final por andar e impedir repetição.
 - [ ] Implementar Implacável, Tempestade e Bastião.
-- [ ] Aplicar escalonamento de andar.
+- [x] Aplicar escalonamento de andar.
 - [ ] Criar tela de extração/continuação.
 - [ ] Implementar os 12 perks iniciais.
-- [ ] Criar arena manual do Rei das Esporas.
+- [x] Criar arena manual do Rei das Esporas.
 - [ ] Entregar chave somente no baú épico.
+
+**Recorte estrutural concluído:** a Floresta gera 5–6, 6–7 e 7–8 salas nos
+andares 1–3, com respectivamente 5–7, 7–10 e 9–12 inimigos. Ao limpar o estágio,
+uma passagem provisória desperta no centro de uma sala de combate aleatória,
+reservada sem evento, baú ou perigo ambiental. Um anúncio comunica a abertura e
+a sala fica marcada em ciano no minimapa. Ao usar o portal, o jogo cria o
+checkpoint seguinte, recupera 15% do HP, restaura stamina e avança até a arena
+isolada. Essa passagem automática será substituída pela escolha “extrair ou
+continuar com perk” no próximo recorte. Baús abertos somem após uma breve pausa
+para não acumular ruído visual nas salas já exploradas.
 
 **Aceite:** uma run completa da Floresta dura aproximadamente 25–40 minutos, pode
 ser extraída em três pontos, não apresenta softlock e continua legível com

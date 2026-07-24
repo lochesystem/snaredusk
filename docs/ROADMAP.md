@@ -121,7 +121,7 @@ elites, escolha de perks e arena final.
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**297 testes**, 63 arquivos)
+- [x] Suite Vitest abrangente (**305 testes**, 64 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -142,6 +142,7 @@ tests/
   economy.test.ts            # 10 ciclos, 3 perfis, orbes/craft/reputação/upgrades
   save.test.ts               # round-trip v10, migração v1–v9, corrupção e localStorage
   expedition.test.ts         # checkpoint, seed, perks e caminhos de encerramento
+  expeditionDungeon.test.ts  # 100 seeds/andar, limites, ausência de boss e arena
   … (+ combat, craft, customers, etc.)
 ```
 
@@ -160,7 +161,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 |-------|---------|--------|
 | 1 | Bestiário simplificado | **Feita** |
 | 2 | Estado, save e retomada de expedição | **Feita** |
-| 3 | Floresta: 3 andares, elites, perks e arena | **Próxima** |
+| 3 | Floresta: 3 andares, elites, perks e arena | **Em andamento — estrutura e portal prontos** |
 | 4 | Balanceamento do vertical slice | Planejada |
 | 5 | Cristal e Termal | Planejada |
 | 6 | Drops de elite e longevidade | Planejada |
@@ -168,7 +169,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 ### Critérios de done
 
-- [ ] Três andares compactos por bioma e uma arena final.
+- [ ] Três andares compactos por bioma e uma arena final. *(Floresta pronta)*
 - [ ] Extração segura após cada elite.
 - [ ] Três escolhas de perk sem repetição.
 - [ ] Elites existentes com afixos legíveis.

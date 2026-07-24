@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  advanceExpeditionStage,
   beginExpedition,
   checkpointExpedition,
   choosePerkAndAdvance,
   endExpedition,
+  getExpeditionDifficulty,
+  getExpeditionStageSeed,
   restoreExpeditionCheckpoint,
 } from '../src/systems/expedition.ts';
 import { defaultGameState } from '../src/types.ts';
@@ -79,6 +82,49 @@ describe('ciclo de vida da expedição', () => {
       perks: ['passo_leve'],
       perkOffers: [],
     });
+  });
+
+  it('deriva seeds estáveis e distintas para cada estágio', () => {
+    const state = defaultGameState();
+    const expedition = beginExpedition(state, 'floresta', 20260724);
+    const floorOneSeed = getExpeditionStageSeed(expedition);
+    expedition.floor = 2;
+    const floorTwoSeed = getExpeditionStageSeed(expedition);
+
+    expect(floorOneSeed).toBe(getExpeditionStageSeed({ ...expedition, floor: 1 }));
+    expect(floorTwoSeed).not.toBe(floorOneSeed);
+  });
+
+  it('recupera 15% de HP, restaura stamina e cria o próximo checkpoint', () => {
+    const state = defaultGameState();
+    beginExpedition(state, 'floresta', 14);
+    state.playerHp = 40;
+    state.playerStamina = 3;
+
+    const next = advanceExpeditionStage(state);
+
+    expect(next).toMatchObject({
+      floor: 2,
+      phase: 'exploring',
+      checkpointHp: 55,
+      checkpointStamina: 80,
+    });
+    expect(state.playerHp).toBe(55);
+    expect(state.playerStamina).toBe(80);
+  });
+
+  it('usa a curva de dificuldade definida para cada andar', () => {
+    expect(getExpeditionDifficulty(1)).toEqual({
+      hpMultiplier: 1,
+      attackMultiplier: 1,
+      speedMultiplier: 1,
+    });
+    expect(getExpeditionDifficulty(3)).toEqual({
+      hpMultiplier: 1.55,
+      attackMultiplier: 1.25,
+      speedMultiplier: 1.08,
+    });
+    expect(getExpeditionDifficulty(4).hpMultiplier).toBe(1.25);
   });
 
   it('rejeita transições sem recompensa ou com perk fora das ofertas', () => {

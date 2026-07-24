@@ -97,6 +97,8 @@ import {
 } from '../systems/companionCombat.ts';
 import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
 import { registerBestiarySpecies } from '../systems/bestiary.ts';
+import type { ExpeditionDifficulty } from '../systems/expedition.ts';
+import { getOpenedChestPresentation } from '../systems/openedChestLifecycle.ts';
 import { selectHotbarSlot } from '../systems/weaponHotbar.ts';
 import {
   applySlipVelocity,
@@ -121,6 +123,10 @@ import {
 } from '../systems/bossPhase.ts';
 import { showBossIntro, hideBossIntro } from '../ui/bossIntroUI.ts';
 import { showBossVictory, hideBossVictory } from '../ui/bossVictoryUI.ts';
+import {
+  hideFloorPortalReveal,
+  showFloorPortalReveal,
+} from '../ui/portalRevealUI.ts';
 import { flashPhaseTransition, hideBossHud, showBossHud, updateBossHud } from '../ui/bossHudUI.ts';
 import { playSfx } from '../engine/audioManager.ts';
 import { playMusic } from '../engine/musicManager.ts';
@@ -187,7 +193,7 @@ import {
   drawAimReticle,
 } from '../world/aimReticle.ts';
 
-export type DungeonExitReason = 'portal' | 'death' | 'abandon';
+export type DungeonExitReason = 'portal' | 'floor_complete' | 'death' | 'abandon';
 
 export interface DungeonReturnPayload {
   reason: DungeonExitReason;
@@ -206,6 +212,8 @@ export interface DungeonSceneConfig {
   seed: number;
   layout?: DungeonLayout;
   tutorialRun?: boolean;
+  expeditionStage?: 'floor' | 'boss';
+  difficulty?: ExpeditionDifficulty;
 }
 
 interface LiveEnemy {
@@ -298,6 +306,8 @@ interface LiveChest {
   goldBonus: number;
   epic: boolean;
   opened: boolean;
+  openedAge: number;
+  removed: boolean;
   container: Container;
 }
 
@@ -376,6 +386,12 @@ export class DungeonScene {
   private fxRunner = new FxRunner();
   private tutorialRun = false;
   private tutorialEnemyDamaged = false;
+  private expeditionStage: 'none' | 'floor' | 'boss' = 'none';
+  private difficulty: ExpeditionDifficulty = {
+    hpMultiplier: 1,
+    attackMultiplier: 1,
+    speedMultiplier: 1,
+  };
 
   private state: GameState;
   private input: InputManager;
@@ -392,6 +408,15 @@ export class DungeonScene {
     this.callbacks = callbacks;
     this.playerSprite = createPlayerSprite(state.equippedHoodId);
     this.tutorialRun = config.tutorialRun ?? false;
+    this.expeditionStage = config.expeditionStage ?? 'none';
+    this.difficulty = config.difficulty ?? this.difficulty;
+    if (this.expeditionStage === 'floor') {
+      this.bossGateClosed = false;
+      this.bossFightPhase = 'done';
+    } else if (this.expeditionStage === 'boss') {
+      this.bossGateClosed = false;
+      this.bossGateOpened = true;
+    }
     this.playerHp = state.playerHp;
     this.playerStamina = state.playerStamina;
     this.layout = config.layout ?? generateDungeon(config.seed, state.activeBiome);
@@ -430,7 +455,7 @@ export class DungeonScene {
     this.refreshBossGateGfx();
 
     this.bossArenaFog = new BossArenaFog();
-    if (!this.tutorialRun) {
+    if (!this.tutorialRun && this.layout.bossRoomIndex >= 0) {
       const bossRoom = this.layout.rooms.find((r) => r.index === this.layout.bossRoomIndex);
       if (bossRoom) {
         this.bossArenaFog.setup(bossRoom.rect, this.layout.biomeId, config.seed);
@@ -491,6 +516,7 @@ export class DungeonScene {
     this.active = false;
     hideBossIntro();
     hideBossVictory();
+    hideFloorPortalReveal();
     hideBossHud();
     clearAllBossVfx();
     document.getElementById('game-wrapper')?.classList.remove(
@@ -519,7 +545,8 @@ export class DungeonScene {
       }
       this.entityLayer.addChild(container);
       const combatInit = initEnemyCombatFields(species.behaviorId);
-      const maxHp = spawn.hp ?? species.maxHp;
+      const baseMaxHp = spawn.hp ?? species.maxHp;
+      const maxHp = Math.max(1, Math.round(baseMaxHp * this.difficulty.hpMultiplier));
       const enemy: LiveEnemy = {
         id: `enemy-${nextEnemyId++}`,
         speciesId: spawn.speciesId,
@@ -529,8 +556,8 @@ export class DungeonScene {
         maxHp,
         x: spawn.x,
         y: spawn.y,
-        atk: species.atk,
-        speed: species.speed,
+        atk: Math.max(1, Math.round(species.atk * this.difficulty.attackMultiplier)),
+        speed: species.speed * this.difficulty.speedMultiplier,
         def: species.def,
         behaviorId: species.behaviorId,
         attackCd: 0,
@@ -640,6 +667,8 @@ export class DungeonScene {
         goldBonus: 0,
         epic: false,
         opened: false,
+        openedAge: 0,
+        removed: false,
         container,
       });
     }
@@ -650,7 +679,7 @@ export class DungeonScene {
 
     this.tryDodge(dt);
     this.tryWeaponHotbar();
-    if (!this.tutorialRun) {
+    if (!this.tutorialRun && this.expeditionStage !== 'floor') {
       this.updateBossFight(dt);
       this.bossArenaFog.update(dt, this.bossFightPhase);
     }
@@ -665,6 +694,7 @@ export class DungeonScene {
     this.updateEnemies(dt);
     this.updateCompanion(dt);
     this.updateCaptureOrbs(dt);
+    this.updateOpenedChests(dt);
     this.tryLaunchCapture();
     this.resolvePendingChoices();
     this.handleInteract();
@@ -684,7 +714,12 @@ export class DungeonScene {
     this.world.x = -this.camera.x;
     this.world.y = -this.camera.y;
     this.visionFog.update(this.playerX - this.camera.x, this.playerY - this.camera.y);
-    this.minimap.update(this.layout, this.playerX, this.playerY);
+    this.minimap.update(
+      this.layout,
+      this.playerX,
+      this.playerY,
+      this.portalActive,
+    );
 
     this.state.playerHp = Math.round(this.playerHp);
     this.state.playerStamina = Math.round(this.playerStamina);
@@ -918,13 +953,15 @@ export class DungeonScene {
       gateWalls: this.layout.bossGateWalls,
       gateOpened: this.bossGateOpened,
       gateClosed: this.bossGateClosed,
-      hasKey: hasBossGateKey(this.state, this.layout.biomeId),
+      hasKey: this.expeditionStage === 'boss'
+        || hasBossGateKey(this.state, this.layout.biomeId),
     });
   }
 
   private abortBossIntro(): void {
     hideBossIntro();
     hideBossVictory();
+    hideFloorPortalReveal();
     hideBossHud();
     this.bossFightPhase = 'locked';
     this.bossIntroTimer = 0;
@@ -1275,6 +1312,7 @@ export class DungeonScene {
 
   private tryGrantBossKey(): void {
     if (this.tutorialRun) return;
+    if (this.expeditionStage !== 'none') return;
     if (this.bossFightPhase !== 'locked') return;
     if (hasBossGateKey(this.state, this.layout.biomeId)) return;
     if (countRemainingPhaseEnemies(this.enemies) > 0) return;
@@ -1389,6 +1427,8 @@ export class DungeonScene {
       goldBonus: drop.goldBonus,
       epic: drop.epic,
       opened: false,
+      openedAge: 0,
+      removed: false,
       container,
     });
   }
@@ -2074,9 +2114,13 @@ export class DungeonScene {
 
     const portalDist = distance(this.playerX, this.playerY, this.layout.portal.x, this.layout.portal.y);
     if (this.portalActive && portalDist < 28) {
-      this.state.dungeonCleared = true;
+      if (this.expeditionStage !== 'floor') {
+        this.state.dungeonCleared = true;
+      }
       this.active = false;
-      this.callbacks.onReturnToBase({ reason: 'portal' });
+      this.callbacks.onReturnToBase({
+        reason: this.expeditionStage === 'floor' ? 'floor_complete' : 'portal',
+      });
       return;
     }
 
@@ -2102,6 +2146,7 @@ export class DungeonScene {
       }
 
       chest.opened = true;
+      chest.openedAge = 0;
       playSfx('dungeon.chest');
       if (chest.epic) {
         this.bossChestOpened = true;
@@ -2565,9 +2610,35 @@ export class DungeonScene {
       this.portalSprite.alpha = cleared ? 1 : 0;
       return;
     }
+    if (this.expeditionStage === 'floor') {
+      const cleared = countRemainingPhaseEnemies(this.enemies) === 0;
+      const justRevealed = cleared && !this.portalActive;
+      this.portalActive = cleared;
+      this.portalSprite.visible = cleared;
+      this.portalSprite.alpha = cleared ? 1 : 0;
+      if (justRevealed) {
+        playSfx('dungeon.gate', { volume: 0.72, speed: 0.82 });
+        showFloorPortalReveal();
+      }
+      return;
+    }
     this.portalActive = this.bossChestOpened;
     this.portalSprite.visible = this.bossChestOpened;
     this.portalSprite.alpha = this.bossChestOpened ? 1 : 0;
+  }
+
+  private updateOpenedChests(dt: number): void {
+    for (const chest of this.chests) {
+      if (!chest.opened || chest.removed) continue;
+      chest.openedAge += dt;
+      const presentation = getOpenedChestPresentation(chest.openedAge);
+      chest.container.alpha = presentation.alpha;
+      chest.container.scale.set(presentation.scale);
+      if (!presentation.expired) continue;
+      chest.removed = true;
+      chest.container.parent?.removeChild(chest.container);
+      chest.container.destroy({ children: true });
+    }
   }
 
   private checkPlayerDeath(): void {
@@ -2625,7 +2696,9 @@ export class DungeonScene {
       return `[Q] Lançar Orbe → ${species.name} · ${chance} · HP ${Math.ceil(target.hp)}/${target.maxHp}`;
     }
     if (this.portalActive) {
-      return '[E] Usar portal — retornar à base';
+      return this.expeditionStage === 'floor'
+        ? '[E] Usar passagem — próximo andar'
+        : '[E] Usar portal — retornar à base';
     }
     if (
       this.bossGateClosed &&

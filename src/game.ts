@@ -8,10 +8,17 @@ import { defaultGameState, type GameState } from './types.ts';
 import { hasSave, loadGame, saveGame } from './systems/saveManager.ts';
 import { clearDungeonSpecial } from './systems/dungeonSpecial.ts';
 import {
+  advanceExpeditionStage,
   beginExpedition,
   endExpedition,
+  getExpeditionDifficulty,
+  getExpeditionStageSeed,
   restoreExpeditionCheckpoint,
 } from './systems/expedition.ts';
+import {
+  generateBossArena,
+  generateExpeditionFloor,
+} from './world/dungeonGenerator.ts';
 import { moveCreatureToBag, moveCreatureToHabitat, listHabitatPens } from './systems/habitat.ts';
 import { endDay, canSleepToday, canEnterDungeonToday, markDungeonReturned, resumeDayAtBase } from './systems/dayCycle.ts';
 import { buyOrbPack, canBuyOrbPack } from './systems/orbShop.ts';
@@ -917,7 +924,27 @@ export class Game {
     if (!resume && !tutorialRun) {
       beginExpedition(this.state, this.state.activeBiome, seed);
     }
-    const layout = tutorialRun ? generateTutorialDungeon(this.state.activeBiome) : undefined;
+    const activeExpedition = this.state.activeExpedition;
+    const useForestExpedition = !tutorialRun
+      && activeExpedition?.biomeId === 'floresta';
+    const stageSeed = activeExpedition
+      ? getExpeditionStageSeed(activeExpedition)
+      : seed;
+    const expeditionStage = useForestExpedition
+      ? activeExpedition.floor === 4 ? 'boss' : 'floor'
+      : undefined;
+    const layout = tutorialRun
+      ? generateTutorialDungeon(this.state.activeBiome)
+      : useForestExpedition
+        ? activeExpedition.floor === 4
+          ? generateBossArena(stageSeed, activeExpedition.biomeId)
+          : generateExpeditionFloor({
+              biomeId: activeExpedition.biomeId,
+              floor: activeExpedition.floor,
+              seed: stageSeed,
+              includeBoss: false,
+            })
+        : undefined;
 
     hideTutorialDialog();
 
@@ -933,7 +960,15 @@ export class Game {
       showToast: (m) => this.showToast(m),
       updateHud: () => this.updateHud(),
       onTutorialEvent: (event) => this.onDungeonTutorialEvent(event),
-    }, { seed, layout, tutorialRun });
+    }, {
+      seed: stageSeed,
+      layout,
+      tutorialRun,
+      expeditionStage,
+      difficulty: activeExpedition && useForestExpedition
+        ? getExpeditionDifficulty(activeExpedition.floor)
+        : undefined,
+    });
 
     if (!tutorialRun && !resume) {
       this.state.dungeonUsedToday = true;
@@ -1017,7 +1052,16 @@ export class Game {
 
       this.dungeon.update(dt);
       const hint = document.getElementById('hud-hint');
-      if (hint) hint.textContent = this.dungeon.getHudHint();
+      if (hint) {
+        const expedition = this.state.activeExpedition;
+        const stage = expedition?.biomeId === 'floresta'
+          ? expedition.floor === 4
+            ? 'Arena do Rei das Esporas'
+            : `Andar ${expedition.floor}/3`
+          : '';
+        const action = this.dungeon.getHudHint();
+        hint.textContent = stage ? `${stage} · ${action}` : action;
+      }
     }
 
     if (this.pendingDungeonExit !== null && !this.processingDungeonExit) {
@@ -1034,12 +1078,31 @@ export class Game {
     closeAbandonModal();
     closeInventoryModal();
     closeBestiaryModal();
+
+    if (payload.reason === 'floor_complete' && this.state.activeExpedition) {
+      this.destroyDungeon();
+      clearDungeonSpecial(this.state);
+      const next = advanceExpeditionStage(this.state);
+      saveGame(this.state);
+      await this.enterDungeon({ resume: true });
+      this.showToast(
+        next.floor === 4
+          ? 'Arena do Rei das Esporas'
+          : `Floresta Fúngica — andar ${next.floor}/3`,
+      );
+      return;
+    }
+
     clearDungeonSpecial(this.state);
     markDungeonReturned(this.state);
     if (this.state.activeExpedition) {
       endExpedition(
         this.state,
-        payload.reason === 'portal' ? 'victory' : payload.reason,
+        payload.reason === 'portal'
+          ? 'victory'
+          : payload.reason === 'floor_complete'
+            ? 'abandon'
+            : payload.reason,
       );
     }
 

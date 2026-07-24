@@ -19,6 +19,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Ciclo de vida separado para extração, morte, abandono e vitória, sempre
   limpando perks e andamento antes de salvar o retorno à base
 - Testes de expedição e smoke test no Chrome para retomada/abandono
+- **Vertical slice estrutural da Floresta:** três andares procedurais compactos
+  sem chefe e quarta etapa com arena isolada do Rei das Esporas
+- Quantidade crescente por estágio: 5–6/6–7/7–8 salas e
+  5–7/7–10/9–12 inimigos, validada em 100 seeds por andar
+- Passagem automática provisória entre andares com checkpoint, recuperação de
+  15% do HP, stamina restaurada e HUD indicando andar/arena
+- Ao limpar um andar, o portal surge no centro de uma sala de combate aleatória
+  sem evento, baú ou perigo; um anúncio próprio informa o despertar e a sala
+  passa a ser marcada em ciano no minimapa
+- Baús abertos permanecem visíveis por um segundo e desaparecem com uma
+  transição curta, reduzindo a poluição visual das salas já exploradas
+- Curva inicial de HP, ataque e velocidade aplicada por andar; Cristal, Termal
+  e tutorial preservam o fluxo anterior
+- Testes da geração de expedição e do ciclo visual dos baús; suíte atualizada
+  para **308 testes em 65 arquivos**
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado

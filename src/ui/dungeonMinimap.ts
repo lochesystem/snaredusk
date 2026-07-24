@@ -30,7 +30,12 @@ export class DungeonMinimap {
     return this.hidden;
   }
 
-  update(layout: DungeonLayout, playerX: number, playerY: number): void {
+  update(
+    layout: DungeonLayout,
+    playerX: number,
+    playerY: number,
+    portalRevealed = false,
+  ): void {
     for (const room of layout.rooms) {
       if (this.isInsideRoom(playerX, playerY, room.rect)) {
         this.explored.add(room.index);
@@ -86,19 +91,21 @@ export class DungeonMinimap {
     }
 
     for (const room of layout.rooms) {
-      if (!this.explored.has(room.index)) continue;
+      const isPortal = room.index === this.portalRoomIndex;
+      if (!this.explored.has(room.index) && !(isPortal && portalRevealed)) continue;
 
       const cx = originX + (room.gx - minGx) * cell + cell / 2;
       const cy = originY + (room.gy - minGy) * cell + cell / 2;
       const rw = cell * 0.82;
       const rh = cell * 0.72;
       const isCurrent = room.index === currentRoomIndex;
-      const isPortal = room.index === this.portalRoomIndex;
       const roomType = (room as { type?: string }).type;
 
       this.gfx.rect(cx - rw / 2, cy - rh / 2, rw, rh);
       if (isCurrent) {
         this.gfx.fill(0xe8e8f0);
+      } else if (isPortal && layout.portalKind === 'floor') {
+        this.gfx.fill(0x55d8cf);
       } else if (isPortal || roomType === 'boss') {
         this.gfx.fill(0xe85d4a);
       } else if (roomType === 'treasure') {

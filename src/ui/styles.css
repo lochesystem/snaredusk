@@ -2956,6 +2956,83 @@ button:hover {
   background: linear-gradient(90deg, transparent, rgba(200, 160, 100, 0.7), transparent);
 }
 
+/* Anúncio do portal entre andares */
+.floor-portal-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(28, 94, 84, 0.18) 0%,
+    rgba(5, 12, 15, 0.52) 68%,
+    transparent 100%
+  );
+  transition: opacity 0.45s ease;
+}
+
+.floor-portal-reveal.visible {
+  opacity: 1;
+}
+
+.floor-portal-reveal-content {
+  min-width: min(460px, calc(100% - 48px));
+  padding: 22px 34px 20px;
+  text-align: center;
+  border-block: 1px solid rgba(113, 235, 215, 0.38);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(5, 24, 27, 0.88) 18%,
+    rgba(8, 31, 34, 0.94) 50%,
+    rgba(5, 24, 27, 0.88) 82%,
+    transparent
+  );
+  transform: translateY(10px) scale(0.98);
+  transition: transform 0.55s ease;
+}
+
+.floor-portal-reveal.visible .floor-portal-reveal-content {
+  transform: translateY(0) scale(1);
+}
+
+.floor-portal-reveal-rune {
+  display: block;
+  margin-bottom: 4px;
+  color: #8df1dc;
+  font-size: 1.15rem;
+  text-shadow: 0 0 18px rgba(87, 235, 214, 0.95);
+}
+
+.floor-portal-reveal-title {
+  margin: 0;
+  color: #d8fff4;
+  font-size: clamp(1.25rem, 4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: 0 0 24px rgba(72, 211, 191, 0.55), 0 2px 0 #071214;
+}
+
+.floor-portal-reveal-sub {
+  margin: 8px 0 0;
+  color: #a9d9cf;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+}
+
+.floor-portal-reveal-map {
+  margin: 7px 0 0;
+  color: #6fa69d;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Day transition (sleep / new day) */
 .day-transition-overlay {
   position: absolute;

@@ -10,6 +10,12 @@ import type { BiomeId } from '../data/biomes.ts';
 
 export type ExpeditionEndReason = 'extract' | 'death' | 'abandon' | 'victory';
 
+export interface ExpeditionDifficulty {
+  hpMultiplier: number;
+  attackMultiplier: number;
+  speedMultiplier: number;
+}
+
 function cloneBag(bag: (BagEntry | null)[]): (BagEntry | null)[] {
   return bag.map((entry) => entry ? { ...entry } : null);
 }
@@ -55,6 +61,25 @@ export function restoreExpeditionCheckpoint(state: GameState): ActiveExpedition 
   return expedition;
 }
 
+/** Deriva uma seed estável e distinta para cada andar a partir da seed da run. */
+export function getExpeditionStageSeed(expedition: ActiveExpedition): number {
+  const mixed = Math.imul(
+    (expedition.seed >>> 0) ^ Math.imul(expedition.floor, 0x9e3779b1),
+    0x85ebca6b,
+  );
+  return (mixed ^ (mixed >>> 13)) >>> 0;
+}
+
+export function getExpeditionDifficulty(floor: ExpeditionFloor): ExpeditionDifficulty {
+  const values: Record<ExpeditionFloor, ExpeditionDifficulty> = {
+    1: { hpMultiplier: 1, attackMultiplier: 1, speedMultiplier: 1 },
+    2: { hpMultiplier: 1.25, attackMultiplier: 1.12, speedMultiplier: 1.04 },
+    3: { hpMultiplier: 1.55, attackMultiplier: 1.25, speedMultiplier: 1.08 },
+    4: { hpMultiplier: 1.25, attackMultiplier: 1.15, speedMultiplier: 1 },
+  };
+  return values[floor];
+}
+
 /** Registra uma fronteira segura que poderá ser retomada pelo Continue. */
 export function checkpointExpedition(
   state: GameState,
@@ -95,6 +120,27 @@ export function choosePerkAndAdvance(
     throw new Error('A arena final não possui próximo andar');
   }
   expedition.perks.push(perkId);
+  const nextFloor = (expedition.floor + 1) as ExpeditionFloor;
+  return checkpointExpedition(
+    state,
+    nextFloor,
+    nextFloor === 4 ? 'boss' : 'exploring',
+  );
+}
+
+/**
+ * Transição provisória usada antes da tela de perks da etapa 3.
+ * Mantém a regra de recuperação e cria imediatamente o checkpoint seguinte.
+ */
+export function advanceExpeditionStage(state: GameState): ActiveExpedition {
+  const expedition = state.activeExpedition;
+  if (!expedition) throw new Error('Nenhuma expedição ativa');
+  if (expedition.floor >= 4) throw new Error('A arena final encerra a expedição');
+  state.playerHp = Math.min(
+    PLAYER_MAX_HP,
+    state.playerHp + Math.ceil(PLAYER_MAX_HP * 0.15),
+  );
+  state.playerStamina = PLAYER_MAX_STAMINA;
   const nextFloor = (expedition.floor + 1) as ExpeditionFloor;
   return checkpointExpedition(
     state,
