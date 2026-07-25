@@ -6,6 +6,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Adicionado
 
+- **Suporte a controles externos via Gamepad API**, com layout inicial para
+  DualSense: movimento, mira, ataque, captura, esquiva, interação, armas,
+  inventário, mapa e menus
+- Cursor virtual, navegação por foco nos menus, vibração de combate e painel em
+  Opções para remapear botões, ajustar zona morta, velocidade, eixo Y e vibração
+- Preferências do controle persistidas no navegador e troca transparente entre
+  controle e mouse/teclado
+- Testes de configuração, zona morta e leitura do Gamepad API; suíte atualizada
+  para **337 testes em 69 arquivos**
 - **Bestiário simplificado:** 18 fichas em abas por bioma, silhuetas para
   criaturas não registradas, sprites e dados de combate, drops, produção,
   disponibilidade como companheiro e progresso por bioma/total

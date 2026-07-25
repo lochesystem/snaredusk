@@ -43,12 +43,14 @@ import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
 import { applyAudioSettings, loadAudioSettings } from './systems/audioSettings.ts';
+import { loadControllerSettings } from './systems/controllerSettings.ts';
 import {
   bindAudioSettingsModal,
   closeAudioSettingsModal,
   isAudioSettingsModalOpen,
   openAudioSettingsModal,
 } from './ui/audioSettingsUI.ts';
+import { bindControllerSettingsModal } from './ui/controllerSettingsUI.ts';
 import { isDayTransitionPlaying, playDayTransition } from './ui/dayTransitionUI.ts';
 import { playDeathTransition } from './ui/deathTransitionUI.ts';
 import {
@@ -167,6 +169,8 @@ export class Game {
   private rewardDecisionOpen = false;
   private shopUI: ShopUI;
   private iconCache = new Map<string, string>();
+  private controllerLoopLastTime = 0;
+  private controllerFocusScope: HTMLElement | null = null;
 
   constructor() {
     this.shopUI = new ShopUI({
@@ -193,6 +197,7 @@ export class Game {
     bindBestiaryModal();
     bindAbandonModal();
     bindAudioSettingsModal();
+    bindControllerSettingsModal();
     this.bindTutorial();
     this.bindBaseUI();
   }
@@ -375,6 +380,7 @@ export class Game {
   async init(): Promise<void> {
     loadAudioSettings();
     applyAudioSettings();
+    loadControllerSettings();
 
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     this.app = new Application();
@@ -392,6 +398,7 @@ export class Game {
     window.addEventListener('resize', () => this.fitCanvas());
 
     this.input = new InputManager(canvas);
+    this.startControllerLoop();
 
     void Promise.all([
       ensureCreatureSpritesPreloaded(),
@@ -430,6 +437,95 @@ export class Game {
   private setRenderLoop(active: boolean): void {
     if (active) this.app.start();
     else this.app.stop();
+  }
+
+  private startControllerLoop(): void {
+    const tick = (time: number) => {
+      const dt = this.controllerLoopLastTime > 0
+        ? Math.min(0.05, (time - this.controllerLoopLastTime) / 1000)
+        : 0;
+      this.controllerLoopLastTime = time;
+      this.input.updateGamepads(dt);
+      this.handleControllerDomNavigation();
+      this.updateControllerCursor();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  private activeControllerScope(): HTMLElement | null {
+    const modals = [...document.querySelectorAll<HTMLElement>('.modal:not(.hidden)')];
+    if (modals.length > 0) return modals.at(-1) ?? null;
+    if (this.screen === 'title') return document.getElementById('title-screen');
+    return null;
+  }
+
+  private controllerFocusable(scope: HTMLElement): HTMLElement[] {
+    const elements = [...scope.querySelectorAll<HTMLElement>(
+      'button:not(:disabled):not(.hidden), input:not(:disabled), [tabindex]:not([tabindex="-1"])',
+    )].filter((element) => {
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    return [
+      ...elements.filter((element) => !element.classList.contains('modal-close-icon')),
+      ...elements.filter((element) => element.classList.contains('modal-close-icon')),
+    ];
+  }
+
+  private handleControllerDomNavigation(): void {
+    const scope = this.activeControllerScope();
+    const captured = Boolean(scope && this.input.isGamepadConnected());
+    this.input.setControllerUiCaptured(captured);
+    if (!captured || !scope || !this.input.isUsingGamepad()) {
+      this.controllerFocusScope = scope;
+      return;
+    }
+    if (scope.querySelector('.controller-binding-row button.listening')) return;
+
+    const focusable = this.controllerFocusable(scope);
+    if (focusable.length === 0) return;
+    const active = document.activeElement as HTMLElement | null;
+    let index = active && scope.contains(active) ? focusable.indexOf(active) : -1;
+    if (this.controllerFocusScope !== scope || index < 0) {
+      this.controllerFocusScope = scope;
+      index = 0;
+      focusable[index]?.focus();
+    }
+
+    const direction = this.input.consumeNavigation();
+    if (direction) {
+      const current = focusable[index] ?? focusable[0]!;
+      if (
+        current instanceof HTMLInputElement
+        && current.type === 'range'
+        && (direction === 'left' || direction === 'right')
+      ) {
+        const step = Number(current.step || 1);
+        const sign = direction === 'left' ? -1 : 1;
+        current.value = String(Math.min(
+          Number(current.max),
+          Math.max(Number(current.min), Number(current.value) + step * sign),
+        ));
+        current.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        const delta = direction === 'up' || direction === 'left' ? -1 : 1;
+        index = (index + delta + focusable.length) % focusable.length;
+        focusable[index]?.focus();
+      }
+      playSfx('ui.click', { volume: 0.35, speed: 1.15 });
+    }
+
+    if (this.input.consumeControllerAction('interact')) {
+      (document.activeElement as HTMLElement | null)?.click();
+    }
+
+    const cancel = this.input.consumeControllerAction('dodge')
+      || this.input.consumeControllerAction('menu');
+    if (cancel) {
+      const close = scope.querySelector<HTMLButtonElement>('.modal-close-icon');
+      close?.click();
+    }
   }
 
   private fitCanvas(): void {
@@ -1095,6 +1191,17 @@ export class Game {
         this.processingDungeonExit = false;
       });
     }
+  }
+
+  private updateControllerCursor(): void {
+    const cursor = document.getElementById('controller-cursor');
+    if (!cursor) return;
+    const visible = this.input.isUsingGamepad()
+      && (this.screen === 'base' || this.screen === 'shop');
+    cursor.classList.toggle('hidden', !visible);
+    if (!visible) return;
+    cursor.style.left = `${(this.input.mouseX / GAME_WIDTH) * 100}%`;
+    cursor.style.top = `${(this.input.mouseY / GAME_HEIGHT) * 100}%`;
   }
 
   private async finishDungeonExit(payload: DungeonReturnPayload): Promise<void> {

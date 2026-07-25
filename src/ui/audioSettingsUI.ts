@@ -4,6 +4,10 @@ import {
   saveAudioSettings,
   type AudioSettings,
 } from '../systems/audioSettings.ts';
+import {
+  closeControllerBindingCapture,
+  renderControllerSettings,
+} from './controllerSettingsUI.ts';
 
 function pctLabel(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -57,10 +61,12 @@ export function bindAudioSettingsModal(): void {
 
 export function openAudioSettingsModal(): void {
   renderForm(getAudioSettings());
+  renderControllerSettings();
   document.getElementById('audio-settings-modal')?.classList.remove('hidden');
 }
 
 export function closeAudioSettingsModal(): void {
+  closeControllerBindingCapture();
   document.getElementById('audio-settings-modal')?.classList.add('hidden');
 }
 

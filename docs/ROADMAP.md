@@ -201,6 +201,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 | **SFX / Música** | Web Audio + placeholders | **Parcial** | SFX combate/UI; música por bioma |
 | **Boss HUD + fases** | Barra topo + 50% HP | **Feito** |
 | **UI** | Painéis, inventário, craft e animações | **Forte** | Padrão minimalista e fechamento por ×; revisão final responsiva pendente |
+| **Controle externo** | DualSense/Gamepad API, remapeamento e menus | **Feito** | Analógicos, cursor virtual, vibração e preferências persistidas |
 
 ---
 

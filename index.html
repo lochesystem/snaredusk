@@ -11,6 +11,7 @@
   <div id="app">
     <div id="game-wrapper">
       <canvas id="game-canvas"></canvas>
+      <div id="controller-cursor" class="controller-cursor hidden" aria-hidden="true"></div>
       <div id="hud" class="hidden">
         <div id="hud-top">
           <div class="hud-vitals">
@@ -105,7 +106,7 @@
         <div class="modal-title-row">
           <div>
             <p class="modal-kicker">Preferências</p>
-            <h3>Opções de áudio</h3>
+            <h3>Opções</h3>
           </div>
           <button id="audio-settings-close" class="modal-close-icon" type="button" aria-label="Fechar">×</button>
         </div>
@@ -123,6 +124,47 @@
           <input id="audio-mute" type="checkbox" />
           <span>Silenciar tudo</span>
         </label>
+        <div class="settings-divider"></div>
+        <div class="controller-settings-heading">
+          <div>
+            <p class="modal-kicker">Controle externo</p>
+            <h4>Gamepad</h4>
+          </div>
+          <span id="controller-status" class="controller-status">Nenhum controle detectado</span>
+        </div>
+        <label class="controller-toggle-row">
+          <input id="controller-enabled" type="checkbox" checked />
+          <span>Ativar controle</span>
+        </label>
+        <div class="controller-range-grid">
+          <label class="audio-setting-row">
+            <span class="audio-setting-label">Deadzone</span>
+            <input id="controller-deadzone" type="range" min="5" max="50" value="18" />
+            <span id="controller-deadzone-value" class="audio-setting-value">18%</span>
+          </label>
+          <label class="audio-setting-row">
+            <span class="audio-setting-label">Cursor</span>
+            <input id="controller-cursor-speed" type="range" min="40" max="200" value="100" />
+            <span id="controller-cursor-speed-value" class="audio-setting-value">100%</span>
+          </label>
+          <label class="audio-setting-row">
+            <span class="audio-setting-label">Vibração</span>
+            <input id="controller-vibration" type="range" min="0" max="100" value="55" />
+            <span id="controller-vibration-value" class="audio-setting-value">55%</span>
+          </label>
+        </div>
+        <label class="controller-toggle-row">
+          <input id="controller-invert-y" type="checkbox" />
+          <span>Inverter eixo vertical da mira</span>
+        </label>
+        <p class="controller-settings-hint">
+          Selecione uma ação e pressione o botão desejado no controle.
+        </p>
+        <div id="controller-bindings" class="controller-bindings"></div>
+        <div class="controller-settings-actions">
+          <button id="controller-test-vibration" type="button">Testar vibração</button>
+          <button id="controller-reset" type="button">Restaurar padrão</button>
+        </div>
       </div>
     </div>
 

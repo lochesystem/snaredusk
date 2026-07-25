@@ -11,9 +11,19 @@ Wireframes textuais, fluxos de tela, HUD, princípios de usabilidade e acessibil
 | **Clareza em 3 segundos** | Jogador sempre sabe: onde está, HP/ouro, próximo objetivo |
 | **Máximo 2 níveis de menu** em combate/exploração | Bolsa e mapa são overlays; não há submenu de submenu |
 | **Feedback imediato** | Toda ação tem resposta visual + sonora em < 100ms |
-| **Mouse + teclado** | Controles exclusivos desktop; mira pelo cursor |
+| **Dois esquemas desktop** | Mouse + teclado e controle via Gamepad API; ambos permanecem ativos |
 | **Fail soft** | Ações inválidas explicam *por quê* ("Bolsa cheia", "HP do alvo muito alto") |
 | **Cozy, não punishing** | Morte explica o que foi perdido vs. mantido |
+
+### Controle externo
+
+- Analógico esquerdo move o personagem e navega por botões dos menus.
+- Analógico direito define a direção da mira e controla um cursor virtual.
+- O layout padrão segue o DualSense, mas todas as ações podem ser remapeadas.
+- Opções persistidas: controle ativo, zona morta, velocidade do cursor, inversão
+  vertical e intensidade da vibração.
+- O foco selecionado por controle recebe contorno verde; ✕ confirma e
+  ○/Options fecha o modal atual.
 
 ### Hierarquia de informação (masmorra)
 

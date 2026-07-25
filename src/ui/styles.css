@@ -629,7 +629,24 @@ body {
 }
 
 .audio-settings-content {
-  width: min(92vw, 360px);
+  width: min(94vw, 620px);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+}
+
+.controller-cursor {
+  position: absolute;
+  z-index: 24;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 2px solid #f0e6d3;
+  border-radius: 2px;
+  background: rgba(93, 187, 99, 0.24);
+  box-shadow:
+    0 0 0 2px rgba(18, 29, 20, 0.7),
+    0 0 9px rgba(136, 220, 126, 0.62);
 }
 
 .audio-setting-row {
@@ -662,6 +679,129 @@ body {
   width: 16px;
   height: 16px;
   accent-color: #5dbb63;
+}
+
+.settings-divider {
+  height: 1px;
+  margin: 4px 0 18px;
+  background: linear-gradient(90deg, transparent, rgba(196, 160, 64, 0.5), transparent);
+}
+
+.controller-settings-heading,
+.controller-settings-actions,
+.controller-toggle-row,
+.controller-binding-row {
+  display: flex;
+  align-items: center;
+}
+
+.controller-settings-heading {
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.controller-settings-heading h4 {
+  margin: 1px 0 0;
+  color: #f0e6d3;
+  font-size: 18px;
+}
+
+.controller-status {
+  max-width: 280px;
+  color: #958878;
+  font-size: 11px;
+  text-align: right;
+}
+
+.controller-status.connected {
+  color: #8bdc7d;
+}
+
+.controller-toggle-row {
+  gap: 9px;
+  margin-bottom: 14px;
+  color: #c8b8a0;
+  font-size: 13px;
+}
+
+.controller-toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #5dbb63;
+}
+
+.controller-range-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.controller-range-grid .audio-setting-row {
+  grid-template-columns: 64px 1fr 38px;
+}
+
+.controller-settings-hint {
+  margin: 2px 0 10px;
+  color: #958878;
+  font-size: 11px;
+}
+
+.controller-bindings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+}
+
+.controller-binding-row {
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid rgba(113, 82, 53, 0.52);
+  border-radius: 4px;
+  background: rgba(29, 22, 28, 0.58);
+  color: #c8b8a0;
+  font-size: 12px;
+}
+
+.controller-binding-row button {
+  min-width: 78px;
+  padding: 6px 10px;
+  border-color: #715235;
+  background: #30242b;
+  font-size: 12px;
+}
+
+.controller-binding-row button.listening {
+  border-color: #8bdc7d;
+  color: #bdf5a9;
+  box-shadow: 0 0 8px rgba(93, 187, 99, 0.28);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #9adf83;
+  outline-offset: 2px;
+}
+
+.controller-settings-actions {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.controller-settings-actions button {
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+@media (max-width: 680px) {
+  .controller-range-grid,
+  .controller-bindings {
+    grid-template-columns: 1fr;
+  }
 }
 
 button {

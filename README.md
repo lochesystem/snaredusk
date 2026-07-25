@@ -25,7 +25,8 @@ No **build atual**: masmorra (1×/dia) → captura → portal → **dormir na ca
 
 ## Plataforma
 
-**Desktop web apenas** — mouse + teclado. Sem suporte mobile ou touch.
+**Desktop web apenas** — mouse + teclado ou controle compatível com Gamepad API
+(incluindo DualSense/controle de PS5). Sem suporte mobile ou touch.
 
 ## Controles (implementados)
 
@@ -35,8 +36,14 @@ No **build atual**: masmorra (1×/dia) → captura → portal → **dormir na ca
 | Mouse / clique | Atacar na direção do cursor |
 | **Q** | Orbe de Vínculo (captura) |
 | **E** | Interagir — portal, baús, bancada, cama (dormir) |
+| Analógico esquerdo | Mover personagem / navegar nos menus |
+| Analógico direito | Mirar e mover o cursor virtual |
+| **R2 / ✕ / ○ / □ / △** | Atacar / interagir / esquivar / capturar / inventário |
+| **L1 / R1** | Selecionar arma 1 / arma 2 |
+| **Create / Options** | Alternar mapa / menu e voltar |
 
-Controles planejados (fase 2+): Espaço, Tab, I, B, M, Esc — ver [UX-UI](docs/UX-UI.md).
+O layout do controle, a zona morta, velocidade do cursor, eixo vertical e
+vibração podem ser alterados em **Opções → Controle**.
 
 ## O que está no jogo hoje
 

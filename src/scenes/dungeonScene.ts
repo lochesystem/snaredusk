@@ -1014,15 +1014,8 @@ export class DungeonScene {
     }
 
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
-    const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
     const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
-    this.lastAimAngle = calcAimAngle(
-      aimOrigin.x,
-      aimOrigin.y,
-      worldMouse.x,
-      worldMouse.y,
-      this.lastAimAngle,
-    );
+    this.lastAimAngle = this.resolvePlayerAimAngle(aimOrigin.x, aimOrigin.y);
     const tip = calcAimReticlePosition(
       aimOrigin.x,
       aimOrigin.y,
@@ -1170,15 +1163,8 @@ export class DungeonScene {
   private performAttack(): void {
     const weapon = getEquippedWeapon(this.state.equippedWeaponId);
     if (this.playerStamina < weapon.staminaCost) return;
-    const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
     const aimOrigin = getPlayerAimOrigin(this.playerX, this.playerY);
-    const angle = calcAimAngle(
-      aimOrigin.x,
-      aimOrigin.y,
-      worldMouse.x,
-      worldMouse.y,
-      this.lastAimAngle,
-    );
+    const angle = this.resolvePlayerAimAngle(aimOrigin.x, aimOrigin.y);
     this.lastAimAngle = angle;
     // Quatro frames a 12 FPS (art bible), sem ultrapassar o cooldown da arma.
     this.playerSprite.playAttack(weapon.id, Math.cos(angle), Math.min(weapon.cooldown, 4 / 12));
@@ -1220,6 +1206,21 @@ export class DungeonScene {
     this.attackCd = weapon.cooldown
       * this.perkModifiers.attackCooldownMultiplier;
     this.playerStamina -= weapon.staminaCost;
+    this.input.pulseGamepad(0.16, 45);
+  }
+
+  private resolvePlayerAimAngle(originX: number, originY: number): number {
+    const controllerAim = this.input.getAimVector();
+    if (controllerAim) return Math.atan2(controllerAim.y, controllerAim.x);
+    if (this.input.isUsingGamepad()) return this.lastAimAngle;
+    const worldMouse = this.camera.screenToWorld(this.input.mouseX, this.input.mouseY);
+    return calcAimAngle(
+      originX,
+      originY,
+      worldMouse.x,
+      worldMouse.y,
+      this.lastAimAngle,
+    );
   }
 
   private playAttackFx(style: AttackFxStyle, angle: number, range: number, color: number): void {
@@ -2823,6 +2824,8 @@ export class DungeonScene {
       );
     }
     if (sound) playSfx(sound);
+    if (result.hpDamage > 0) this.input.pulseGamepad(0.68, 115);
+    else if (result.absorbed > 0) this.input.pulseGamepad(0.28, 70);
     this.callbacks.updateHud();
     return result.hpDamage;
   }
