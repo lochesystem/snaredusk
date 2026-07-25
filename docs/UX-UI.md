@@ -17,13 +17,16 @@ Wireframes textuais, fluxos de tela, HUD, princípios de usabilidade e acessibil
 
 ### Controle externo
 
-- Analógico esquerdo move o personagem e navega por botões dos menus.
+- Analógico esquerdo move o personagem; o direcional navega espacialmente por
+  botões, grids de receitas, perks e barra de construção.
 - Analógico direito define a direção da mira e controla um cursor virtual.
 - O layout padrão segue o DualSense, mas todas as ações podem ser remapeadas.
 - Opções persistidas: controle ativo, zona morta, velocidade do cursor, inversão
   vertical e intensidade da vibração.
 - O foco selecionado por controle recebe contorno verde; ✕ confirma e
   ○/Options fecha o modal atual.
+- Telas com ações menos óbvias mostram uma legenda contextual discreta no canto:
+  perks, bancada, menus e ferramentas de construção da base.
 
 ### Hierarquia de informação (masmorra)
 

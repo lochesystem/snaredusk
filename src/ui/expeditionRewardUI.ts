@@ -28,6 +28,7 @@ export function openExpeditionRewardUI(
     overlay.className = 'expedition-reward-overlay';
     overlay.innerHTML = `
       <section class="expedition-reward-panel" role="dialog" aria-modal="true"
+        data-controller-scope="expedition-reward"
         aria-labelledby="expedition-reward-title">
         <p class="expedition-reward-kicker">Andar ${floor} concluído</p>
         <h2 id="expedition-reward-title">A passagem exige uma escolha</h2>

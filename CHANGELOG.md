@@ -13,8 +13,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   Opções para remapear botões, ajustar zona morta, velocidade, eixo Y e vibração
 - Preferências do controle persistidas no navegador e troca transparente entre
   controle e mouse/teclado
-- Testes de configuração, zona morta e leitura do Gamepad API; suíte atualizada
-  para **337 testes em 69 arquivos**
+- Navegação espacial pelo direcional em perks, receitas e demais grids, com
+  destaque verde inequívoco da seleção atual
+- Barra de construção navegável pelo direcional na base; ✕ seleciona,
+  R2 posiciona, ○ cancela e L2 rotaciona
+- Legendas contextuais de botões na base, bancada, recompensas e menus; na
+  bancada □ fabrica diretamente a receita selecionada
+- Testes de configuração, zona morta, leitura do Gamepad API e navegação
+  espacial; suíte atualizada para **339 testes em 70 arquivos**
 - **Bestiário simplificado:** 18 fichas em abas por bioma, silhuetas para
   criaturas não registradas, sprites e dados de combate, drops, produção,
   disponibilidade como companheiro e progresso por bioma/total

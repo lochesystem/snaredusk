@@ -86,11 +86,14 @@ describe('controllerSettings', () => {
 
     input.updateGamepads(1 / 60);
     expect(input.getMovement().x).toBeGreaterThan(0.6);
+    expect(input.consumeNavigation()).toBeNull();
     expect(input.consumeClick()).toBe(true);
     expect(input.consumeClick()).toBe(false);
 
     buttons[7] = { pressed: false, value: 0 };
+    buttons[15] = { pressed: true, value: 1 };
     input.updateGamepads(1 / 60);
+    expect(input.consumeNavigation()).toBe('right');
     expect(input.consumeClick()).toBe(false);
   });
 });

@@ -43,7 +43,12 @@ import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
 import { applyAudioSettings, loadAudioSettings } from './systems/audioSettings.ts';
-import { loadControllerSettings } from './systems/controllerSettings.ts';
+import {
+  controllerButtonLabel,
+  getControllerSettings,
+  loadControllerSettings,
+  type ControllerAction,
+} from './systems/controllerSettings.ts';
 import {
   bindAudioSettingsModal,
   closeAudioSettingsModal,
@@ -51,6 +56,7 @@ import {
   openAudioSettingsModal,
 } from './ui/audioSettingsUI.ts';
 import { bindControllerSettingsModal } from './ui/controllerSettingsUI.ts';
+import { findSpatialNavigationIndex } from './ui/controllerNavigation.ts';
 import { isDayTransitionPlaying, playDayTransition } from './ui/dayTransitionUI.ts';
 import { playDeathTransition } from './ui/deathTransitionUI.ts';
 import {
@@ -171,6 +177,8 @@ export class Game {
   private iconCache = new Map<string, string>();
   private controllerLoopLastTime = 0;
   private controllerFocusScope: HTMLElement | null = null;
+  private controllerFocusKey = '';
+  private controllerBuildIndex: number | null = null;
 
   constructor() {
     this.shopUI = new ShopUI({
@@ -448,12 +456,17 @@ export class Game {
       this.input.updateGamepads(dt);
       this.handleControllerDomNavigation();
       this.updateControllerCursor();
+      this.updateControllerHelp();
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   }
 
   private activeControllerScope(): HTMLElement | null {
+    const reward = document.querySelector<HTMLElement>(
+      '.expedition-reward-overlay.visible [data-controller-scope]',
+    );
+    if (reward) return reward;
     const modals = [...document.querySelectorAll<HTMLElement>('.modal:not(.hidden)')];
     if (modals.length > 0) return modals.at(-1) ?? null;
     if (this.screen === 'title') return document.getElementById('title-screen');
@@ -465,7 +478,9 @@ export class Game {
       'button:not(:disabled):not(.hidden), input:not(:disabled), [tabindex]:not([tabindex="-1"])',
     )].filter((element) => {
       const style = getComputedStyle(element);
-      return style.display !== 'none' && style.visibility !== 'hidden';
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && element.getClientRects().length > 0;
     });
     return [
       ...elements.filter((element) => !element.classList.contains('modal-close-icon')),
@@ -479,18 +494,27 @@ export class Game {
     this.input.setControllerUiCaptured(captured);
     if (!captured || !scope || !this.input.isUsingGamepad()) {
       this.controllerFocusScope = scope;
+      if (!scope) this.handleControllerBaseNavigation();
       return;
     }
     if (scope.querySelector('.controller-binding-row button.listening')) return;
+    this.controllerBuildIndex = null;
 
     const focusable = this.controllerFocusable(scope);
     if (focusable.length === 0) return;
     const active = document.activeElement as HTMLElement | null;
     let index = active && scope.contains(active) ? focusable.indexOf(active) : -1;
     if (this.controllerFocusScope !== scope || index < 0) {
+      if (this.controllerFocusScope !== scope) this.controllerFocusKey = '';
       this.controllerFocusScope = scope;
-      index = 0;
-      focusable[index]?.focus();
+      index = this.controllerFocusKey
+        ? focusable.findIndex((element) => (
+          element.dataset.controllerKey === this.controllerFocusKey
+          || element.id === this.controllerFocusKey
+        ))
+        : -1;
+      if (index < 0) index = 0;
+      this.focusControllerElement(focusable[index]);
     }
 
     const direction = this.input.consumeNavigation();
@@ -509,15 +533,29 @@ export class Game {
         ));
         current.dispatchEvent(new Event('input', { bubbles: true }));
       } else {
-        const delta = direction === 'up' || direction === 'left' ? -1 : 1;
-        index = (index + delta + focusable.length) % focusable.length;
-        focusable[index]?.focus();
+        const points = focusable.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        });
+        index = findSpatialNavigationIndex(points, index, direction);
+        this.focusControllerElement(focusable[index]);
       }
       playSfx('ui.click', { volume: 0.35, speed: 1.15 });
     }
 
+    if (
+      scope.closest('#workshop-modal')
+      && this.input.consumeControllerAction('capture')
+    ) {
+      scope.querySelector<HTMLButtonElement>('.craft-confirm-button:not(:disabled)')?.click();
+    }
+
     if (this.input.consumeControllerAction('interact')) {
-      (document.activeElement as HTMLElement | null)?.click();
+      const focused = document.activeElement as HTMLElement | null;
+      if (focused) {
+        this.controllerFocusKey = focused.dataset.controllerKey || focused.id;
+        focused.click();
+      }
     }
 
     const cancel = this.input.consumeControllerAction('dodge')
@@ -526,6 +564,139 @@ export class Game {
       const close = scope.querySelector<HTMLButtonElement>('.modal-close-icon');
       close?.click();
     }
+  }
+
+  private focusControllerElement(element: HTMLElement | undefined): void {
+    document.querySelectorAll('.controller-focus').forEach((current) => {
+      current.classList.remove('controller-focus');
+    });
+    if (!element) return;
+    element.classList.add('controller-focus');
+    this.controllerFocusKey = element.dataset.controllerKey || element.id;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  private handleControllerBaseNavigation(): void {
+    if (
+      this.screen !== 'base'
+      || !this.input.isGamepadConnected()
+      || !this.input.isUsingGamepad()
+    ) {
+      return;
+    }
+    const slots = [...document.querySelectorAll<HTMLButtonElement>(
+      '#base-build-hotbar .hotbar-slot',
+    )];
+    if (slots.length === 0) return;
+    const direction = this.input.consumeNavigation();
+    if (direction === 'left' || direction === 'right') {
+      const delta = direction === 'left' ? -1 : 1;
+      this.controllerBuildIndex = this.controllerBuildIndex === null
+        ? direction === 'left' ? slots.length - 1 : 0
+        : (this.controllerBuildIndex + delta + slots.length) % slots.length;
+      this.focusControllerElement(slots[this.controllerBuildIndex]);
+      playSfx('ui.click', { volume: 0.35, speed: 1.15 });
+    } else if (direction === 'down') {
+      this.controllerBuildIndex = null;
+      document.querySelectorAll('.controller-focus').forEach((current) => {
+        current.classList.remove('controller-focus');
+      });
+    }
+
+    if (
+      this.controllerBuildIndex !== null
+      && this.input.consumeControllerAction('interact')
+    ) {
+      slots[this.controllerBuildIndex]?.click();
+      this.controllerBuildIndex = null;
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+
+    if (this.input.consumeControllerAction('dodge')) {
+      if (this.controllerBuildIndex !== null) {
+        this.controllerBuildIndex = null;
+        document.querySelectorAll('.controller-focus').forEach((current) => {
+          current.classList.remove('controller-focus');
+        });
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      } else if (getSelectedBuildTool()) {
+        clearBuildTool();
+        this.baseScene?.clearBuildTool();
+        renderBaseBuildHotbar(this.state, this.buildHotbarCallbacks());
+      }
+    }
+  }
+
+  private updateControllerHelp(): void {
+    const help = document.getElementById('controller-help');
+    if (!help) return;
+    if (!this.input.isUsingGamepad()) {
+      help.classList.add('hidden');
+      return;
+    }
+    const scope = this.activeControllerScope();
+    const button = (action: ControllerAction) => {
+      const settings = getControllerSettings();
+      return controllerButtonLabel(settings.bindings[action]);
+    };
+    let items: Array<[string, string]> = [];
+    if (scope?.id === 'title-screen') {
+      items = [['✚', 'Navegar'], [button('interact'), 'Selecionar']];
+    } else if (scope?.dataset.controllerScope === 'expedition-reward') {
+      items = [['✚', 'Escolher'], [button('interact'), 'Confirmar']];
+    } else if (scope?.closest('#workshop-modal')) {
+      items = [
+        ['✚', 'Navegar'],
+        [button('interact'), 'Selecionar'],
+        [button('capture'), 'Fabricar'],
+        [button('dodge'), 'Fechar'],
+      ];
+    } else if (scope) {
+      items = [
+        ['✚', 'Navegar'],
+        [button('interact'), 'Selecionar'],
+        [button('dodge'), 'Fechar'],
+      ];
+    } else if (this.screen === 'base') {
+      const buildTool = getSelectedBuildTool();
+      if (buildTool) {
+        items = [
+          [button('attack'), buildTool === 'move' ? 'Mover / soltar' : 'Posicionar'],
+          [button('dodge'), 'Cancelar'],
+          [button('rotate'), 'Girar'],
+        ];
+      } else if (this.controllerBuildIndex !== null) {
+        items = [
+          ['← →', 'Escolher'],
+          [button('interact'), 'Selecionar'],
+          [button('dodge'), 'Sair'],
+        ];
+      } else {
+        items = [
+          ['← →', 'Construções'],
+          [button('interact'), 'Interagir'],
+        ];
+      }
+    }
+    if (items.length === 0) {
+      help.classList.add('hidden');
+      return;
+    }
+    help.dataset.itemCount = String(items.length);
+    help.replaceChildren(...items.map(([button, label]) => {
+      const item = document.createElement('span');
+      const glyph = document.createElement('b');
+      glyph.textContent = button;
+      glyph.classList.toggle('wide', button.length > 1);
+      item.append(glyph, document.createTextNode(label));
+      return item;
+    }));
+    help.classList.remove('hidden');
   }
 
   private fitCanvas(): void {

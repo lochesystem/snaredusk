@@ -36,8 +36,9 @@ No **build atual**: masmorra (1×/dia) → captura → portal → **dormir na ca
 | Mouse / clique | Atacar na direção do cursor |
 | **Q** | Orbe de Vínculo (captura) |
 | **E** | Interagir — portal, baús, bancada, cama (dormir) |
-| Analógico esquerdo | Mover personagem / navegar nos menus |
+| Analógico esquerdo | Mover personagem |
 | Analógico direito | Mirar e mover o cursor virtual |
+| Direcional | Navegar por menus, perks, receitas e barra de construção |
 | **R2 / ✕ / ○ / □ / △** | Atacar / interagir / esquivar / capturar / inventário |
 | **L1 / R1** | Selecionar arma 1 / arma 2 |
 | **Create / Options** | Alternar mapa / menu e voltar |

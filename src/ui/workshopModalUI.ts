@@ -291,6 +291,8 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'craft-grid-slot';
+    btn.dataset.controllerKey = `recipe:${recipe.id}`;
+    btn.dataset.recipeId = recipe.id;
     if (recipe.id === selectedRecipeId) btn.classList.add('selected');
     if (preview.owned) btn.classList.add('owned');
     if (!preview.canCraft && !preview.owned) btn.classList.add('missing');
@@ -307,6 +309,11 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
     btn.addEventListener('click', () => {
       selectedRecipeId = recipe.id;
       renderWorkshopModal(callbacks);
+      requestAnimationFrame(() => {
+        container.querySelector<HTMLButtonElement>(
+          `[data-recipe-id="${recipe.id}"]`,
+        )?.focus();
+      });
     });
     container.appendChild(btn);
   }
@@ -379,6 +386,7 @@ export function renderWorkshopModal(callbacks: WorkshopModalCallbacks): void {
     const craftButton = document.createElement('button');
     craftButton.type = 'button';
     craftButton.className = 'craft-confirm-button';
+    craftButton.dataset.controllerKey = 'craft-confirm';
     craftButton.textContent = preview.owned ? 'Já fabricada' : 'Fabricar';
     craftButton.disabled = preview.owned || !preview.canCraft;
     craftButton.addEventListener('click', () => {

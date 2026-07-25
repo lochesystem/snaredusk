@@ -145,16 +145,16 @@ export class InputManager {
     };
 
     const nextNavigation = new Set<'up' | 'down' | 'left' | 'right'>();
-    if (gamepad.buttons[12]?.pressed || this.controllerMovement.y < -0.7) {
+    if (gamepad.buttons[12]?.pressed) {
       nextNavigation.add('up');
     }
-    if (gamepad.buttons[13]?.pressed || this.controllerMovement.y > 0.7) {
+    if (gamepad.buttons[13]?.pressed) {
       nextNavigation.add('down');
     }
-    if (gamepad.buttons[14]?.pressed || this.controllerMovement.x < -0.7) {
+    if (gamepad.buttons[14]?.pressed) {
       nextNavigation.add('left');
     }
-    if (gamepad.buttons[15]?.pressed || this.controllerMovement.x > 0.7) {
+    if (gamepad.buttons[15]?.pressed) {
       nextNavigation.add('right');
     }
     for (const direction of nextNavigation) {
