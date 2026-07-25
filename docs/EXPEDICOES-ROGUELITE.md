@@ -4,7 +4,7 @@ Especificação do novo formato de masmorra de Snaredusk. Este documento descrev
 design aprovado para planejamento; a implementação deve seguir as etapas abaixo e
 ser validada primeiro na Floresta Fúngica.
 
-**Status:** em implementação — etapas 1 e 2 concluídas
+**Status:** em implementação — etapas 1, 2 e 3 concluídas; próxima: balanceamento
 **Escopo:** Bestiário simplificado + expedições de três andares + arena final  
 **Princípio:** aumentar duração e variedade sem transformar o jogo num roguelike
 pesado ou apagar o loop de base, craft e loja.
@@ -330,7 +330,7 @@ expedição antes do retorno à base.
 - [x] Criar tela de extração/continuação.
 - [x] Implementar os 12 perks iniciais.
 - [x] Criar arena manual do Rei das Esporas.
-- [ ] Entregar chave somente no baú épico.
+- [x] Entregar chave somente no baú épico.
 
 **Recorte estrutural concluído:** a Floresta gera 5–6, 6–7 e 7–8 salas nos
 andares 1–3, com respectivamente 5–7, 7–10 e 9–12 inimigos. Ao limpar o estágio,
@@ -362,6 +362,12 @@ O mercador ambulante também oferece uma compra única de cura por encontro. O
 Elixir do Caminhante recupera de 5% a 10% do HP máximo e custa uma fração
 aleatória de 20% a 40% do ouro atual, com piso acima do pacote de três Orbes para
 continuar sendo o item mais caro da lista.
+
+A progressão final também foi desacoplada da morte do chefe. Derrotar o Rei das
+Esporas registra a vitória no Bestiário, mas a Chave de Esporo e o desbloqueio
+do Cristal só são concedidos ao abrir o baú épico. A concessão é idempotente,
+persiste pelo Continue e saves anteriores com `dungeonCleared` permanecem
+compatíveis.
 
 **Aceite:** uma run completa da Floresta dura aproximadamente 25–40 minutos, pode
 ser extraída em três pontos, não apresenta softlock e continua legível com

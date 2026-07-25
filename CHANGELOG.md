@@ -45,12 +45,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Curva inicial de HP, ataque e velocidade aplicada por andar; Cristal, Termal
   e tutorial preservam o fluxo anterior
 - Testes da geração, perks, cura do mercador e ciclo visual dos baús; suíte
-  atualizada para **326 testes em 68 arquivos**
+  atualizada para **332 testes em 68 arquivos**
 - **Elites de encerramento dos andares:** uma espécie diferente por piso
   desperta na sala marcada após a derrota dos inimigos comuns, com escala,
   aura, barra dourada, título e anúncio próprios
 - Três afixos funcionais para elites: Implacável acelera ataques e movimento,
   Tempestade dispara rajadas em leque e Bastião recebe defesa e escudo
+- A Chave de Esporo e o desbloqueio do Cristal agora são concedidos somente ao
+  abrir o baú épico do Rei das Esporas, com persistência e proteção contra
+  duplicação
 - **Planejamento de expedições roguelite:** especificação de três andares,
   elites, perks temporários, extração, arenas de chefe e implementação em sete
   etapas, começando pelo Bestiário simplificado
@@ -62,6 +65,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 - Mira, efeitos e ataques usam o centro visual do corpo como origem, em vez da
   âncora dos pés do personagem
+- Ataques corpo a corpo consideram todo o arco declarado da arma e o corpo de
+  inimigos próximos, alinhando a colisão ao efeito visual
 - Saves com ouro/HP/stamina/dia fora dos limites são normalizados sem perder o restante do progresso
 - Armas, capuzes, biomas, tutorial, bolsa e layout da base inválidos recebem fallbacks seguros
 - Saves antigos sem campos do tutorial continuam pulando o tutorial, como antes

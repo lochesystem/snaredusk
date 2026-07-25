@@ -3,6 +3,7 @@ import { defaultGameState } from '../src/types.ts';
 import { generateDungeon } from '../src/world/dungeonGenerator.ts';
 import {
   isBiomeUnlocked,
+  onBiomeBossChestOpened,
   onBiomeBossDefeated,
   selectBiome,
   syncBiomeUnlocks,
@@ -15,17 +16,44 @@ describe('biomes', () => {
     expect(isBiomeUnlocked(state, 'cristal')).toBe(false);
   });
 
-  it('derrotar chefe da floresta desbloqueia cristal', () => {
+  it('derrotar chefe da floresta ainda não desbloqueia cristal', () => {
     const state = defaultGameState();
     onBiomeBossDefeated(state, 'floresta');
     expect(state.biomeBossDefeated.floresta).toBe(true);
+    expect(isBiomeUnlocked(state, 'cristal')).toBe(false);
+    expect(state.hasSporeKey).toBe(false);
+  });
+
+  it('abrir o baú épico da floresta entrega a chave e desbloqueia cristal', () => {
+    const state = defaultGameState();
+    onBiomeBossDefeated(state, 'floresta');
+    expect(onBiomeBossChestOpened(state, 'floresta')).toBe('cristal');
     expect(isBiomeUnlocked(state, 'cristal')).toBe(true);
     expect(state.hasSporeKey).toBe(true);
+    expect(state.bag.filter((entry) => entry?.kind === 'loot' && entry.id === 'chave_esporo'))
+      .toHaveLength(1);
+  });
+
+  it('não concede chave nem desbloqueio sem derrotar o chefe', () => {
+    const state = defaultGameState();
+    expect(onBiomeBossChestOpened(state, 'floresta')).toBeNull();
+    expect(state.hasSporeKey).toBe(false);
+    expect(isBiomeUnlocked(state, 'cristal')).toBe(false);
+  });
+
+  it('abrir novamente o baú épico não duplica a chave', () => {
+    const state = defaultGameState();
+    onBiomeBossDefeated(state, 'floresta');
+    onBiomeBossChestOpened(state, 'floresta');
+    expect(onBiomeBossChestOpened(state, 'floresta')).toBeNull();
+    expect(state.bag.filter((entry) => entry?.kind === 'loot' && entry.id === 'chave_esporo'))
+      .toHaveLength(1);
   });
 
   it('permite selecionar bioma desbloqueado', () => {
     const state = defaultGameState();
     onBiomeBossDefeated(state, 'floresta');
+    onBiomeBossChestOpened(state, 'floresta');
     expect(selectBiome(state, 'cristal')).toBe(true);
     expect(state.activeBiome).toBe('cristal');
   });
@@ -33,7 +61,11 @@ describe('biomes', () => {
   it('derrotar chefe do cristal desbloqueia termal', () => {
     const state = defaultGameState();
     onBiomeBossDefeated(state, 'floresta');
+    onBiomeBossChestOpened(state, 'floresta');
     onBiomeBossDefeated(state, 'cristal');
+    expect(isBiomeUnlocked(state, 'termal')).toBe(false);
+    expect(state.hasPrismaticKey).toBe(false);
+    expect(onBiomeBossChestOpened(state, 'cristal')).toBe('termal');
     expect(state.biomeBossDefeated.cristal).toBe(true);
     expect(isBiomeUnlocked(state, 'termal')).toBe(true);
     expect(state.hasPrismaticKey).toBe(true);

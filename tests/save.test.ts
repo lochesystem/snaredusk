@@ -7,6 +7,10 @@ import {
   saveGame,
   serializeState,
 } from '../src/systems/saveManager.ts';
+import {
+  onBiomeBossChestOpened,
+  onBiomeBossDefeated,
+} from '../src/systems/biomeProgress.ts';
 import { defaultGameState } from '../src/types.ts';
 
 function installLocalStorageMock(): void {
@@ -134,6 +138,43 @@ describe('saveManager', () => {
       id: 'cogumelo_comum',
       quantity: 9,
     });
+  });
+
+  it('Continue preserva o chefe derrotado sem antecipar a chave épica', () => {
+    const state = defaultGameState();
+    state.activeExpedition = {
+      biomeId: 'floresta',
+      seed: 9182,
+      floor: 4,
+      phase: 'boss',
+      perks: ['fio_afiado'],
+      perkOffers: [],
+      defeatedEliteSpecies: ['lumimorcego', 'carapaca_musgo', 'esporo_dorminhoco'],
+      checkpointHp: 71,
+      checkpointStamina: 80,
+      checkpointBag: state.bag.map((entry) => entry ? { ...entry } : null),
+    };
+
+    onBiomeBossDefeated(state, 'floresta');
+    const beforeChest = deserializeState(serializeState(state));
+
+    expect(beforeChest?.activeExpedition).toMatchObject({
+      biomeId: 'floresta',
+      floor: 4,
+      phase: 'boss',
+    });
+    expect(beforeChest?.biomeBossDefeated.floresta).toBe(true);
+    expect(beforeChest?.hasSporeKey).toBe(false);
+    expect(beforeChest?.unlockedBiomes).not.toContain('cristal');
+
+    onBiomeBossChestOpened(beforeChest!, 'floresta');
+    const afterChest = deserializeState(serializeState(beforeChest!));
+
+    expect(afterChest?.hasSporeKey).toBe(true);
+    expect(afterChest?.unlockedBiomes).toContain('cristal');
+    expect(afterChest?.bag.filter(
+      (entry) => entry?.kind === 'loot' && entry.id === 'chave_esporo',
+    )).toHaveLength(1);
   });
 
   it('migra saves das versões 2–9 preenchendo campos introduzidos depois', () => {

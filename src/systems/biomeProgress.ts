@@ -18,6 +18,8 @@ export function unlockBiome(state: GameState, biomeId: BiomeId): void {
 export function canUnlockBiome(state: GameState, biomeId: BiomeId): boolean {
   const def = BIOMES[biomeId];
   if (!def.unlockAfterBossIn) return true;
+  if (def.unlockAfterBossIn === 'floresta') return state.hasSporeKey;
+  if (def.unlockAfterBossIn === 'cristal') return state.hasPrismaticKey;
   return state.biomeBossDefeated[def.unlockAfterBossIn] === true;
 }
 
@@ -27,6 +29,9 @@ export function syncBiomeUnlocks(state: GameState): void {
   }
   if (state.dungeonCleared) {
     state.biomeBossDefeated.floresta = true;
+    // Compatibilidade com saves anteriores, nos quais dungeonCleared já
+    // significava que a recompensa final da Floresta havia sido coletada.
+    grantKey(state, 'chave_esporo', 'hasSporeKey');
   }
   for (const biome of listBiomes()) {
     if (canUnlockBiome(state, biome.id)) {
@@ -40,24 +45,38 @@ export function syncBiomeUnlocks(state: GameState): void {
 
 export function onBiomeBossDefeated(state: GameState, biomeId: BiomeId): void {
   state.biomeBossDefeated[biomeId] = true;
+}
+
+/**
+ * Concede a progressão somente quando o baú épico do chefe é aberto.
+ * Retorna o bioma recém-desbloqueado para feedback da interface.
+ */
+export function onBiomeBossChestOpened(
+  state: GameState,
+  biomeId: BiomeId,
+): BiomeId | null {
+  if (state.biomeBossDefeated[biomeId] !== true) return null;
+
+  const unlockedBefore = new Set(state.unlockedBiomes);
   if (biomeId === 'floresta') {
     state.dungeonCleared = true;
     grantKey(state, 'chave_esporo', 'hasSporeKey');
-  }
-  if (biomeId === 'cristal') {
+  } else if (biomeId === 'cristal') {
     grantKey(state, 'chave_prismatica', 'hasPrismaticKey');
   }
   syncBiomeUnlocks(state);
+
+  return state.unlockedBiomes.find((id) => !unlockedBefore.has(id)) ?? null;
 }
 
 function grantKey(
   state: GameState,
   lootId: keyof typeof LOOT_TABLE,
   flag: 'hasSporeKey' | 'hasPrismaticKey',
-): void {
-  if (state[flag]) return;
+): boolean {
+  if (state[flag]) return false;
   const def = LOOT_TABLE[lootId];
-  if (!def) return;
+  if (!def) return false;
   const key: LootItem = {
     kind: 'loot',
     id: def.id,
@@ -67,6 +86,7 @@ function grantKey(
   };
   addToBag(state, key);
   state[flag] = true;
+  return true;
 }
 
 export function getBiomeUnlockToast(unlockedBiomeId: BiomeId): string | null {

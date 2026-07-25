@@ -95,7 +95,11 @@ import {
   tickCompanionIdleRoam,
   type CompanionIdleRoamFields,
 } from '../systems/companionCombat.ts';
-import { onBiomeBossDefeated, getBiomeUnlockToast } from '../systems/biomeProgress.ts';
+import {
+  getBiomeUnlockToast,
+  onBiomeBossChestOpened,
+  onBiomeBossDefeated,
+} from '../systems/biomeProgress.ts';
 import { registerBestiarySpecies } from '../systems/bestiary.ts';
 import type { ExpeditionDifficulty } from '../systems/expedition.ts';
 import {
@@ -1545,7 +1549,6 @@ export class DungeonScene {
       hideBossHud();
       clearBossVfxState(enemy.id);
       const species = getSpecies(enemy.speciesId);
-      const unlockedBefore = [...this.state.unlockedBiomes];
       registerBestiarySpecies(this.state, species.id);
       onBiomeBossDefeated(this.state, this.layout.biomeId);
       this.bossFightPhase = 'done';
@@ -1560,13 +1563,6 @@ export class DungeonScene {
         setTimeout(() => {
           this.callbacks.showToast('Baú épico apareceu — abra para ativar o portal');
         }, 3400);
-        for (const biomeId of this.state.unlockedBiomes) {
-          if (unlockedBefore.includes(biomeId)) continue;
-          const toast = getBiomeUnlockToast(biomeId);
-          if (toast) {
-            setTimeout(() => this.callbacks.showToast(toast), 4000);
-          }
-        }
       }
     } else if (enemy.isElite && !options?.skipToast) {
       const species = getSpecies(enemy.speciesId);
@@ -2471,8 +2467,18 @@ export class DungeonScene {
       playSfx('dungeon.chest');
       if (chest.epic) {
         this.bossChestOpened = true;
+        const unlockedBiomeId = onBiomeBossChestOpened(
+          this.state,
+          this.layout.biomeId,
+        );
         this.updatePortalState();
         this.callbacks.showToast('Portal ativado — retorne à base!');
+        if (unlockedBiomeId) {
+          const unlockToast = getBiomeUnlockToast(unlockedBiomeId);
+          if (unlockToast) {
+            setTimeout(() => this.callbacks.showToast(unlockToast), 1200);
+          }
+        }
       }
       const parent = chest.container.parent;
       parent?.removeChild(chest.container);

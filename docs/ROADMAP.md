@@ -19,8 +19,8 @@ flowchart LR
 
 **Build local:** pós-`v0.5.0`, candidato à próxima release.
 
-**Próximo marco:** vertical slice roguelite da Floresta: três andares compactos,
-elites, escolha de perks e arena final.
+**Próximo marco:** balancear o vertical slice roguelite da Floresta antes de
+replicar a estrutura para Cristal e Termal.
 
 ---
 
@@ -31,7 +31,7 @@ elites, escolha de perks e arena final.
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
 | 2 — Core loop | **~92%** | Economia, saves e Bestiário simplificado concluídos |
-| 2.5 — Expedições roguelite | **Em progresso** | Bestiário e fundação de estado/save concluídos; próximo: vertical slice da Floresta |
+| 2.5 — Expedições roguelite | **Em progresso** | Vertical slice da Floresta concluído; próximo: balanceamento |
 | 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
@@ -161,8 +161,8 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 |-------|---------|--------|
 | 1 | Bestiário simplificado | **Feita** |
 | 2 | Estado, save e retomada de expedição | **Feita** |
-| 3 | Floresta: 3 andares, elites, perks e arena | **Em andamento — 12 perks, elites e recompensa prontos; falta chave épica** |
-| 4 | Balanceamento do vertical slice | Planejada |
+| 3 | Floresta: 3 andares, elites, perks e arena | **Feita** |
+| 4 | Balanceamento do vertical slice | **Próxima** |
 | 5 | Cristal e Termal | Planejada |
 | 6 | Drops de elite e longevidade | Planejada |
 | 7 | QA completo e release | Planejada |
@@ -174,7 +174,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 - [x] Três escolhas de perk sem repetição. *(pool completo com 12 perks funcionais)*
 - [x] Elites existentes com afixos legíveis. *(Implacável, Tempestade e Bastião)*
 - [x] Continue retoma a mesma seed e o mesmo andar.
-- [ ] Chave do próximo bioma vem apenas do chefe.
+- [x] Chave do próximo bioma vem apenas do baú épico do chefe.
 - [ ] Expedição completa dura aproximadamente 25–40 minutos.
 - [ ] Novo jogo → três chefes sem softlocks.
 
@@ -240,8 +240,8 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 7. ~~**Economia de 10 ciclos**~~ — conservador, normal e eficiente
 8. ~~**Suíte completa de save**~~ — migrações, corrupção, round-trip e localStorage
 9. ~~**Bestiário UI simplificado**~~ — 18 fichas e progresso por bioma
-10. **Fundação da expedição** — estado, save, extração e retomada
-11. **Vertical slice da Floresta** — 3 andares, elites, perks e arena
+10. ~~**Fundação da expedição**~~ — estado, save, extração e retomada
+11. ~~**Vertical slice da Floresta**~~ — 3 andares, elites, perks e arena
 12. **Balancear e replicar** — Cristal e Termal somente após validar a Floresta
 13. **Playtest completo** — novo jogo → três expedições → craft temático
 14. **Polish final** — áudio, responsividade e consistência visual
@@ -260,4 +260,5 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 ---
 
-*Roadmap v0.10 — revisado 2026-07-24 (Bestiário concluído; próxima etapa é a fundação das expedições).*
+*Roadmap v0.11 — revisado 2026-07-24 (vertical slice da Floresta concluído;
+próxima etapa é o balanceamento).*
