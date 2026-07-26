@@ -330,9 +330,15 @@ export function generateBossArena(
     { ...spawn, radius: 60 },
     { ...portal, radius: 76 },
   ];
-  const reserved = [spawn, portal];
+  const arenaBlueprint = buildBossArenaBlueprint(room, biomeId);
+  const reserved = [
+    spawn,
+    portal,
+    ...arenaBlueprint.obstacles,
+    ...arenaBlueprint.hazards,
+  ];
   const decor: DungeonDecor[] = [];
-  const obstacles: DungeonObstacle[] = [];
+  const obstacles: DungeonObstacle[] = [...arenaBlueprint.obstacles];
   populateRoomDecor(
     room,
     rng,
@@ -352,7 +358,7 @@ export function generateBossArena(
     floors,
     walls,
     bossGateWalls: [],
-    hazards: [],
+    hazards: arenaBlueprint.hazards,
     decor,
     obstacles,
     chests: [],
@@ -372,6 +378,50 @@ export function generateBossArena(
   });
   // normalizeDungeonLayout usa o spawn padrão da sala, adequado à entrada oeste.
   return layout;
+}
+
+/**
+ * Composições manuais mantêm uma silhueta de combate própria em cada arena.
+ * A Floresta preserva o layout já balanceado; Cristal usa pilares prismáticos
+ * e Termal cria corredores entre poças de veneno.
+ */
+function buildBossArenaBlueprint(
+  room: RoomLayout,
+  biomeId: BiomeId,
+): { obstacles: DungeonObstacle[]; hazards: DungeonHazard[] } {
+  const { x, y, width, height } = room.rect;
+  const point = (offsetX: number, offsetY: number) => ({
+    x: x + offsetX,
+    y: y + offsetY,
+    roomIndex: room.index,
+  });
+
+  if (biomeId === 'cristal') {
+    return {
+      obstacles: [
+        { ...point(width * 0.42, height * 0.27), kind: 'crystal', radius: 17, variant: 1 },
+        { ...point(width * 0.72, height * 0.27), kind: 'crystal', radius: 15, variant: 2 },
+        { ...point(width * 0.42, height * 0.73), kind: 'crystal', radius: 15, variant: 3 },
+        { ...point(width * 0.72, height * 0.73), kind: 'crystal', radius: 17, variant: 0 },
+      ],
+      hazards: [],
+    };
+  }
+
+  if (biomeId === 'termal') {
+    return {
+      obstacles: [
+        { ...point(width * 0.48, height * 0.22), kind: 'rock', radius: 15, variant: 1 },
+        { ...point(width * 0.72, height * 0.78), kind: 'rock', radius: 15, variant: 2 },
+      ],
+      hazards: [
+        { ...point(width * 0.62, height * 0.24), kind: 'poison', radius: 30 },
+        { ...point(width * 0.48, height * 0.78), kind: 'poison', radius: 28 },
+      ],
+    };
+  }
+
+  return { obstacles: [], hazards: [] };
 }
 
 function buildDungeon(

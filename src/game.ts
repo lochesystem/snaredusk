@@ -42,6 +42,7 @@ import { ensureInteractableSpritesPreloaded } from './world/interactableAssets.t
 import { unlockAudio, preloadAudio, playSfx } from './engine/audioManager.ts';
 import { playMusic, setMusicUnlocked } from './engine/musicManager.ts';
 import { musicForBiome } from './data/musicCatalog.ts';
+import { getBiomeDef } from './data/biomes.ts';
 import { applyAudioSettings, loadAudioSettings } from './systems/audioSettings.ts';
 import {
   controllerButtonLabel,
@@ -1203,17 +1204,16 @@ export class Game {
       beginExpedition(this.state, this.state.activeBiome, seed);
     }
     const activeExpedition = this.state.activeExpedition;
-    const useForestExpedition = !tutorialRun
-      && activeExpedition?.biomeId === 'floresta';
+    const useExpedition = !tutorialRun && activeExpedition !== null;
     const stageSeed = activeExpedition
       ? getExpeditionStageSeed(activeExpedition)
       : seed;
-    const expeditionStage = useForestExpedition
+    const expeditionStage = useExpedition
       ? activeExpedition.floor === 4 ? 'boss' : 'floor'
       : undefined;
     const layout = tutorialRun
       ? generateTutorialDungeon(this.state.activeBiome)
-      : useForestExpedition
+      : useExpedition
         ? activeExpedition.floor === 4
           ? generateBossArena(stageSeed, activeExpedition.biomeId)
           : generateExpeditionFloor({
@@ -1250,7 +1250,7 @@ export class Game {
       layout,
       tutorialRun,
       expeditionStage,
-      difficulty: activeExpedition && useForestExpedition
+      difficulty: activeExpedition && useExpedition
         ? getExpeditionDifficulty(activeExpedition.floor)
         : undefined,
     });
@@ -1344,9 +1344,9 @@ export class Game {
       const hint = document.getElementById('hud-hint');
       if (hint) {
         const expedition = this.state.activeExpedition;
-        const stage = expedition?.biomeId === 'floresta'
+        const stage = expedition
           ? expedition.floor === 4
-            ? 'Arena do Rei das Esporas'
+            ? `Arena final · ${getBiomeDef(expedition.biomeId).shortName}`
             : `Andar ${expedition.floor}/3`
           : '';
         const action = this.dungeon.getHudHint();

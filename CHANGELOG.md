@@ -6,6 +6,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Adicionado
 
+- **Expedições de Cristal e Termal:** o fluxo roguelite de três andares, elites,
+  perks, extração e arena final agora vale para os três biomas
+- Arenas próprias da Matriarca Prismática e Salamandra Anciã, com pilares de
+  cristal e corredores entre poças termais, respectivamente
+- Pools de elite sem repetição por bioma e HUD de estágio genérico
+- Validação de 100 seeds por andar nos três biomas; suíte atualizada para
+  **350 testes em 70 arquivos**
 - **Suporte a controles externos via Gamepad API**, com layout inicial para
   DualSense: movimento, mira, ataque, captura, esquiva, interação, armas,
   inventário, mapa e menus

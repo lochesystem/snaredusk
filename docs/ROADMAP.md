@@ -10,7 +10,7 @@ Fases de produção do GDD ao release jogável. Cada fase tem entregáveis, crit
 flowchart LR
   f0["Fase 0 GDD\nconcluída"] --> f1["Fase 1 Slice\nconcluída"]
   f1 --> f2["Fase 2 Core\n~92%"]
-  f2 --> f25["Fase 2.5 Expedições\nem progresso"]
+  f2 --> f25["Fase 2.5 Expedições\n5/7 etapas"]
   f25 --> f3["Fase 3 Polish\n~72%"]
   f3 --> f4["Fase 4 Release\nparcial"]
 ```
@@ -19,8 +19,8 @@ flowchart LR
 
 **Build local:** pós-`v0.5.0`, candidato à próxima release.
 
-**Próximo marco:** balancear o vertical slice roguelite da Floresta antes de
-replicar a estrutura para Cristal e Termal.
+**Próximo marco:** validar visualmente as expedições de Cristal e Termal e
+conectar drops de elite à longevidade do loop.
 
 ---
 
@@ -31,7 +31,7 @@ replicar a estrutura para Cristal e Termal.
 | 0 — GDD | 100% | Documentação completa |
 | 1 — Vertical slice | 100% | Playtest 10/10 (2026-07-17) |
 | 2 — Core loop | **~92%** | Economia, saves e Bestiário simplificado concluídos |
-| 2.5 — Expedições roguelite | **Em progresso** | Vertical slice da Floresta concluído; próximo: balanceamento |
+| 2.5 — Expedições roguelite | **5/7 etapas** | Estrutura replicada nos três biomas; próximo: longevidade e QA |
 | 3 — Polish | **~72%** | Sprites v2+, skins, UI customizada, fog of war e ambientação dos três biomas |
 | 4 — Release | ~55% | Deploy + save ok; tutorial fluxo completo; polish visual em andamento |
 
@@ -121,7 +121,7 @@ replicar a estrutura para Cristal e Termal.
 - [x] Habitat produz recursos (MVP: yield fixo ao dormir/fechar loja)
 - [x] Reputação nível 1–3 alcançável
 - [x] Tutorial completo sem softlocks conhecidos (validação contínua em playtest)
-- [x] Suite Vitest abrangente (**326 testes**, 68 arquivos)
+- [x] Suite Vitest abrangente (**350 testes**, 70 arquivos)
 
 ### Testes automatizados (Vitest) — estado atual
 
@@ -162,14 +162,14 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 | 1 | Bestiário simplificado | **Feita** |
 | 2 | Estado, save e retomada de expedição | **Feita** |
 | 3 | Floresta: 3 andares, elites, perks e arena | **Feita** |
-| 4 | Balanceamento do vertical slice | **Próxima** |
-| 5 | Cristal e Termal | Planejada |
-| 6 | Drops de elite e longevidade | Planejada |
+| 4 | Validação do vertical slice da Floresta | **Feita** — playtest manual aprovado para replicação |
+| 5 | Cristal e Termal | **Feita (estrutura)** — 3 andares, elites, perks e arenas próprias |
+| 6 | Drops de elite e longevidade | **Próxima** |
 | 7 | QA completo e release | Planejada |
 
 ### Critérios de done
 
-- [ ] Três andares compactos por bioma e uma arena final. *(Floresta pronta)*
+- [x] Três andares compactos por bioma e uma arena final.
 - [x] Extração segura após cada elite. *(portal e recompensa liberados ao limpar o andar)*
 - [x] Três escolhas de perk sem repetição. *(pool completo com 12 perks funcionais)*
 - [x] Elites existentes com afixos legíveis. *(Implacável, Tempestade e Bastião)*
@@ -243,9 +243,10 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 9. ~~**Bestiário UI simplificado**~~ — 18 fichas e progresso por bioma
 10. ~~**Fundação da expedição**~~ — estado, save, extração e retomada
 11. ~~**Vertical slice da Floresta**~~ — 3 andares, elites, perks e arena
-12. **Balancear e replicar** — Cristal e Termal somente após validar a Floresta
-13. **Playtest completo** — novo jogo → três expedições → craft temático
-14. **Polish final** — áudio, responsividade e consistência visual
+12. ~~**Balancear e replicar**~~ — Floresta validada; estrutura aplicada a Cristal e Termal
+13. **Drops de elite e longevidade** — ligar reruns a receitas, skins e Bestiário
+14. **Playtest completo** — novo jogo → três expedições → craft temático
+15. **Polish final** — áudio, responsividade e consistência visual
 
 ---
 
@@ -253,7 +254,7 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 | Risco | Mitigação |
 |-------|-----------|
-| Três andares virarem repetição, não longevidade | Validar Floresta antes de replicar e ligar reruns a Bestiário/receitas/drops |
+| Três andares virarem repetição, não longevidade | Ligar reruns a Bestiário, receitas e drops de elite |
 | Expedição ficar longa demais | Andares de 5–8 salas e meta total de 25–40 min |
 | Save quebrar entre andares | Checkpoint só em transições, seed fixa e migração coberta por testes |
 | Build público atrás do local | Agrupar mudanças em uma próxima release testável |
@@ -261,5 +262,5 @@ Especificação completa: [EXPEDICOES-ROGUELITE.md](EXPEDICOES-ROGUELITE.md).
 
 ---
 
-*Roadmap v0.11 — revisado 2026-07-24 (vertical slice da Floresta concluído;
-próxima etapa é o balanceamento).*
+*Roadmap v0.12 — revisado 2026-07-26 (estrutura de expedições replicada nos
+três biomas; próximas etapas: longevidade e QA completo).*

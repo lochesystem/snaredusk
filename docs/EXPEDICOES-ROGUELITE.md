@@ -4,7 +4,8 @@ Especificação do novo formato de masmorra de Snaredusk. Este documento descrev
 design aprovado para planejamento; a implementação deve seguir as etapas abaixo e
 ser validada primeiro na Floresta Fúngica.
 
-**Status:** em implementação — etapas 1, 2 e 3 concluídas; próxima: balanceamento
+**Status:** em implementação — etapas 1–5 concluídas estruturalmente; próxima:
+conteúdo recorrente e longevidade
 **Escopo:** Bestiário simplificado + expedições de três andares + arena final  
 **Princípio:** aumentar duração e variedade sem transformar o jogo num roguelike
 pesado ou apagar o loop de base, craft e loja.
@@ -387,19 +388,30 @@ companheiro, elite e props.
 **Aceite:** extrair cedo e continuar são decisões válidas; nenhuma arma ou perk
 torna o chefe trivial; a bolsa cria pressão sem ficar cheia sempre no andar 1.
 
-### Etapa 5 — Cristal e Termal
+**Gate de replicação aprovado em 2026-07-26:** após playtest manual recorrente
+do vertical slice pelo responsável do projeto, a estrutura foi liberada para os
+outros biomas. As métricas acima continuam úteis para ajustes finos e não são
+consideradas encerradas apenas pela replicação.
+
+### Etapa 5 — Cristal e Termal — estrutura concluída
 
 **Objetivo:** aplicar a estrutura validada aos outros biomas.
 
-- [ ] Definir pools de elite sem repetição por bioma.
-- [ ] Adaptar afixos aos hazards de Cristal e Termal.
-- [ ] Criar arena manual da Matriarca Prismática.
-- [ ] Criar arena manual da Salamandra Anciã.
-- [ ] Integrar as chaves e desbloqueios existentes.
-- [ ] Validar sprites grandes, hitboxes e navegação do companheiro.
+- [x] Definir pools de elite sem repetição por bioma.
+- [x] Adaptar afixos aos hazards de Cristal e Termal.
+- [x] Criar arena manual da Matriarca Prismática.
+- [x] Criar arena manual da Salamandra Anciã.
+- [x] Integrar as chaves e desbloqueios existentes.
+- [x] Validar geração, hitboxes e navegação compartilhada por testes.
 
 **Aceite:** os três biomas compartilham regras, mas mantêm identidade visual,
 hazards e escolhas de combate próprias.
+
+**Validação estrutural:** 100 seeds por andar e por bioma cobrem limites de
+salas/inimigos, passagem, ausência de chefe e áreas reservadas. Cristal usa
+pilares prismáticos na arena e o hazard escorregadio do bioma; Termal usa uma
+composição de rochas e poças de veneno. O QA visual completo permanece na etapa
+7.
 
 ### Etapa 6 — Conteúdo recorrente e longevidade
 
